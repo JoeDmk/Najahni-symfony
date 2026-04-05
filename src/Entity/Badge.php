@@ -28,7 +28,7 @@ class Badge
     private ?string $description = null;
 
     #[ORM\Column(length: 50)]
-    private string $icone = '🏆';
+    private string $icone = '';
 
     #[ORM\Column(name: 'condition_obtention', type: Types::TEXT)]
     #[Assert\NotBlank]

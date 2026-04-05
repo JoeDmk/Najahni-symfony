@@ -20,8 +20,8 @@
                         <td><span class="badge bg-primary bg-opacity-10 text-primary">{{ c.categorie }}</span></td>
                         <td>{{ c.niveauDifficulte }}</td>
                         <td>{{ c.pointsXp }}</td>
-                        <td>{{ c.certification ? '✅' : '❌' }}</td>
-                        <td>{{ c.actif ? '✅' : '❌' }}</td>
+                        <td>{{ c.certification ? 'Oui' : 'Non' }}</td>
+                        <td>{{ c.actif ? 'Oui' : 'Non' }}</td>
                         <td class="text-end">
                             <div class="btn-group btn-group-sm">
                                 <a href="{{ path('admin_cours_edit', {id: c.id}) }}" class="btn btn-outline-primary"><i class="bi bi-pencil"></i></a>

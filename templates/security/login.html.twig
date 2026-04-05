@@ -1,5 +1,7 @@
 {% extends 'base.html.twig' %}
 
+{% set recaptcha_enabled = recaptcha_site_key is not empty and recaptcha_site_key not in ['your_recaptcha_site_key', 'your_recaptcha_secret_key'] %}
+
 {% block title %}Connexion - Najahni{% endblock %}
 
 {% block body %}
@@ -7,8 +9,7 @@
     <div class="card shadow-lg border-0" style="width:440px;border-radius:1.5rem">
         <div class="card-body p-5">
             <div class="text-center mb-4">
-                <h1 class="fw-800" style="font-size:2.5rem">🚀</h1>
-                <h3 class="fw-bold">Najahni</h3>
+                <h3 class="fw-bold" style="font-size:2rem">Najahni</h3>
                 <p class="text-muted">Connectez-vous à votre compte</p>
             </div>
 
@@ -51,13 +52,15 @@
                 </button>
             </form>
 
-            {# reCAPTCHA notice #}
-            <div class="text-center mb-3">
-                <small class="text-muted">
-                    <i class="bi bi-shield-check text-success"></i>
-                    Protégé par reCAPTCHA Google
-                </small>
-            </div>
+            {% if recaptcha_enabled %}
+                {# reCAPTCHA notice #}
+                <div class="text-center mb-3">
+                    <small class="text-muted">
+                        <i class="bi bi-shield-check text-success"></i>
+                        Protégé par reCAPTCHA Google
+                    </small>
+                </div>
+            {% endif %}
 
             {# Divider #}
             <div class="d-flex align-items-center my-3">
@@ -90,7 +93,6 @@
 {% endblock %}
 
 {% block javascripts %}
-<script src="https://www.google.com/recaptcha/api.js?render={{ recaptcha_site_key }}"></script>
 <script>
 function togglePw() {
     const inp = document.getElementById('loginPassword');
@@ -101,6 +103,11 @@ function togglePw() {
 
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('loginForm');
+
+    {% if not recaptcha_enabled %}
+    return;
+    {% endif %}
+
     form.addEventListener('submit', function(e) {
         e.preventDefault();
         grecaptcha.ready(function() {
@@ -112,4 +119,7 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+{% if recaptcha_enabled %}
+<script src="https://www.google.com/recaptcha/api.js?render={{ recaptcha_site_key }}"></script>
+{% endif %}
 {% endblock %}

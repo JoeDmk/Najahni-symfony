@@ -1,5 +1,7 @@
 {% extends 'base.html.twig' %}
 
+{% set recaptcha_enabled = recaptcha_site_key is not empty and recaptcha_site_key not in ['your_recaptcha_site_key', 'your_recaptcha_secret_key'] %}
+
 {% block title %}Inscription - Najahni{% endblock %}
 
 {% block body %}
@@ -7,8 +9,7 @@
     <div class="card shadow-lg border-0" style="width:520px;border-radius:1.5rem">
         <div class="card-body p-5">
             <div class="text-center mb-4">
-                <h1 style="font-size:2.5rem">🚀</h1>
-                <h3 class="fw-bold">Rejoindre Najahni</h3>
+                <h3 class="fw-bold" style="font-size:2rem">Rejoindre Najahni</h3>
                 <p class="text-muted">Créez votre compte pour commencer</p>
             </div>
 
@@ -46,9 +47,9 @@
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Rôle</label>
                     <select name="role" class="form-select" required>
-                        <option value="ENTREPRENEUR" {{ user.role == 'ENTREPRENEUR' ? 'selected' }}>🚀 Entrepreneur</option>
-                        <option value="MENTOR" {{ user.role == 'MENTOR' ? 'selected' }}>🎓 Mentor</option>
-                        <option value="INVESTISSEUR" {{ user.role == 'INVESTISSEUR' ? 'selected' }}>💰 Investisseur</option>
+                        <option value="ENTREPRENEUR" {{ user.role == 'ENTREPRENEUR' ? 'selected' }}>Entrepreneur</option>
+                        <option value="MENTOR" {{ user.role == 'MENTOR' ? 'selected' }}>Mentor</option>
+                        <option value="INVESTISSEUR" {{ user.role == 'INVESTISSEUR' ? 'selected' }}>Investisseur</option>
                     </select>
                 </div>
                 <div class="row g-3 mb-3">
@@ -91,13 +92,15 @@
                 </button>
             </form>
 
-            {# reCAPTCHA notice #}
-            <div class="text-center mb-3">
-                <small class="text-muted">
-                    <i class="bi bi-shield-check text-success"></i>
-                    Protégé par reCAPTCHA Google
-                </small>
-            </div>
+            {% if recaptcha_enabled %}
+                {# reCAPTCHA notice #}
+                <div class="text-center mb-3">
+                    <small class="text-muted">
+                        <i class="bi bi-shield-check text-success"></i>
+                        Protégé par reCAPTCHA Google
+                    </small>
+                </div>
+            {% endif %}
 
             {# Divider #}
             <div class="d-flex align-items-center my-3">
@@ -126,7 +129,6 @@
 {% endblock %}
 
 {% block javascripts %}
-<script src="https://www.google.com/recaptcha/api.js?render={{ recaptcha_site_key }}"></script>
 <script>
 function togglePassword(id, btn) {
     const inp = document.getElementById(id);
@@ -162,6 +164,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // reCAPTCHA on form submit
     const form = document.getElementById('registerForm');
+
+    if (!form || !{{ recaptcha_enabled ? 'true' : 'false' }}) {
+        return;
+    }
+
     form.addEventListener('submit', function(e) {
         e.preventDefault();
         grecaptcha.ready(function() {
@@ -173,4 +180,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 </script>
+{% if recaptcha_enabled %}
+<script src="https://www.google.com/recaptcha/api.js?render={{ recaptcha_site_key }}"></script>
+{% endif %}
 {% endblock %}

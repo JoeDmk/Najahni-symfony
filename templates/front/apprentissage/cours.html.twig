@@ -36,7 +36,7 @@
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <h5 class="fw-bold mb-0">{{ c.titre }}</h5>
-                    {% if c.certification %}<span class="badge bg-success">🎓 Certifiant</span>{% endif %}
+                    {% if c.certification %}<span class="badge bg-success"><i class="bi bi-patch-check me-1"></i>Certifiant</span>{% endif %}
                 </div>
                 <p class="text-muted small mb-3">{{ c.description|length > 100 ? c.description|slice(0,100) ~ '...' : c.description }}</p>
                 <div class="d-flex flex-wrap gap-2 mb-3">
@@ -55,7 +55,7 @@
 </div>
 {% else %}
 <div class="text-center py-5">
-    <div style="font-size:5rem">📚</div>
+    <div class="text-center"><i class="bi bi-book" style="font-size:4rem;color:var(--nj-primary)"></i></div>
     <h4 class="fw-bold mt-3">Aucun cours disponible</h4>
 </div>
 {% endif %}

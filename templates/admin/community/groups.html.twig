@@ -16,7 +16,7 @@
                         <td class="fw-semibold">{{ group.name }}</td>
                         <td>{{ group.groupAdmin.firstname }} {{ group.groupAdmin.lastname }}</td>
                         <td>{{ group.members|length }}</td>
-                        <td>{{ group.isPrivate ? '🔒' : '🔓' }}</td>
+                        <td>{{ group.isPrivate ? 'Privé' : 'Public' }}</td>
                         <td>{{ group.createdAt|date('d/m/Y') }}</td>
                         <td class="text-end">
                             <form method="post" action="{{ path('admin_community_groups_delete', {id: group.id}) }}" class="d-inline" onsubmit="return confirm('Supprimer ?')">

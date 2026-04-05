@@ -16,11 +16,11 @@
                 <tbody>
                     {% for b in pagination %}
                     <tr>
-                        <td style="font-size:1.5rem">{{ b.icone ?? '🏆' }}</td>
+                        <td style="font-size:1.5rem">{{ b.icone ?? '' }}</td>
                         <td class="fw-semibold">{{ b.nom }}</td>
                         <td><span class="badge {{ b.rarete == 'LEGENDAIRE' ? 'bg-warning text-dark' : (b.rarete == 'EPIQUE' ? 'bg-danger' : (b.rarete == 'RARE' ? 'bg-primary' : 'bg-secondary')) }}">{{ b.rarete }}</span></td>
                         <td>{{ b.pointsRequis }}</td>
-                        <td>{{ b.actif ? '✅' : '❌' }}</td>
+                        <td>{{ b.actif ? 'Oui' : 'Non' }}</td>
                         <td class="text-end">
                             <div class="btn-group btn-group-sm">
                                 <a href="{{ path('admin_badges_edit', {id: b.id}) }}" class="btn btn-outline-primary"><i class="bi bi-pencil"></i></a>

@@ -14,7 +14,7 @@
     <div class="col-md-4 col-lg-3">
         <div class="card border-0 shadow-sm h-100 text-center" style="border-radius:1rem">
             <div class="card-body p-4">
-                <div class="mb-3" style="font-size:3rem">{{ badge.icone ?? '🏆' }}</div>
+                <div class="mb-3" style="font-size:3rem">{{ badge.icone ?? '' }}</div>
                 <h5 class="fw-bold mb-1">{{ badge.nom }}</h5>
                 <span class="badge mb-2 {{ badge.rarete == 'LEGENDAIRE' ? 'bg-warning text-dark' : (badge.rarete == 'EPIQUE' ? 'bg-danger' : (badge.rarete == 'RARE' ? 'bg-primary' : 'bg-secondary')) }}">
                     {{ badge.rarete }}
@@ -32,7 +32,7 @@
 </div>
 {% else %}
 <div class="text-center py-5">
-    <div style="font-size:5rem">🏆</div>
+    <div class="text-center"><i class="bi bi-trophy" style="font-size:4rem;color:var(--nj-primary)"></i></div>
     <h4 class="fw-bold mt-3">Aucun badge disponible</h4>
 </div>
 {% endif %}
