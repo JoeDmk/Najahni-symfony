@@ -21,8 +21,8 @@ class InvestmentOffer
     private ?int $id = null;
 
     #[ORM\Column(type: Types::DECIMAL, precision: 15, scale: 2)]
-    #[Assert\NotBlank]
-    #[Assert\Positive]
+    #[Assert\NotBlank(message: 'Le montant proposé est obligatoire.')]
+    #[Assert\Positive(message: 'Le montant doit être positif.')]
     private ?string $proposedAmount = null;
 
     #[ORM\Column(length: 20, columnDefinition: "ENUM('PENDING','ACCEPTED','REJECTED') DEFAULT 'PENDING'")]

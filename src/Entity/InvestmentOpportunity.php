@@ -23,14 +23,18 @@ class InvestmentOpportunity
     private ?int $id = null;
 
     #[ORM\Column(type: Types::DECIMAL, precision: 15, scale: 2)]
-    #[Assert\NotBlank]
-    #[Assert\Positive]
+    #[Assert\NotBlank(message: 'Le montant cible est obligatoire.')]
+    #[Assert\Positive(message: 'Le montant doit être positif.')]
+    #[Assert\GreaterThanOrEqual(value: 100, message: 'Le montant cible doit être au minimum 100 DT.')]
     private ?string $targetAmount = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Assert\NotBlank(message: 'La description est obligatoire.')]
+    #[Assert\Length(min: 10, max: 2000, minMessage: 'La description doit contenir au moins {{ limit }} caractères.', maxMessage: 'La description ne peut pas dépasser {{ limit }} caractères.')]
     private ?string $description = null;
 
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
+    #[Assert\NotNull(message: 'La date limite est obligatoire.')]
     private ?\DateTimeInterface $deadline = null;
 
     #[ORM\Column(length: 20, columnDefinition: "ENUM('OPEN','CLOSED','FUNDED') DEFAULT 'OPEN'")]

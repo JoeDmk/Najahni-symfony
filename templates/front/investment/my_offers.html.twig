@@ -8,13 +8,21 @@
     <a href="{{ path('app_invest_opportunities') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Opportunités</a>
 </div>
 
+{% for message in app.flashes('success') %}
+    <div class="alert alert-success alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endfor %}
+{% for message in app.flashes('danger') %}
+    <div class="alert alert-danger alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endfor %}
+
 {% if offers|length > 0 %}
+<p class="text-muted mb-3">{{ offers|length }} offre{{ offers|length > 1 ? 's' : '' }} soumise{{ offers|length > 1 ? 's' : '' }}</p>
 <div class="card border-0 shadow-sm" style="border-radius:1rem">
     <div class="card-body p-0">
         <div class="table-responsive">
             <table class="table table-nj mb-0">
                 <thead>
-                    <tr><th>Projet</th><th>Montant</th><th>Statut</th><th>Payé</th><th>Objectif</th><th></th></tr>
+                    <tr><th>Projet</th><th>Montant</th><th>Statut</th><th>Date</th><th>Objectif</th><th></th></tr>
                 </thead>
                 <tbody>
                     {% for offer in offers %}
@@ -22,7 +30,7 @@
                         <td class="fw-semibold">{{ offer.opportunity.project ? offer.opportunity.project.titre : 'N/A' }}</td>
                         <td>{{ offer.proposedAmount|number_format(0, ',', ' ') }} DT</td>
                         <td><span class="badge bg-{{ offer.status == 'ACCEPTED' ? 'success' : (offer.status == 'REJECTED' ? 'danger' : 'warning text-dark') }}">{{ offer.status }}</span></td>
-                        <td>{{ offer.paid ? '✅' : '❌' }}</td>
+                        <td class="text-muted small">{{ offer.createdAt|date('d/m/Y H:i') }}</td>
                         <td>{{ offer.opportunity.targetAmount|number_format(0, ',', ' ') }} DT</td>
                         <td><a href="{{ path('app_invest_opportunity_show', {id: offer.opportunity.id}) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td>
                     </tr>

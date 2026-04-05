@@ -1,12 +1,10 @@
-{% extends 'front/layout.html.twig' %}
+{% extends 'admin/layout.html.twig' %}
 
-{% block title %}Créer une opportunité - Najahni{% endblock %}
+{% block title %}Créer une opportunité - Admin Najahni{% endblock %}
 
 {% block main %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold mb-0"><i class="bi bi-plus-circle me-2"></i>Créer une opportunité</h2>
-    <a href="{{ path('app_invest_opportunities') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Retour</a>
-</div>
+<a href="{{ path('admin_invest_opportunities') }}" class="text-decoration-none text-muted"><i class="bi bi-arrow-left me-1"></i>Toutes les opportunités</a>
+<h2 class="fw-bold mt-3 mb-4">Créer une opportunité</h2>
 
 {% for message in app.flashes('success') %}
     <div class="alert alert-success alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
@@ -17,8 +15,8 @@
 
 <div class="card border-0 shadow-sm" style="border-radius:1rem">
     <div class="card-body p-4">
-        <form method="post" id="createOpportunityForm" novalidate>
-            <input type="hidden" name="_token" value="{{ csrf_token('create_opportunity') }}">
+        <form method="post" id="adminCreateForm" novalidate>
+            <input type="hidden" name="_token" value="{{ csrf_token('admin_create_opportunity') }}">
             <div class="mb-3">
                 <label for="project_id" class="form-label fw-semibold">Projet <span class="text-danger">*</span></label>
                 <select name="project_id" id="project_id" class="form-select" required>
@@ -43,10 +41,10 @@
             </div>
             <div class="mb-3 mt-3">
                 <label for="description" class="form-label fw-semibold">Description <span class="text-danger">*</span></label>
-                <textarea name="description" id="description" class="form-control" rows="4" minlength="10" maxlength="2000" placeholder="Décrivez votre opportunité d'investissement (min. 10 caractères)" required></textarea>
+                <textarea name="description" id="description" class="form-control" rows="4" minlength="10" maxlength="2000" placeholder="Min. 10 caractères" required></textarea>
                 <div class="d-flex justify-content-between">
                     <div class="invalid-feedback">La description doit contenir au moins 10 caractères.</div>
-                    <small class="text-muted mt-1" id="descCharCount">0 / 2000</small>
+                    <small class="text-muted mt-1" id="charCount">0 / 2000</small>
                 </div>
             </div>
             <button type="submit" class="btn btn-nj btn-lg"><i class="bi bi-check-lg me-2"></i>Créer l'opportunité</button>
@@ -54,23 +52,16 @@
         <script>
         (function() {
             var desc = document.getElementById('description');
-            var counter = document.getElementById('descCharCount');
-            desc.addEventListener('input', function() {
-                counter.textContent = desc.value.length + ' / 2000';
-            });
-            document.getElementById('createOpportunityForm').addEventListener('submit', function(e) {
+            var counter = document.getElementById('charCount');
+            desc.addEventListener('input', function() { counter.textContent = desc.value.length + ' / 2000'; });
+            document.getElementById('adminCreateForm').addEventListener('submit', function(e) {
                 var valid = true;
-                var fields = this.querySelectorAll('[required]');
-                fields.forEach(function(f) { f.classList.remove('is-invalid'); });
-                fields.forEach(function(f) {
+                this.querySelectorAll('[required]').forEach(function(f) {
+                    f.classList.remove('is-invalid');
                     if (!f.value.trim()) { f.classList.add('is-invalid'); valid = false; }
                 });
-                var amt = document.getElementById('target_amount');
-                if (parseFloat(amt.value) < 100) { amt.classList.add('is-invalid'); valid = false; }
-                var dl = document.getElementById('deadline');
-                if (dl.value && dl.value < new Date().toISOString().split('T')[0]) { dl.classList.add('is-invalid'); valid = false; }
-                var d = document.getElementById('description');
-                if (d.value.trim().length < 10) { d.classList.add('is-invalid'); valid = false; }
+                if (parseFloat(document.getElementById('target_amount').value) < 100) { document.getElementById('target_amount').classList.add('is-invalid'); valid = false; }
+                if (desc.value.trim().length < 10) { desc.classList.add('is-invalid'); valid = false; }
                 if (!valid) e.preventDefault();
             });
         })();
