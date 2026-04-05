@@ -4,10 +4,14 @@ namespace App\Service;
 
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
+use Symfony\Component\Mime\Address;
 use Twig\Environment;
 
 class EmailService
 {
+    private const SENDER_EMAIL = 'mahdibenmariem1@gmail.com';
+    private const SENDER_NAME = 'Najahni';
+
     public function __construct(
         private MailerInterface $mailer,
         private Environment $twig,
@@ -21,7 +25,7 @@ class EmailService
         ]);
 
         $email = (new Email())
-            ->from('noreply@najahni.tn')
+            ->from(new Address(self::SENDER_EMAIL, self::SENDER_NAME))
             ->to($to)
             ->subject('Code de vérification - Najahni')
             ->html($html);
@@ -37,7 +41,7 @@ class EmailService
         ]);
 
         $email = (new Email())
-            ->from('noreply@najahni.tn')
+            ->from(new Address(self::SENDER_EMAIL, self::SENDER_NAME))
             ->to($to)
             ->subject('Réinitialisation de mot de passe - Najahni')
             ->html($html);
@@ -52,7 +56,7 @@ class EmailService
         ]);
 
         $email = (new Email())
-            ->from('noreply@najahni.tn')
+            ->from(new Address(self::SENDER_EMAIL, self::SENDER_NAME))
             ->to($to)
             ->subject('Confirmation de changement de mot de passe - Najahni')
             ->html($html);
@@ -67,7 +71,7 @@ class EmailService
         ]);
 
         $email = (new Email())
-            ->from('noreply@najahni.tn')
+            ->from(new Address(self::SENDER_EMAIL, self::SENDER_NAME))
             ->to($to)
             ->subject('Bienvenue sur Najahni !')
             ->html($html);
@@ -85,7 +89,7 @@ class EmailService
             ]);
 
             $email = (new Email())
-                ->from('noreply@najahni.tn')
+                ->from(new Address(self::SENDER_EMAIL, self::SENDER_NAME))
                 ->to($to)
                 ->subject($subject . ' - Najahni')
                 ->html($html);

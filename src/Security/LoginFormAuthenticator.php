@@ -5,6 +5,7 @@ namespace App\Security;
 use App\Entity\LoginHistory;
 use App\Entity\User;
 use App\Repository\UserRepository;
+use App\Service\ReCaptchaService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -34,12 +35,19 @@ class LoginFormAuthenticator extends AbstractLoginFormAuthenticator
         private UserRepository $userRepository,
         private EntityManagerInterface $em,
         private UserPasswordHasherInterface $passwordHasher,
+        private ReCaptchaService $reCaptchaService,
     ) {}
 
     public function authenticate(Request $request): Passport
     {
         $email = $request->request->get('_username', '');
         $password = $request->request->get('_password', '');
+
+        // Verify reCAPTCHA
+        $recaptchaToken = $request->request->get('_recaptcha_token', '');
+        if (!$this->reCaptchaService->verify($recaptchaToken, $request->getClientIp())) {
+            throw new CustomUserMessageAuthenticationException('Vérification reCAPTCHA échouée. Veuillez réessayer.');
+        }
 
         $request->getSession()->set(SecurityRequestAttributes::LAST_USERNAME, $email);
 

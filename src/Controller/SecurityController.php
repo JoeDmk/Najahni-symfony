@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\User;
 use App\Repository\UserRepository;
 use App\Service\EmailService;
+use App\Service\ReCaptchaService;
 use Doctrine\ORM\EntityManagerInterface;
 use KnpU\OAuth2ClientBundle\Client\ClientRegistry;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -37,12 +38,20 @@ class SecurityController extends AbstractController
         EntityManagerInterface $em,
         ValidatorInterface $validator,
         EmailService $emailService,
+        ReCaptchaService $reCaptchaService,
     ): Response {
         if ($this->getUser()) {
             return $this->redirectToRoute('app_home');
         }
 
         if ($request->isMethod('POST')) {
+            // Verify reCAPTCHA
+            $recaptchaToken = $request->request->get('_recaptcha_token', '');
+            if (!$reCaptchaService->verify($recaptchaToken, $request->getClientIp())) {
+                $this->addFlash('danger', 'Vérification reCAPTCHA échouée. Veuillez réessayer.');
+                return $this->render('security/register.html.twig', ['user' => new User()]);
+            }
+
             $user = new User();
             $user->setFirstname(trim($request->request->get('firstname', '')));
             $user->setLastname(trim($request->request->get('lastname', '')));

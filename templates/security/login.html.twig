@@ -45,10 +45,19 @@
                     <a href="{{ path('app_forgot_password') }}" class="small text-decoration-none" style="color:var(--nj-primary)">Mot de passe oublié ?</a>
                 </div>
                 <input type="hidden" name="_csrf_token" value="{{ csrf_token('authenticate') }}">
+                <input type="hidden" name="_recaptcha_token" id="recaptchaToken">
                 <button type="submit" class="btn btn-nj w-100 py-2 mb-3">
                     <i class="bi bi-box-arrow-in-right me-2"></i>Se connecter
                 </button>
             </form>
+
+            {# reCAPTCHA notice #}
+            <div class="text-center mb-3">
+                <small class="text-muted">
+                    <i class="bi bi-shield-check text-success"></i>
+                    Protégé par reCAPTCHA Google
+                </small>
+            </div>
 
             {# Divider #}
             <div class="d-flex align-items-center my-3">
@@ -81,6 +90,7 @@
 {% endblock %}
 
 {% block javascripts %}
+<script src="https://www.google.com/recaptcha/api.js?render={{ recaptcha_site_key }}"></script>
 <script>
 function togglePw() {
     const inp = document.getElementById('loginPassword');
@@ -88,5 +98,18 @@ function togglePw() {
     if (inp.type === 'password') { inp.type = 'text'; icon.className = 'bi bi-eye-slash'; }
     else { inp.type = 'password'; icon.className = 'bi bi-eye'; }
 }
+
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('loginForm');
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        grecaptcha.ready(function() {
+            grecaptcha.execute('{{ recaptcha_site_key }}', {action: 'login'}).then(function(token) {
+                document.getElementById('recaptchaToken').value = token;
+                form.submit();
+            });
+        });
+    });
+});
 </script>
 {% endblock %}
