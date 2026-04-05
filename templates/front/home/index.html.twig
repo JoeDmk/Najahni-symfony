@@ -1,0 +1,127 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Accueil - Najahni{% endblock %}
+
+{% block main %}
+{# Hero Section #}
+<section class="hero-section text-center py-5 mb-5">
+    <div class="container position-relative py-4" style="z-index:1">
+        <span class="badge bg-white bg-opacity-25 text-white px-3 py-2 rounded-pill mb-3" style="font-size:.9rem"><i class="bi bi-stars me-1"></i>Plateforme entrepreneuriale #1 en Tunisie</span>
+        <h1 class="display-4 fw-bold mb-3">Propulsez votre<br>parcours entrepreneurial</h1>
+        <p class="lead mb-4 mx-auto opacity-85" style="max-width:600px">Connectez-vous avec des mentors expérimentés, trouvez des investisseurs et développez vos compétences pour réussir.</p>
+        <div class="d-flex gap-3 justify-content-center flex-wrap">
+            {% if app.user %}
+                <a href="{{ path('app_projet_index') }}" class="btn btn-light btn-lg px-4 fw-semibold shadow-sm"><i class="bi bi-rocket-takeoff me-2"></i>Mes Projets</a>
+                <a href="{{ path('app_community_posts') }}" class="btn btn-outline-light btn-lg px-4"><i class="bi bi-people me-2"></i>Communauté</a>
+            {% else %}
+                <a href="{{ path('app_register') }}" class="btn btn-light btn-lg px-4 fw-semibold shadow-sm"><i class="bi bi-person-plus me-2"></i>Commencer gratuitement</a>
+                <a href="{{ path('app_login') }}" class="btn btn-outline-light btn-lg px-4"><i class="bi bi-box-arrow-in-right me-2"></i>Se connecter</a>
+            {% endif %}
+        </div>
+    </div>
+</section>
+
+{# Modules Grid #}
+<h3 class="fw-bold text-center mb-2">Nos 6 modules</h3>
+<p class="text-center text-muted mb-4">Tout ce dont vous avez besoin pour réussir votre aventure entrepreneuriale</p>
+<div class="row g-4 mb-5">
+    <div class="col-md-4">
+        <div class="module-card h-100">
+            <div class="module-icon" style="background:rgba(67,97,238,.1)"><i class="bi bi-rocket-takeoff" style="color:var(--nj-primary)"></i></div>
+            <h5>Gestion de Projets</h5>
+            <p>Créez, évaluez et suivez vos projets entrepreneuriaux avec des outils puissants.</p>
+            <a href="{{ path('app_projet_index') }}" class="btn btn-outline-nj btn-sm">Explorer <i class="bi bi-arrow-right ms-1"></i></a>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="module-card h-100">
+            <div class="module-icon" style="background:rgba(114,9,183,.1)"><i class="bi bi-cash-stack" style="color:var(--nj-accent)"></i></div>
+            <h5>Investissement</h5>
+            <p>Publiez des opportunités et recevez des offres de financement pour vos projets.</p>
+            <a href="{{ path('app_invest_opportunities') }}" class="btn btn-outline-nj btn-sm">Découvrir <i class="bi bi-arrow-right ms-1"></i></a>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="module-card h-100">
+            <div class="module-icon" style="background:rgba(58,12,163,.1)"><i class="bi bi-people-fill" style="color:var(--nj-secondary)"></i></div>
+            <h5>Communauté</h5>
+            <p>Échangez avec d'autres entrepreneurs, rejoignez des groupes et participez à des événements.</p>
+            <a href="{{ path('app_community_posts') }}" class="btn btn-outline-nj btn-sm">Rejoindre <i class="bi bi-arrow-right ms-1"></i></a>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="module-card h-100">
+            <div class="module-icon" style="background:rgba(6,214,160,.15)"><i class="bi bi-mortarboard" style="color:var(--nj-success)"></i></div>
+            <h5>Mentorat</h5>
+            <p>Trouvez un mentor expérimenté pour vous guider et planifiez des sessions en ligne.</p>
+            <a href="{{ path('app_mentorat_requests') }}" class="btn btn-outline-nj btn-sm">Commencer <i class="bi bi-arrow-right ms-1"></i></a>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="module-card h-100">
+            <div class="module-icon" style="background:rgba(247,37,133,.1)"><i class="bi bi-book" style="color:#f72585"></i></div>
+            <h5>Apprentissage</h5>
+            <p>Suivez des cours, obtenez des badges et développez vos compétences entrepreneuriales.</p>
+            <a href="{{ path('app_apprentissage_cours') }}" class="btn btn-outline-nj btn-sm">Apprendre <i class="bi bi-arrow-right ms-1"></i></a>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="module-card h-100">
+            <div class="module-icon" style="background:rgba(255,209,102,.2)"><i class="bi bi-person-vcard" style="color:#e6a700"></i></div>
+            <h5>Gestion Utilisateurs</h5>
+            <p>Profils riches, authentification sécurisée et gestion avancée des rôles.</p>
+            <a href="{{ path('app_profile') }}" class="btn btn-outline-nj btn-sm">Mon profil <i class="bi bi-arrow-right ms-1"></i></a>
+        </div>
+    </div>
+</div>
+
+{# About Section #}
+<div class="card border-0 shadow-sm mb-5" style="border-radius:1.5rem;overflow:hidden">
+    <div class="row g-0 align-items-center">
+        <div class="col-lg-7 p-5">
+            <span class="feature-badge mb-3"><i class="bi bi-lightning-charge-fill"></i> Plateforme tout-en-un</span>
+            <h2 class="fw-bold mt-3 mb-3">Pourquoi choisir Najahni ?</h2>
+            <p class="text-muted mb-4">Najahni combine tous les outils essentiels pour accompagner les entrepreneurs tunisiens de l'idée au succès. Notre écosystème connecte créateurs, mentors et investisseurs dans un seul espace.</p>
+            <div class="row g-3">
+                <div class="col-sm-6">
+                    <div class="d-flex align-items-start gap-2">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px;height:36px;background:rgba(67,97,238,.1)">
+                            <i class="bi bi-check-lg" style="color:var(--nj-primary)"></i>
+                        </div>
+                        <div><strong class="d-block">Évaluation IA</strong><small class="text-muted">Scores automatiques pour vos projets</small></div>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="d-flex align-items-start gap-2">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px;height:36px;background:rgba(114,9,183,.1)">
+                            <i class="bi bi-check-lg" style="color:var(--nj-accent)"></i>
+                        </div>
+                        <div><strong class="d-block">Paiement sécurisé</strong><small class="text-muted">Intégration Stripe & Flouci</small></div>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="d-flex align-items-start gap-2">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px;height:36px;background:rgba(6,214,160,.15)">
+                            <i class="bi bi-check-lg" style="color:var(--nj-success)"></i>
+                        </div>
+                        <div><strong class="d-block">Visio intégrée</strong><small class="text-muted">Sessions de mentorat en direct</small></div>
+                    </div>
+                </div>
+                <div class="col-sm-6">
+                    <div class="d-flex align-items-start gap-2">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px;height:36px;background:rgba(247,37,133,.1)">
+                            <i class="bi bi-check-lg" style="color:#f72585"></i>
+                        </div>
+                        <div><strong class="d-block">Badges & XP</strong><small class="text-muted">Gamification de l'apprentissage</small></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-5 text-center p-5" style="background:var(--nj-gradient)">
+            <div style="font-size:8rem;line-height:1">🚀</div>
+            <h4 class="text-white fw-bold mt-3 mb-2">Najahni</h4>
+            <p class="text-white opacity-75 mb-0">Votre succès commence ici</p>
+        </div>
+    </div>
+</div>
+{% endblock %}

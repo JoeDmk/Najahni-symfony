@@ -1,0 +1,72 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}{{ projet.titre }} - Admin Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{{ path('admin_projets') }}" class="text-decoration-none text-muted"><i class="bi bi-arrow-left me-1"></i>Tous les projets</a>
+        <h2 class="fw-bold mt-2 mb-0">{{ projet.titre }}</h2>
+    </div>
+    <form method="post" action="{{ path('admin_projets_delete', {id: projet.id}) }}" onsubmit="return confirm('Supprimer ?')">
+        <button class="btn btn-outline-danger"><i class="bi bi-trash me-1"></i>Supprimer</button>
+    </form>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <span class="badge {{ projet.statutProjet == 'EVALUE' ? 'bg-success' : (projet.statutProjet == 'SOUMIS' ? 'bg-warning text-dark' : 'bg-secondary') }}">{{ projet.statutProjet }}</span>
+                {% if projet.secteur %}<span class="badge bg-primary bg-opacity-10 text-primary">{{ projet.secteur }}</span>{% endif %}
+                {% if projet.etape %}<span class="badge bg-info bg-opacity-10 text-info">{{ projet.etape }}</span>{% endif %}
+            </div>
+            <p>{{ projet.description }}</p>
+        </div>
+
+        {% if projet.donneesBusiness %}
+        {% set db = projet.donneesBusiness %}
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h5 class="fw-bold mb-3">Données Business</h5>
+            <div class="row g-3">
+                <div class="col-md-4"><strong>Taille marché:</strong> {{ db.tailleMarche|number_format(0,',', ' ') }} DT</div>
+                <div class="col-md-4"><strong>Coûts:</strong> {{ db.coutsEstimes|number_format(0,',', ' ') }} DT</div>
+                <div class="col-md-4"><strong>Revenus:</strong> {{ db.revenusAttendus|number_format(0,',', ' ') }} DT</div>
+                <div class="col-md-4"><strong>Modèle:</strong> {{ db.modeleRevenu }}</div>
+                <div class="col-md-4"><strong>Risque:</strong> {{ db.niveauRisque }}</div>
+                <div class="col-md-4"><strong>Équipe:</strong> {{ db.forceEquipe }}/10</div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-md-4">
+        {# Evaluate #}
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
+            <h6 class="fw-bold mb-3"><i class="bi bi-clipboard-check me-2"></i>Évaluer le projet</h6>
+            <form method="post" action="{{ path('admin_projets_evaluate', {id: projet.id}) }}">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Score (0-100)</label>
+                    <input type="number" min="0" max="100" step="0.1" name="score" class="form-control" value="{{ projet.scoreGlobal }}">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Diagnostic IA</label>
+                    <textarea name="diagnostic" class="form-control" rows="4">{{ projet.diagnosticIa }}</textarea>
+                </div>
+                <button type="submit" class="btn btn-nj w-100"><i class="bi bi-check-lg me-1"></i>Évaluer</button>
+            </form>
+        </div>
+
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h6 class="fw-bold mb-3">Informations</h6>
+            <ul class="list-unstyled mb-0">
+                <li class="mb-2"><strong>Entrepreneur:</strong> {{ projet.user ? projet.user.firstname ~ ' ' ~ projet.user.lastname : 'N/A' }}</li>
+                <li class="mb-2"><strong>Créé le:</strong> {{ projet.dateCreation|date('d/m/Y') }}</li>
+                {% if projet.dateSoumission %}<li class="mb-2"><strong>Soumis le:</strong> {{ projet.dateSoumission|date('d/m/Y') }}</li>{% endif %}
+                {% if projet.dateEvaluation %}<li class="mb-2"><strong>Évalué le:</strong> {{ projet.dateEvaluation|date('d/m/Y') }}</li>{% endif %}
+                {% if projet.scoreGlobal %}<li><strong>Score:</strong> {{ projet.scoreGlobal|number_format(1) }}/100</li>{% endif %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

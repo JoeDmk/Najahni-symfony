@@ -1,0 +1,62 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}Détails Opportunité - Admin Najahni{% endblock %}
+
+{% block main %}
+<a href="{{ path('admin_invest_opportunities') }}" class="text-decoration-none text-muted"><i class="bi bi-arrow-left me-1"></i>Toutes les opportunités</a>
+<h2 class="fw-bold mt-3 mb-4">{{ opportunity.project ? opportunity.project.titre : 'Opportunité #' ~ opportunity.id }}</h2>
+
+<div class="row g-4">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
+            <span class="badge bg-{{ opportunity.status == 'OPEN' ? 'success' : 'secondary' }} mb-3">{{ opportunity.status }}</span>
+            <p>{{ opportunity.description }}</p>
+            <div class="p-3 rounded-3" style="background:rgba(67,97,238,.05)">
+                <div class="d-flex justify-content-between mb-2">
+                    <span>Financement</span>
+                    <span class="fw-bold">{{ opportunity.fundingPercentage|number_format(1) }}%</span>
+                </div>
+                <div class="progress" style="height:10px">
+                    <div class="progress-bar" style="width:{{ opportunity.fundingPercentage }}%;background:var(--nj-gradient)"></div>
+                </div>
+                <div class="d-flex justify-content-between small text-muted mt-1">
+                    <span>{{ opportunity.totalFunded|number_format(0,',', ' ') }} DT</span>
+                    <span>{{ opportunity.targetAmount|number_format(0, ',', ' ') }} DT</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h5 class="fw-bold mb-3">Offres ({{ opportunity.offers|length }})</h5>
+            <div class="table-responsive">
+                <table class="table table-nj">
+                    <thead><tr><th>Investisseur</th><th>Montant</th><th>Statut</th><th>Payé</th></tr></thead>
+                    <tbody>
+                        {% for offer in opportunity.offers %}
+                        <tr>
+                            <td>{{ offer.investor.firstname }} {{ offer.investor.lastname }}</td>
+                            <td class="fw-semibold">{{ offer.proposedAmount|number_format(0,',', ' ') }} DT</td>
+                            <td><span class="badge bg-{{ offer.status == 'ACCEPTED' ? 'success' : (offer.status == 'REJECTED' ? 'danger' : 'warning text-dark') }}">{{ offer.status }}</span></td>
+                            <td>{{ offer.paid ? '✅' : '❌' }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="4" class="text-muted text-center">Aucune offre</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h6 class="fw-bold mb-3">Informations</h6>
+            <ul class="list-unstyled">
+                <li class="mb-2"><strong>Projet:</strong> {{ opportunity.project ? opportunity.project.titre : 'N/A' }}</li>
+                <li class="mb-2"><strong>Deadline:</strong> {{ opportunity.deadline ? opportunity.deadline|date('d/m/Y') : '-' }}</li>
+                {% if opportunity.riskScore %}<li class="mb-2"><strong>Risque:</strong> {{ opportunity.riskScore|number_format(1) }} ({{ opportunity.riskLabel }})</li>{% endif %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

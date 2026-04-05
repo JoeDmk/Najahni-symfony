@@ -1,0 +1,189 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Mon Profil - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-person-circle me-2"></i>Mon Profil</h2>
+    <div class="d-flex gap-2">
+        <a href="{{ path('app_profile_notifications') }}" class="btn btn-outline-secondary position-relative">
+            <i class="bi bi-bell"></i>
+            {% if unreadNotifs > 0 %}
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size:.65rem">{{ unreadNotifs }}</span>
+            {% endif %}
+        </a>
+        <a href="{{ path('app_profile_edit') }}" class="btn btn-nj"><i class="bi bi-pencil me-2"></i>Modifier</a>
+    </div>
+</div>
+
+<div class="row g-4">
+    {# Left Column: Avatar & Quick Info #}
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm text-center p-4" style="border-radius:1rem">
+            {% if app.user.profilePicture %}
+                <img src="{{ app.user.profilePicture }}" class="rounded-circle mx-auto mb-3" width="120" height="120" style="object-fit:cover" alt="Avatar">
+            {% else %}
+                <div class="rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width:120px;height:120px;background:var(--nj-gradient);color:#fff;font-size:3rem">
+                    {{ app.user.firstname|first|upper }}{{ app.user.lastname|first|upper }}
+                </div>
+            {% endif %}
+            <h4 class="fw-bold mb-1">{{ app.user.firstname }} {{ app.user.lastname }}</h4>
+            <span class="badge rounded-pill mb-2" style="background:var(--nj-gradient)">{{ app.user.role }}</span>
+            <p class="text-muted small">{{ app.user.email }}</p>
+            {% if app.user.phone %}<p class="text-muted small mb-0"><i class="bi bi-phone me-1"></i>{{ app.user.phone }}</p>{% endif %}
+        </div>
+
+        {% if app.user.totalXp > 0 %}
+        <div class="card border-0 shadow-sm mt-3 p-4" style="border-radius:1rem">
+            <h6 class="fw-bold mb-3"><i class="bi bi-star-fill text-warning me-2"></i>Expérience</h6>
+            <div class="d-flex align-items-center">
+                <div class="display-6 fw-bold me-3" style="color:var(--nj-primary)">{{ app.user.totalXp }}</div>
+                <span class="text-muted">Points XP</span>
+            </div>
+        </div>
+        {% endif %}
+
+        {# Account Security Card #}
+        <div class="card border-0 shadow-sm mt-3 p-4" style="border-radius:1rem">
+            <h6 class="fw-bold mb-3"><i class="bi bi-shield-check me-2"></i>Sécurité du compte</h6>
+            <div class="d-flex flex-column gap-2">
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="small">Email vérifié</span>
+                    {% if app.user.verified %}
+                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> Oui</span>
+                    {% else %}
+                        <form method="post" action="{{ path('app_profile_verify_email') }}" class="d-inline">
+                            <input type="hidden" name="action" value="send">
+                            <button type="submit" class="badge bg-warning border-0 text-dark" style="cursor:pointer"><i class="bi bi-exclamation-circle"></i> Vérifier</button>
+                        </form>
+                    {% endif %}
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="small">Google lié</span>
+                    {% if app.user.googleProviderId %}
+                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> Oui</span>
+                    {% else %}
+                        <a href="{{ path('app_google_connect') }}" class="badge bg-secondary text-decoration-none"><i class="bi bi-google"></i> Lier</a>
+                    {% endif %}
+                </div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="small">Face ID</span>
+                    {% if app.user.faceRegistered %}
+                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> Actif</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Inactif</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Right Column: Details & History #}
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
+            <h5 class="fw-bold mb-4"><i class="bi bi-info-circle me-2"></i>Informations</h5>
+
+            <div class="row g-3">
+                {% if app.user.bio %}
+                <div class="col-12">
+                    <label class="form-label text-muted small fw-semibold">Bio</label>
+                    <p>{{ app.user.bio }}</p>
+                </div>
+                {% endif %}
+
+                {% if app.user.companyName %}
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold">Entreprise</label>
+                    <p><i class="bi bi-building me-1"></i>{{ app.user.companyName }}</p>
+                </div>
+                {% endif %}
+
+                {% if app.user.linkedinUrl %}
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold">LinkedIn</label>
+                    <p><a href="{{ app.user.linkedinUrl }}" target="_blank" class="text-decoration-none"><i class="bi bi-linkedin me-1"></i>Voir le profil</a></p>
+                </div>
+                {% endif %}
+
+                {% if app.user.address %}
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold">Adresse</label>
+                    <p><i class="bi bi-geo-alt me-1"></i>{{ app.user.address }}</p>
+                </div>
+                {% endif %}
+
+                {% if app.user.dateOfBirth %}
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold">Date de naissance</label>
+                    <p><i class="bi bi-calendar me-1"></i>{{ app.user.dateOfBirth|date('d/m/Y') }}</p>
+                </div>
+                {% endif %}
+
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold">Membre depuis</label>
+                    <p><i class="bi bi-clock me-1"></i>{{ app.user.createdAt|date('d/m/Y') }}</p>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label text-muted small fw-semibold">Statut</label>
+                    <p>
+                        {% if app.user.verified %}
+                            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Vérifié</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-circle me-1"></i>Non vérifié</span>
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        {# Recent Login History #}
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0"><i class="bi bi-clock-history me-2"></i>Connexions récentes</h5>
+                <a href="{{ path('app_profile_login_history') }}" class="btn btn-sm btn-outline-nj">Voir tout</a>
+            </div>
+            {% if loginHistory|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table table-sm mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Date</th>
+                                <th>Méthode</th>
+                                <th>IP</th>
+                                <th>Statut</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for entry in loginHistory|slice(0, 5) %}
+                            <tr>
+                                <td class="small">{{ entry.loginTime|date('d/m/Y H:i') }}</td>
+                                <td>
+                                    {% if entry.loginMethod == 'GOOGLE' %}
+                                        <span class="badge bg-info"><i class="bi bi-google me-1"></i>Google</span>
+                                    {% elseif entry.loginMethod == 'FACE_ID' %}
+                                        <span class="badge" style="background:var(--nj-accent)"><i class="bi bi-person-bounding-box me-1"></i>Face ID</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary"><i class="bi bi-key me-1"></i>Email</span>
+                                    {% endif %}
+                                </td>
+                                <td class="small text-muted">{{ entry.ipAddress }}</td>
+                                <td>
+                                    {% if entry.success %}
+                                        <i class="bi bi-check-circle-fill text-success"></i>
+                                    {% else %}
+                                        <i class="bi bi-x-circle-fill text-danger"></i>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted text-center small mb-0">Aucun historique de connexion.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,154 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Inscription - Najahni{% endblock %}
+
+{% block body %}
+<div class="min-vh-100 d-flex align-items-center justify-content-center py-4" style="background:var(--nj-gradient)">
+    <div class="card shadow-lg border-0" style="width:520px;border-radius:1.5rem">
+        <div class="card-body p-5">
+            <div class="text-center mb-4">
+                <h1 style="font-size:2.5rem">🚀</h1>
+                <h3 class="fw-bold">Rejoindre Najahni</h3>
+                <p class="text-muted">Créez votre compte pour commencer</p>
+            </div>
+
+            <form method="post" id="registerForm">
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Prénom</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-person"></i></span>
+                            <input type="text" name="firstname" class="form-control border-start-0 ps-0" value="{{ user.firstname }}" placeholder="Votre prénom" required>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Nom</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0"><i class="bi bi-person-fill"></i></span>
+                            <input type="text" name="lastname" class="form-control border-start-0 ps-0" value="{{ user.lastname }}" placeholder="Votre nom" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Email</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-envelope"></i></span>
+                        <input type="email" name="email" class="form-control border-start-0 ps-0" value="{{ user.email }}" placeholder="votre@email.com" required>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Téléphone</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-phone"></i></span>
+                        <input type="text" name="phone" class="form-control border-start-0 ps-0" value="{{ user.phone }}" placeholder="+216 XX XXX XXX">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Rôle</label>
+                    <select name="role" class="form-select" required>
+                        <option value="ENTREPRENEUR" {{ user.role == 'ENTREPRENEUR' ? 'selected' }}>🚀 Entrepreneur</option>
+                        <option value="MENTOR" {{ user.role == 'MENTOR' ? 'selected' }}>🎓 Mentor</option>
+                        <option value="INVESTISSEUR" {{ user.role == 'INVESTISSEUR' ? 'selected' }}>💰 Investisseur</option>
+                    </select>
+                </div>
+                <div class="row g-3 mb-3">
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Mot de passe</label>
+                        <div class="input-group">
+                            <input type="password" name="password" id="regPassword" class="form-control border-end-0" placeholder="Min. 6 caractères" required>
+                            <button class="btn btn-outline-secondary border-start-0" type="button" onclick="togglePassword('regPassword', this)">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Confirmer</label>
+                        <div class="input-group">
+                            <input type="password" name="confirm_password" id="regConfirm" class="form-control border-end-0" placeholder="Confirmer" required>
+                            <button class="btn btn-outline-secondary border-start-0" type="button" onclick="togglePassword('regConfirm', this)">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {# Password strength indicator #}
+                <div class="mb-3">
+                    <div class="progress mb-1" style="height:4px">
+                        <div class="progress-bar" id="pwStrength" role="progressbar" style="width:0%"></div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2">
+                        <small id="rLen" class="text-muted"><i class="bi bi-circle"></i> 6+ car.</small>
+                        <small id="rUp" class="text-muted"><i class="bi bi-circle"></i> Majuscule</small>
+                        <small id="rLow" class="text-muted"><i class="bi bi-circle"></i> Minuscule</small>
+                        <small id="rDig" class="text-muted"><i class="bi bi-circle"></i> Chiffre</small>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn-nj w-100 py-2 mb-3">
+                    <i class="bi bi-person-plus me-2"></i>Créer mon compte
+                </button>
+            </form>
+
+            {# Divider #}
+            <div class="d-flex align-items-center my-3">
+                <hr class="flex-grow-1"><span class="px-3 text-muted small">ou</span><hr class="flex-grow-1">
+            </div>
+
+            {# Google Sign Up #}
+            <div class="d-grid mb-3">
+                <a href="{{ path('app_google_connect') }}" class="btn btn-outline-secondary py-2 d-flex align-items-center justify-content-center" style="border-radius:.75rem">
+                    <svg width="18" height="18" viewBox="0 0 24 24" class="me-2">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+                    </svg>
+                    S'inscrire avec Google
+                </a>
+            </div>
+
+            <p class="text-center text-muted mb-0">Déjà un compte ?
+                <a href="{{ path('app_login') }}" class="fw-semibold text-decoration-none" style="color:var(--nj-primary)">Se connecter</a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+function togglePassword(id, btn) {
+    const inp = document.getElementById(id);
+    const icon = btn.querySelector('i');
+    if (inp.type === 'password') { inp.type = 'text'; icon.className = 'bi bi-eye-slash'; }
+    else { inp.type = 'password'; icon.className = 'bi bi-eye'; }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const pw = document.getElementById('regPassword');
+    const bar = document.getElementById('pwStrength');
+
+    pw.addEventListener('input', () => {
+        const v = pw.value;
+        let score = 0;
+        const checks = [
+            ['rLen', v.length >= 6],
+            ['rUp', /[A-Z]/.test(v)],
+            ['rLow', /[a-z]/.test(v)],
+            ['rDig', /\d/.test(v)]
+        ];
+        checks.forEach(([id, met]) => {
+            score += met ? 1 : 0;
+            const el = document.getElementById(id);
+            const icon = el.querySelector('i');
+            if (met) { icon.className = 'bi bi-check-circle-fill text-success'; el.classList.add('text-success'); el.classList.remove('text-muted'); }
+            else { icon.className = 'bi bi-circle'; el.classList.remove('text-success'); el.classList.add('text-muted'); }
+        });
+        const colors = ['', 'bg-danger', 'bg-warning', 'bg-info', 'bg-success'];
+        bar.style.width = (score * 25) + '%';
+        bar.className = 'progress-bar ' + (colors[score] || '');
+    });
+});
+</script>
+{% endblock %}

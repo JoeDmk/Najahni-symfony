@@ -1,0 +1,92 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}Historique de connexion - {{ user.firstname }} {{ user.lastname }} - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-clock-history me-2"></i>Historique de connexion</h2>
+        <p class="text-muted mb-0">{{ user.firstname }} {{ user.lastname }} ({{ user.email }})</p>
+    </div>
+    <a href="{{ path('admin_users') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+</div>
+
+{# Quick stats #}
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card" style="border-left:4px solid var(--nj-primary)">
+            <h3 style="color:var(--nj-primary)">{{ history|length }}</h3>
+            <small class="text-muted">Total connexions</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card" style="border-left:4px solid var(--nj-success)">
+            <h3 style="color:var(--nj-success)">{{ history|filter(h => h.success)|length }}</h3>
+            <small class="text-muted">Réussies</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card" style="border-left:4px solid var(--nj-danger)">
+            <h3 style="color:var(--nj-danger)">{{ history|filter(h => not h.success)|length }}</h3>
+            <small class="text-muted">Échouées</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card" style="border-left:4px solid var(--nj-warning)">
+            <h3 style="color:var(--nj-warning)">{{ user.loginAttempts }}</h3>
+            <small class="text-muted">Tentatives en cours</small>
+        </div>
+    </div>
+</div>
+
+{% if history|length > 0 %}
+<div class="card border-0 shadow-sm" style="border-radius:1rem;overflow:hidden">
+    <div class="table-responsive">
+        <table class="table table-nj mb-0">
+            <thead>
+                <tr>
+                    <th>Date & Heure</th>
+                    <th>Méthode</th>
+                    <th>Adresse IP</th>
+                    <th>Appareil</th>
+                    <th>Statut</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in history %}
+                <tr class="{{ not entry.success ? 'table-danger bg-opacity-10' : '' }}">
+                    <td>{{ entry.loginTime|date('d/m/Y H:i:s') }}</td>
+                    <td>
+                        {% if entry.loginMethod == 'GOOGLE' %}
+                            <span class="badge bg-info"><i class="bi bi-google me-1"></i>Google</span>
+                        {% elseif entry.loginMethod == 'FACE_ID' %}
+                            <span class="badge" style="background:var(--nj-accent)"><i class="bi bi-person-bounding-box me-1"></i>Face ID</span>
+                        {% else %}
+                            <span class="badge bg-secondary"><i class="bi bi-key me-1"></i>Email</span>
+                        {% endif %}
+                    </td>
+                    <td><code>{{ entry.ipAddress }}</code></td>
+                    <td class="small" style="max-width:300px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ entry.deviceInfo }}">
+                        {{ entry.deviceInfo|length > 80 ? entry.deviceInfo|slice(0, 80) ~ '...' : entry.deviceInfo }}
+                    </td>
+                    <td>
+                        {% if entry.success %}
+                            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Succès</span>
+                        {% else %}
+                            <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Échec</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <h4>Aucun historique</h4>
+        <p>Aucune connexion enregistrée pour cet utilisateur.</p>
+    </div>
+{% endif %}
+{% endblock %}

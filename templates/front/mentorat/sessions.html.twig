@@ -1,0 +1,64 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Sessions de mentorat - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-camera-video me-2"></i>Sessions</h2>
+    <a href="{{ path('app_mentorat_requests') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Demandes</a>
+</div>
+
+{% if sessions|length > 0 %}
+<div class="row g-4">
+    {% for session in sessions %}
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm" style="border-radius:1rem">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <h6 class="fw-bold mb-0">
+                            {% if session.mentorshipRequest %}
+                            {{ session.mentorshipRequest.mentor.firstname }} {{ session.mentorshipRequest.mentor.lastname }}
+                            ↔
+                            {{ session.mentorshipRequest.entrepreneur.firstname }} {{ session.mentorshipRequest.entrepreneur.lastname }}
+                            {% else %}Session de mentorat{% endif %}
+                        </h6>
+                    </div>
+                    <span class="badge bg-{{ session.status == 'completed' ? 'success' : (session.status == 'cancelled' ? 'danger' : 'primary') }}">{{ session.status }}</span>
+                </div>
+                <p class="small text-muted mb-1"><i class="bi bi-calendar me-1"></i>{{ session.scheduledAt|date('d/m/Y H:i') }}</p>
+                <p class="small text-muted mb-2"><i class="bi bi-clock me-1"></i>{{ session.durationMinutes }} min</p>
+                {% if session.meetingLink %}
+                    <a href="{{ session.meetingLink }}" class="btn btn-sm btn-outline-primary mb-2" target="_blank"><i class="bi bi-camera-video me-1"></i>Rejoindre</a>
+                {% endif %}
+
+                {# Feedback form #}
+                {% if session.status == 'completed' %}
+                <hr>
+                <form method="post" action="{{ path('app_mentorat_session_feedback', {id: session.id}) }}">
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold small">Votre feedback</label>
+                        <textarea name="feedback" class="form-control form-control-sm" rows="2"></textarea>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label fw-semibold small">Note (1-5)</label>
+                        <select name="rating" class="form-select form-select-sm" style="width:80px">
+                            {% for i in 1..5 %}<option>{{ i }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <button class="btn btn-sm btn-nj"><i class="bi bi-send me-1"></i>Envoyer</button>
+                </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <div style="font-size:5rem">📹</div>
+    <h4 class="fw-bold mt-3">Aucune session</h4>
+    <p class="text-muted">Les sessions apparaîtront après acceptation d'une demande de mentorat</p>
+</div>
+{% endif %}
+{% endblock %}

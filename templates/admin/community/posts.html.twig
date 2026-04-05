@@ -1,0 +1,35 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}Gestion Publications - Najahni{% endblock %}
+
+{% block main %}
+<h2 class="fw-bold mb-4"><i class="bi bi-chat-square-text me-2"></i>Publications</h2>
+
+<div class="card border-0 shadow-sm" style="border-radius:1rem">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-nj mb-0">
+                <thead><tr><th>Auteur</th><th>Contenu</th><th>Réactions</th><th>Date</th><th class="text-end">Actions</th></tr></thead>
+                <tbody>
+                    {% for post in pagination %}
+                    <tr>
+                        <td>{{ post.user.firstname }} {{ post.user.lastname }}</td>
+                        <td>{{ post.content|length > 80 ? post.content|slice(0,80) ~ '...' : post.content }}</td>
+                        <td>{{ post.reactions|length }}</td>
+                        <td>{{ post.createdAt|date('d/m/Y H:i') }}</td>
+                        <td class="text-end">
+                            <form method="post" action="{{ path('admin_community_posts_delete', {id: post.id}) }}" class="d-inline" onsubmit="return confirm('Supprimer ?')">
+                                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="5" class="text-center text-muted py-4">Aucune publication.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div class="d-flex justify-content-center mt-4">{{ knp_pagination_render(pagination) }}</div>
+{% endblock %}

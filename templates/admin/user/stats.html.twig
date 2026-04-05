@@ -1,0 +1,111 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}Statistiques Utilisateurs - Najahni Admin{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-bar-chart-line me-2"></i>Statistiques Utilisateurs</h2>
+    <a href="{{ path('admin_users') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+</div>
+
+{# Overview Cards #}
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="stat-card stat-gradient">
+            <i class="bi bi-people stat-icon"></i>
+            <h3>{{ totalUsers }}</h3>
+            <small>Total utilisateurs</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card" style="border-left:4px solid var(--nj-success)">
+            <i class="bi bi-check-circle stat-icon" style="color:var(--nj-success)"></i>
+            <h3 style="color:var(--nj-success)">{{ verifiedUsers }}</h3>
+            <small class="text-muted">Vérifiés</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card" style="border-left:4px solid var(--nj-danger)">
+            <i class="bi bi-slash-circle stat-icon" style="color:var(--nj-danger)"></i>
+            <h3 style="color:var(--nj-danger)">{{ bannedUsers }}</h3>
+            <small class="text-muted">Bannis</small>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stat-card" style="border-left:4px solid var(--nj-warning)">
+            <i class="bi bi-percent stat-icon" style="color:var(--nj-warning)"></i>
+            <h3 style="color:var(--nj-warning)">{{ totalUsers > 0 ? ((verifiedUsers / totalUsers) * 100)|round(0) : 0 }}%</h3>
+            <small class="text-muted">Taux de vérification</small>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    {# Roles Distribution #}
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h5 class="fw-bold mb-4"><i class="bi bi-pie-chart me-2"></i>Répartition par rôle</h5>
+            {% for rc in roleCounts %}
+                {% set pct = totalUsers > 0 ? ((rc.cnt / totalUsers) * 100)|round(1) : 0 %}
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="badge badge-role-{{ rc.role }}">{{ rc.role }}</span>
+                        <span class="fw-bold">{{ rc.cnt }} <small class="text-muted fw-normal">({{ pct }}%)</small></span>
+                    </div>
+                    <div class="progress" style="height:8px;border-radius:1rem">
+                        <div class="progress-bar" style="width:{{ pct }}%;background:{% if rc.role == 'ADMIN' %}#dc3545{% elseif rc.role == 'ENTREPRENEUR' %}var(--nj-primary){% elseif rc.role == 'MENTOR' %}var(--nj-accent){% else %}var(--nj-secondary){% endif %};border-radius:1rem"></div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {# Recent Logins #}
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h5 class="fw-bold mb-4"><i class="bi bi-clock-history me-2"></i>Connexions récentes</h5>
+            {% if recentLogins|length > 0 %}
+            <div class="table-responsive">
+                <table class="table table-sm mb-0">
+                    <thead class="table-light">
+                        <tr><th>Utilisateur</th><th>Méthode</th><th>Date</th><th>Statut</th></tr>
+                    </thead>
+                    <tbody>
+                        {% for login in recentLogins %}
+                        <tr>
+                            <td class="small">
+                                {% if login.user %}
+                                    {{ login.user.firstname }} {{ login.user.lastname|first }}.
+                                {% else %}
+                                    <span class="text-muted">Supprimé</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if login.loginMethod == 'GOOGLE' %}
+                                    <i class="bi bi-google text-info"></i>
+                                {% elseif login.loginMethod == 'FACE_ID' %}
+                                    <i class="bi bi-person-bounding-box" style="color:var(--nj-accent)"></i>
+                                {% else %}
+                                    <i class="bi bi-key text-secondary"></i>
+                                {% endif %}
+                            </td>
+                            <td class="small text-muted">{{ login.loginTime|date('d/m H:i') }}</td>
+                            <td>
+                                {% if login.success %}
+                                    <i class="bi bi-check-circle-fill text-success"></i>
+                                {% else %}
+                                    <i class="bi bi-x-circle-fill text-danger"></i>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+                <p class="text-muted text-center mb-0">Aucune connexion enregistrée.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,93 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}{{ projet ? 'Modifier' : 'Nouveau' }} Projet - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-{{ projet ? 'pencil-square' : 'plus-circle' }} me-2"></i>{{ projet ? 'Modifier le projet' : 'Nouveau Projet' }}</h2>
+    <a href="{{ path('app_projet_index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+</div>
+
+<form method="post">
+<div class="row g-4">
+    <div class="col-md-7">
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h5 class="fw-bold mb-4">Informations du projet</h5>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Titre</label>
+                <input type="text" name="titre" class="form-control" value="{{ projet ? projet.titre }}" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Description</label>
+                <textarea name="description" class="form-control" rows="5" required>{{ projet ? projet.description }}</textarea>
+            </div>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Secteur</label>
+                    <input type="text" name="secteur" class="form-control" value="{{ projet ? projet.secteur }}" placeholder="ex: Tech, Santé...">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Étape</label>
+                    <select name="etape" class="form-select">
+                        {% for e in ['Idéation', 'MVP', 'Lancement', 'Croissance', 'Maturité'] %}
+                            <option value="{{ e }}" {{ projet and projet.etape == e ? 'selected' }}>{{ e }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Statut</label>
+                    <select name="statut" class="form-select">
+                        {% for s in ['En cours', 'En pause', 'Terminé'] %}
+                            <option value="{{ s }}" {{ projet and projet.statut == s ? 'selected' }}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-5">
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h5 class="fw-bold mb-4"><i class="bi bi-graph-up me-2"></i>Données Business</h5>
+            {% set db = projet ? projet.donneesBusiness : null %}
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Taille du marché (DT)</label>
+                <input type="number" step="0.01" name="taille_marche" class="form-control" value="{{ db ? db.tailleMarche }}">
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Modèle de revenu</label>
+                <input type="text" name="modele_revenu" class="form-control" value="{{ db ? db.modeleRevenu }}">
+            </div>
+            <div class="row g-3">
+                <div class="col-6">
+                    <label class="form-label fw-semibold">Coûts estimés (DT)</label>
+                    <input type="number" step="0.01" name="couts_estimes" class="form-control" value="{{ db ? db.coutsEstimes }}">
+                </div>
+                <div class="col-6">
+                    <label class="form-label fw-semibold">Revenus attendus (DT)</label>
+                    <input type="number" step="0.01" name="revenus_attendus" class="form-control" value="{{ db ? db.revenusAttendus }}">
+                </div>
+            </div>
+            <div class="row g-3 mt-1">
+                <div class="col-6">
+                    <label class="form-label fw-semibold">Niveau de risque</label>
+                    <select name="niveau_risque" class="form-select">
+                        {% for n in ['Faible', 'Modéré', 'Élevé', 'Très élevé'] %}
+                            <option value="{{ n }}" {{ db and db.niveauRisque == n ? 'selected' }}>{{ n }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-6">
+                    <label class="form-label fw-semibold">Force d'équipe (1-10)</label>
+                    <input type="number" min="1" max="10" name="force_equipe" class="form-control" value="{{ db ? db.forceEquipe }}">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-4">
+    <button type="submit" class="btn btn-nj btn-lg"><i class="bi bi-check-lg me-2"></i>{{ projet ? 'Enregistrer' : 'Créer le projet' }}</button>
+</div>
+</form>
+{% endblock %}

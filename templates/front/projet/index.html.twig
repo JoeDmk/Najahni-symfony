@@ -1,0 +1,60 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Mes Projets - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-rocket-takeoff me-2"></i>Mes Projets</h2>
+    <a href="{{ path('app_projet_new') }}" class="btn btn-nj"><i class="bi bi-plus-lg me-2"></i>Nouveau Projet</a>
+</div>
+
+{% if projets|length > 0 %}
+<div class="row g-4">
+    {% for projet in projets %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm h-100" style="border-radius:1rem;transition:transform .2s">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h5 class="fw-bold mb-0">{{ projet.titre }}</h5>
+                    <span class="badge rounded-pill {{ projet.statutProjet == 'EVALUE' ? 'bg-success' : (projet.statutProjet == 'SOUMIS' ? 'bg-warning text-dark' : 'bg-secondary') }}">
+                        {{ projet.statutProjet }}
+                    </span>
+                </div>
+                <p class="text-muted small mb-3">{{ projet.description|length > 120 ? projet.description|slice(0,120) ~ '...' : projet.description }}</p>
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    {% if projet.secteur %}<span class="badge bg-primary bg-opacity-10 text-primary">{{ projet.secteur }}</span>{% endif %}
+                    {% if projet.etape %}<span class="badge bg-info bg-opacity-10 text-info">{{ projet.etape }}</span>{% endif %}
+                </div>
+                {% if projet.scoreGlobal %}
+                <div class="mb-3">
+                    <small class="text-muted">Score global</small>
+                    <div class="progress" style="height:8px">
+                        <div class="progress-bar" style="width:{{ projet.scoreGlobal }}%;background:var(--nj-gradient)"></div>
+                    </div>
+                </div>
+                {% endif %}
+                <div class="d-flex gap-2">
+                    <a href="{{ path('app_projet_show', {id: projet.id}) }}" class="btn btn-sm btn-outline-primary flex-fill">
+                        <i class="bi bi-eye me-1"></i>Détails
+                    </a>
+                    <a href="{{ path('app_projet_edit', {id: projet.id}) }}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                </div>
+            </div>
+            <div class="card-footer bg-transparent border-0 px-4 pb-3">
+                <small class="text-muted">Créé le {{ projet.dateCreation|date('d/m/Y') }}</small>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <div style="font-size:5rem">📋</div>
+    <h4 class="fw-bold mt-3">Aucun projet pour le moment</h4>
+    <p class="text-muted">Commencez par créer votre premier projet entrepreneurial</p>
+    <a href="{{ path('app_projet_new') }}" class="btn btn-nj"><i class="bi bi-plus-lg me-2"></i>Créer un projet</a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,47 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Ma Progression - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-bar-chart me-2"></i>Ma Progression</h2>
+    <a href="{{ path('app_apprentissage_cours') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Cours</a>
+</div>
+
+{% if progressions|length > 0 %}
+<div class="row g-4">
+    {% for p in progressions %}
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm" style="border-radius:1rem">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h5 class="fw-bold mb-0">{{ p.cours.titre }}</h5>
+                    <span class="badge bg-{{ p.etat == 'COMPLETE' ? 'success' : (p.etat == 'CERTIFIE' ? 'warning text-dark' : (p.etat == 'EN_COURS' ? 'primary' : 'secondary')) }}">
+                        {{ p.etat }}
+                    </span>
+                </div>
+                <div class="progress mb-2" style="height:10px">
+                    <div class="progress-bar" style="width:{{ p.pourcentage }}%;background:var(--nj-gradient)"></div>
+                </div>
+                <div class="d-flex justify-content-between small text-muted">
+                    <span>{{ p.pourcentage }}% complété</span>
+                    <span>{{ p.pointsXp }} XP</span>
+                </div>
+                <div class="mt-2 small text-muted">
+                    <i class="bi bi-calendar me-1"></i>Début : {{ p.dateDebut|date('d/m/Y') }}
+                    {% if p.dateObtention %} · Terminé : {{ p.dateObtention|date('d/m/Y') }}{% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <div style="font-size:5rem">📈</div>
+    <h4 class="fw-bold mt-3">Aucune progression</h4>
+    <p class="text-muted">Inscrivez-vous à un cours pour commencer</p>
+    <a href="{{ path('app_apprentissage_cours') }}" class="btn btn-nj">Explorer les cours</a>
+</div>
+{% endif %}
+{% endblock %}

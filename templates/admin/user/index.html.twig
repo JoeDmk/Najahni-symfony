@@ -1,0 +1,163 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}Gestion des utilisateurs - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-people me-2"></i>Utilisateurs</h2>
+    <div class="d-flex gap-2">
+        <a href="{{ path('admin_users_export_csv') }}" class="btn btn-outline-secondary"><i class="bi bi-download me-1"></i>CSV</a>
+        <a href="{{ path('admin_users_broadcast') }}" class="btn btn-outline-secondary"><i class="bi bi-megaphone me-1"></i>Broadcast</a>
+        <a href="{{ path('admin_users_stats') }}" class="btn btn-outline-secondary"><i class="bi bi-bar-chart-line me-1"></i>Stats</a>
+        <a href="{{ path('admin_users_new') }}" class="btn btn-nj"><i class="bi bi-plus-lg me-2"></i>Ajouter</a>
+    </div>
+</div>
+
+{# Stat Cards #}
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="stat-card" style="border-left:4px solid var(--nj-primary)">
+            <i class="bi bi-people stat-icon" style="color:var(--nj-primary)"></i>
+            <h3 style="color:var(--nj-primary)">{{ totalUsers }}</h3>
+            <small class="text-muted">Total utilisateurs</small>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card" style="border-left:4px solid var(--nj-success)">
+            <i class="bi bi-check-circle stat-icon" style="color:var(--nj-success)"></i>
+            <h3 style="color:var(--nj-success)">{{ verifiedUsers }}</h3>
+            <small class="text-muted">Vérifiés</small>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card" style="border-left:4px solid var(--nj-danger)">
+            <i class="bi bi-slash-circle stat-icon" style="color:var(--nj-danger)"></i>
+            <h3 style="color:var(--nj-danger)">{{ bannedUsers }}</h3>
+            <small class="text-muted">Bannis</small>
+        </div>
+    </div>
+</div>
+
+{# Search & Filters #}
+<div class="card border-0 shadow-sm mb-4" style="border-radius:1rem">
+    <div class="card-body p-3">
+        <form method="get" class="d-flex gap-2 flex-wrap">
+            <input type="text" name="q" class="form-control" style="max-width:300px" placeholder="Rechercher par nom, email..." value="{{ search }}">
+            <select name="role" class="form-select" style="max-width:180px">
+                <option value="">Tous les rôles</option>
+                <option value="ADMIN" {{ roleFilter == 'ADMIN' ? 'selected' }}>Admin</option>
+                <option value="ENTREPRENEUR" {{ roleFilter == 'ENTREPRENEUR' ? 'selected' }}>Entrepreneur</option>
+                <option value="MENTOR" {{ roleFilter == 'MENTOR' ? 'selected' }}>Mentor</option>
+                <option value="INVESTISSEUR" {{ roleFilter == 'INVESTISSEUR' ? 'selected' }}>Investisseur</option>
+            </select>
+            <select name="status" class="form-select" style="max-width:180px">
+                <option value="">Tous statuts</option>
+                <option value="banned" {{ statusFilter == 'banned' ? 'selected' }}>Bannis</option>
+                <option value="inactive" {{ statusFilter == 'inactive' ? 'selected' }}>Inactifs</option>
+                <option value="unverified" {{ statusFilter == 'unverified' ? 'selected' }}>Non vérifiés</option>
+            </select>
+            <button class="btn btn-nj px-4"><i class="bi bi-search"></i></button>
+            {% if search or roleFilter or statusFilter %}
+                <a href="{{ path('admin_users') }}" class="btn btn-outline-secondary"><i class="bi bi-x-lg"></i></a>
+            {% endif %}
+        </form>
+    </div>
+</div>
+
+{# User Table #}
+<div class="card border-0 shadow-sm" style="border-radius:1rem">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-nj mb-0">
+                <thead>
+                    <tr>
+                        <th>Utilisateur</th>
+                        <th>Email</th>
+                        <th>Rôle</th>
+                        <th>Statut</th>
+                        <th>Tentatives</th>
+                        <th>Inscrit le</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in pagination %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                {% if user.profilePicture %}
+                                    <img src="{{ user.profilePicture }}" class="rounded-circle me-2" width="36" height="36" style="object-fit:cover" alt="">
+                                {% else %}
+                                <div class="rounded-circle d-flex align-items-center justify-content-center me-2" style="width:36px;height:36px;background:var(--nj-gradient);color:#fff;font-size:.85rem">
+                                    {{ user.firstname|first|upper }}{{ user.lastname|first|upper }}
+                                </div>
+                                {% endif %}
+                                <div>
+                                    <span class="fw-semibold">{{ user.firstname }} {{ user.lastname }}</span>
+                                    {% if user.googleProviderId %}
+                                        <i class="bi bi-google text-info ms-1" title="Compte Google lié" style="font-size:.75rem"></i>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ user.email }}</td>
+                        <td><span class="badge badge-role-{{ user.role }}">{{ user.role }}</span></td>
+                        <td>
+                            {% if user.isBanned %}
+                                <span class="badge bg-danger">Banni</span>
+                            {% elseif not user.isActive %}
+                                <span class="badge bg-secondary">Verrouillé</span>
+                            {% elseif user.verified %}
+                                <span class="badge bg-success">Actif</span>
+                            {% else %}
+                                <span class="badge bg-warning text-dark">Non vérifié</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if user.loginAttempts > 0 %}
+                                <span class="badge bg-{{ user.loginAttempts >= 3 ? 'danger' : 'warning' }}">{{ user.loginAttempts }}</span>
+                            {% else %}
+                                <span class="text-muted">0</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ user.createdAt|date('d/m/Y') }}</td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ path('admin_users_login_history', {id: user.id}) }}" class="btn btn-outline-info" title="Historique">
+                                    <i class="bi bi-clock-history"></i>
+                                </a>
+                                <a href="{{ path('admin_users_edit', {id: user.id}) }}" class="btn btn-outline-primary" title="Modifier">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                {% if not user.isActive or user.isBanned %}
+                                <form method="post" action="{{ path('admin_users_unlock', {id: user.id}) }}" class="d-inline">
+                                    <button class="btn btn-outline-success" title="Déverrouiller"><i class="bi bi-unlock"></i></button>
+                                </form>
+                                {% endif %}
+                                <form method="post" action="{{ path('admin_users_toggle_ban', {id: user.id}) }}" class="d-inline">
+                                    <button class="btn btn-outline-{{ user.isBanned ? 'success' : 'warning' }}" title="{{ user.isBanned ? 'Débannir' : 'Bannir' }}">
+                                        <i class="bi bi-{{ user.isBanned ? 'unlock' : 'slash-circle' }}"></i>
+                                    </button>
+                                </form>
+                                <form method="post" action="{{ path('admin_users_delete', {id: user.id}) }}" class="d-inline" onsubmit="return confirm('Supprimer cet utilisateur ?')">
+                                    <button class="btn btn-outline-danger" title="Supprimer">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" class="text-center text-muted py-4">Aucun utilisateur trouvé.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+{# Pagination #}
+<div class="d-flex justify-content-center mt-4">
+    {{ knp_pagination_render(pagination) }}
+</div>
+{% endblock %}

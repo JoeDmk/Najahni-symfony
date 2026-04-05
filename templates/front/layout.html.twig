@@ -1,0 +1,87 @@
+{% extends 'base.html.twig' %}
+
+{% block body %}
+{# Top Navbar #}
+<nav class="navbar navbar-expand-lg navbar-nj navbar-dark sticky-top">
+    <div class="container-fluid px-4">
+        <a class="navbar-brand text-white" href="{{ path('app_home') }}">🚀 Najahni</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navMain">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                <li class="nav-item"><a class="nav-link {{ app.request.attributes.get('_route') starts with 'app_home' ? 'active' }}" href="{{ path('app_home') }}"><i class="bi bi-house-door me-1"></i>Accueil</a></li>
+                <li class="nav-item"><a class="nav-link {{ app.request.attributes.get('_route') starts with 'app_community' ? 'active' }}" href="{{ path('app_community_posts') }}"><i class="bi bi-people me-1"></i>Communauté</a></li>
+                <li class="nav-item"><a class="nav-link {{ app.request.attributes.get('_route') starts with 'app_projet' ? 'active' }}" href="{{ path('app_projet_index') }}"><i class="bi bi-kanban me-1"></i>Projets</a></li>
+                <li class="nav-item"><a class="nav-link {{ app.request.attributes.get('_route') starts with 'app_invest' ? 'active' }}" href="{{ path('app_invest_opportunities') }}"><i class="bi bi-graph-up-arrow me-1"></i>Investissement</a></li>
+                <li class="nav-item"><a class="nav-link {{ app.request.attributes.get('_route') starts with 'app_mentorat' ? 'active' }}" href="{{ path('app_mentorat_requests') }}"><i class="bi bi-mortarboard me-1"></i>Mentorat</a></li>
+                <li class="nav-item"><a class="nav-link {{ app.request.attributes.get('_route') starts with 'app_apprentissage' ? 'active' }}" href="{{ path('app_apprentissage_cours') }}"><i class="bi bi-book me-1"></i>Apprentissage</a></li>
+            </ul>
+            <ul class="navbar-nav">
+                {% if app.user %}
+                {% if is_granted('ROLE_ADMIN') %}
+                <li class="nav-item"><a class="nav-link" href="{{ path('admin_dashboard') }}"><i class="bi bi-shield-lock me-1"></i>Admin</a></li>
+                {% endif %}
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ path('app_profile_notifications') }}">
+                        <i class="bi bi-bell me-1"></i>
+                    </a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-person-circle me-1"></i>{{ app.user.firstname }}
+                    </a>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{{ path('app_profile') }}"><i class="bi bi-person me-2"></i>Mon Profil</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-danger" href="{{ path('app_logout') }}"><i class="bi bi-box-arrow-right me-2"></i>Déconnexion</a></li>
+                    </ul>
+                </li>
+                {% else %}
+                <li class="nav-item"><a class="nav-link" href="{{ path('app_login') }}"><i class="bi bi-box-arrow-in-right me-1"></i>Connexion</a></li>
+                <li class="nav-item"><a class="nav-link" href="{{ path('app_register') }}"><i class="bi bi-person-plus me-1"></i>Inscription</a></li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<main class="container-fluid py-4 px-4 fade-in" style="min-height:calc(100vh - 200px)">
+    {% block main %}{% endblock %}
+</main>
+
+{# Footer #}
+<footer class="nj-footer mt-5">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-md-4">
+                <h5 class="fw-bold text-white mb-3">🚀 Najahni</h5>
+                <p class="small mb-0">La plateforme tunisienne qui connecte entrepreneurs, mentors et investisseurs pour bâtir l'avenir.</p>
+            </div>
+            <div class="col-md-4">
+                <h6 class="fw-bold text-white mb-3">Modules</h6>
+                <div class="d-flex flex-column gap-1">
+                    <a href="{{ path('app_projet_index') }}"><i class="bi bi-rocket-takeoff me-2"></i>Projets</a>
+                    <a href="{{ path('app_invest_opportunities') }}"><i class="bi bi-graph-up-arrow me-2"></i>Investissement</a>
+                    <a href="{{ path('app_community_posts') }}"><i class="bi bi-people me-2"></i>Communauté</a>
+                    <a href="{{ path('app_mentorat_requests') }}"><i class="bi bi-mortarboard me-2"></i>Mentorat</a>
+                    <a href="{{ path('app_apprentissage_cours') }}"><i class="bi bi-book me-2"></i>Apprentissage</a>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <h6 class="fw-bold text-white mb-3">Contact</h6>
+                <p class="small mb-1"><i class="bi bi-geo-alt me-2"></i>Esprit, Ariana, Tunisie</p>
+                <p class="small mb-1"><i class="bi bi-envelope me-2"></i>contact@najahni.tn</p>
+                <p class="small mb-3"><i class="bi bi-telephone me-2"></i>+216 XX XXX XXX</p>
+                <div class="d-flex gap-3">
+                    <a href="#" class="text-white"><i class="bi bi-facebook" style="font-size:1.2rem"></i></a>
+                    <a href="#" class="text-white"><i class="bi bi-linkedin" style="font-size:1.2rem"></i></a>
+                    <a href="#" class="text-white"><i class="bi bi-instagram" style="font-size:1.2rem"></i></a>
+                </div>
+            </div>
+        </div>
+        <hr style="border-color:rgba(255,255,255,.15)">
+        <p class="text-center small mb-0">&copy; {{ "now"|date('Y') }} Najahni — Projet PIDEV 3A Esprit. Tous droits réservés.</p>
+    </div>
+</footer>
+{% endblock %}

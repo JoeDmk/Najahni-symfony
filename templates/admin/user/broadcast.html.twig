@@ -1,0 +1,50 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}Email Broadcast - Najahni Admin{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-megaphone me-2"></i>Email Broadcast</h2>
+    <a href="{{ path('admin_users') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h5 class="fw-bold mb-4">Envoyer un email à tous les utilisateurs</h5>
+            <form method="post">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Destinataires</label>
+                    <select name="target_role" class="form-select">
+                        <option value="">Tous les utilisateurs actifs</option>
+                        <option value="ENTREPRENEUR">Entrepreneurs uniquement</option>
+                        <option value="MENTOR">Mentors uniquement</option>
+                        <option value="INVESTISSEUR">Investisseurs uniquement</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Sujet</label>
+                    <input type="text" name="subject" class="form-control" placeholder="Sujet de l'email..." required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Contenu</label>
+                    <textarea name="body" class="form-control" rows="8" placeholder="Rédigez votre message ici..." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-nj" onclick="return confirm('Envoyer cet email à tous les utilisateurs sélectionnés ?')">
+                    <i class="bi bi-send me-2"></i>Envoyer
+                </button>
+            </form>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h6 class="fw-bold mb-3"><i class="bi bi-info-circle me-2"></i>Information</h6>
+            <ul class="list-unstyled small text-muted mb-0">
+                <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>L'email sera envoyé uniquement aux comptes actifs et non bannis.</li>
+                <li class="mb-2"><i class="bi bi-clock text-warning me-2"></i>Un délai de 200ms est appliqué entre chaque envoi pour éviter le spam.</li>
+                <li><i class="bi bi-envelope text-primary me-2"></i>Les emails utilisent le template Najahni avec le branding de la plateforme.</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}

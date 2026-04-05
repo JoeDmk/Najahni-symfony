@@ -1,0 +1,42 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}Gestion des Badges - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-award me-2"></i>Badges</h2>
+    <a href="{{ path('admin_badges_new') }}" class="btn btn-nj"><i class="bi bi-plus-lg me-2"></i>Ajouter</a>
+</div>
+
+<div class="card border-0 shadow-sm" style="border-radius:1rem">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-nj mb-0">
+                <thead><tr><th>Icône</th><th>Nom</th><th>Rareté</th><th>XP requis</th><th>Actif</th><th class="text-end">Actions</th></tr></thead>
+                <tbody>
+                    {% for b in pagination %}
+                    <tr>
+                        <td style="font-size:1.5rem">{{ b.icone ?? '🏆' }}</td>
+                        <td class="fw-semibold">{{ b.nom }}</td>
+                        <td><span class="badge {{ b.rarete == 'LEGENDAIRE' ? 'bg-warning text-dark' : (b.rarete == 'EPIQUE' ? 'bg-danger' : (b.rarete == 'RARE' ? 'bg-primary' : 'bg-secondary')) }}">{{ b.rarete }}</span></td>
+                        <td>{{ b.pointsRequis }}</td>
+                        <td>{{ b.actif ? '✅' : '❌' }}</td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ path('admin_badges_edit', {id: b.id}) }}" class="btn btn-outline-primary"><i class="bi bi-pencil"></i></a>
+                                <form method="post" action="{{ path('admin_badges_delete', {id: b.id}) }}" class="d-inline" onsubmit="return confirm('Supprimer ?')">
+                                    <button class="btn btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center text-muted py-4">Aucun badge.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div class="d-flex justify-content-center mt-4">{{ knp_pagination_render(pagination) }}</div>
+{% endblock %}

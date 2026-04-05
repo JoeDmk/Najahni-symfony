@@ -1,0 +1,142 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Modifier mon profil - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-pencil-square me-2"></i>Modifier mon profil</h2>
+    <a href="{{ path('app_profile') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h5 class="fw-bold mb-4">Informations personnelles</h5>
+            <form method="post" enctype="multipart/form-data">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Prénom</label>
+                        <input type="text" name="firstname" class="form-control" value="{{ app.user.firstname }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Nom</label>
+                        <input type="text" name="lastname" class="form-control" value="{{ app.user.lastname }}" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Email</label>
+                        <input type="email" name="email" class="form-control" value="{{ app.user.email }}" required>
+                        {% if not app.user.verified %}
+                            <small class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>Non vérifié</small>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Téléphone</label>
+                        <input type="text" name="phone" class="form-control" value="{{ app.user.phone }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Date de naissance</label>
+                        <input type="date" name="date_of_birth" class="form-control" value="{{ app.user.dateOfBirth ? app.user.dateOfBirth|date('Y-m-d') }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Langue préférée</label>
+                        <select name="preferred_language" class="form-select">
+                            <option value="fr" {{ app.user.preferredLanguage == 'fr' ? 'selected' }}>🇫🇷 Français</option>
+                            <option value="en" {{ app.user.preferredLanguage == 'en' ? 'selected' }}>🇬🇧 English</option>
+                            <option value="ar" {{ app.user.preferredLanguage == 'ar' ? 'selected' }}>🇹🇳 العربية</option>
+                        </select>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Bio</label>
+                        <textarea name="bio" class="form-control" rows="3">{{ app.user.bio }}</textarea>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">Entreprise</label>
+                        <input type="text" name="company_name" class="form-control" value="{{ app.user.companyName }}">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold">LinkedIn</label>
+                        <input type="url" name="linkedin_url" class="form-control" value="{{ app.user.linkedinUrl }}">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Adresse</label>
+                        <input type="text" name="address" class="form-control" value="{{ app.user.address }}">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-semibold">Photo de profil</label>
+                        <input type="file" name="profile_picture" class="form-control" accept="image/*">
+                        {% if app.user.profilePicture %}
+                            <div class="mt-2 d-flex align-items-center gap-2">
+                                <img src="{{ app.user.profilePicture }}" class="rounded-circle" width="40" height="40" style="object-fit:cover" alt="">
+                                <small class="text-muted">Photo actuelle</small>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-nj mt-4"><i class="bi bi-check-lg me-2"></i>Enregistrer</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        {# Change Password #}
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
+            <h5 class="fw-bold mb-4"><i class="bi bi-shield-lock me-2"></i>Changer le mot de passe</h5>
+            <form method="post" action="{{ path('app_profile_password') }}">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Mot de passe actuel</label>
+                    <div class="input-group">
+                        <input type="password" name="current_password" id="curPw" class="form-control border-end-0" required>
+                        <button class="btn btn-outline-secondary border-start-0" type="button" onclick="togglePw('curPw',this)"><i class="bi bi-eye"></i></button>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Nouveau mot de passe</label>
+                    <div class="input-group">
+                        <input type="password" name="new_password" id="newPw" class="form-control border-end-0" required>
+                        <button class="btn btn-outline-secondary border-start-0" type="button" onclick="togglePw('newPw',this)"><i class="bi bi-eye"></i></button>
+                    </div>
+                    <div class="progress mt-1" style="height:3px">
+                        <div class="progress-bar" id="pwBar" style="width:0%"></div>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Confirmer</label>
+                    <input type="password" name="confirm_password" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-outline-danger w-100"><i class="bi bi-key me-2"></i>Modifier</button>
+            </form>
+        </div>
+
+        {# Quick Links #}
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h5 class="fw-bold mb-3"><i class="bi bi-link-45deg me-2"></i>Liens rapides</h5>
+            <div class="d-grid gap-2">
+                <a href="{{ path('app_profile_login_history') }}" class="btn btn-outline-secondary btn-sm text-start">
+                    <i class="bi bi-clock-history me-2"></i>Historique de connexion
+                </a>
+                <a href="{{ path('app_profile_notifications') }}" class="btn btn-outline-secondary btn-sm text-start">
+                    <i class="bi bi-bell me-2"></i>Notifications
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+function togglePw(id, btn) {
+    const inp = document.getElementById(id);
+    const icon = btn.querySelector('i');
+    if (inp.type === 'password') { inp.type = 'text'; icon.className = 'bi bi-eye-slash'; }
+    else { inp.type = 'password'; icon.className = 'bi bi-eye'; }
+}
+document.getElementById('newPw').addEventListener('input', function() {
+    const v = this.value;
+    let score = (v.length >= 6 ? 1 : 0) + (/[A-Z]/.test(v) ? 1 : 0) + (/[a-z]/.test(v) ? 1 : 0) + (/\d/.test(v) ? 1 : 0);
+    const bar = document.getElementById('pwBar');
+    bar.style.width = (score * 25) + '%';
+    bar.className = 'progress-bar ' + ['', 'bg-danger', 'bg-warning', 'bg-info', 'bg-success'][score];
+});
+</script>
+{% endblock %}

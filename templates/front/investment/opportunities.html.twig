@@ -1,0 +1,56 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Opportunités d'investissement - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-cash-stack me-2"></i>Opportunités d'investissement</h2>
+    <div class="d-flex gap-2">
+        <a href="{{ path('app_invest_my_offers') }}" class="btn btn-outline-primary"><i class="bi bi-list-check me-1"></i>Mes Offres</a>
+        <a href="{{ path('app_invest_create_opportunity') }}" class="btn btn-nj"><i class="bi bi-plus-lg me-1"></i>Créer une opportunité</a>
+    </div>
+</div>
+
+{% if opportunities|length > 0 %}
+<div class="row g-4">
+    {% for opp in opportunities %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm h-100" style="border-radius:1rem">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <h5 class="fw-bold mb-0">{{ opp.project ? opp.project.titre : 'Projet' }}</h5>
+                    <span class="badge bg-{{ opp.status == 'OPEN' ? 'success' : (opp.status == 'FUNDED' ? 'primary' : 'secondary') }}">{{ opp.status }}</span>
+                </div>
+                <p class="text-muted small mb-3">{{ opp.description|length > 100 ? opp.description|slice(0,100) ~ '...' : opp.description }}</p>
+
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span>{{ opp.totalFunded|number_format(0, ',', ' ') }} DT</span>
+                        <span class="fw-semibold">{{ opp.targetAmount|number_format(0, ',', ' ') }} DT</span>
+                    </div>
+                    <div class="progress" style="height:8px">
+                        <div class="progress-bar" style="width:{{ opp.fundingPercentage }}%;background:var(--nj-gradient)"></div>
+                    </div>
+                    <small class="text-muted">{{ opp.fundingPercentage|number_format(1) }}% financé</small>
+                </div>
+
+                {% if opp.deadline %}
+                <p class="text-muted small mb-3"><i class="bi bi-clock me-1"></i>Deadline : {{ opp.deadline|date('d/m/Y') }}</p>
+                {% endif %}
+
+                <a href="{{ path('app_invest_opportunity_show', {id: opp.id}) }}" class="btn btn-sm btn-outline-primary w-100">
+                    <i class="bi bi-eye me-1"></i>Voir les détails
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <div style="font-size:5rem">💰</div>
+    <h4 class="fw-bold mt-3">Aucune opportunité disponible</h4>
+    <p class="text-muted">Les opportunités d'investissement apparaîtront ici</p>
+</div>
+{% endif %}
+{% endblock %}

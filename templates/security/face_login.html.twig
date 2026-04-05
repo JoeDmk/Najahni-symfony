@@ -1,0 +1,127 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Face ID - Najahni{% endblock %}
+
+{% block body %}
+<div class="min-vh-100 d-flex align-items-center justify-content-center" style="background:var(--nj-gradient)">
+    <div class="card shadow-lg border-0" style="width:500px;border-radius:1.5rem">
+        <div class="card-body p-5">
+            <div class="text-center mb-4">
+                <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-3" style="width:80px;height:80px;background:rgba(114,9,183,.1)">
+                    <i class="bi bi-person-bounding-box" style="font-size:2.5rem;color:var(--nj-accent)"></i>
+                </div>
+                <h3 class="fw-bold">Connexion Face ID</h3>
+                <p class="text-muted">Placez votre visage devant la caméra pour vous connecter.</p>
+            </div>
+
+            {# Camera Preview #}
+            <div class="position-relative mb-4" id="cameraContainer">
+                <div class="rounded-4 overflow-hidden bg-dark d-flex align-items-center justify-content-center" style="height:300px" id="videoContainer">
+                    <video id="video" autoplay playsinline muted class="w-100 h-100 d-none" style="object-fit:cover"></video>
+                    <div id="cameraPlaceholder" class="text-center text-white">
+                        <i class="bi bi-camera-video" style="font-size:4rem;opacity:.5"></i>
+                        <p class="mt-2 mb-0 opacity-75">Cliquez pour activer la caméra</p>
+                    </div>
+                </div>
+                <canvas id="overlay" class="position-absolute top-0 start-0 w-100 h-100 d-none" style="pointer-events:none"></canvas>
+            </div>
+
+            {# Status #}
+            <div class="text-center mb-3">
+                <div id="statusMsg" class="alert d-none"></div>
+            </div>
+
+            {# Controls #}
+            <div class="d-grid gap-2">
+                <button class="btn btn-nj py-2" id="startBtn" onclick="startCamera()">
+                    <i class="bi bi-camera-video me-2"></i>Activer la caméra
+                </button>
+                <button class="btn btn-outline-nj py-2 d-none" id="captureBtn" onclick="captureAndLogin()">
+                    <i class="bi bi-person-check me-2"></i>Scanner mon visage
+                </button>
+            </div>
+
+            <hr class="my-4">
+
+            <p class="text-center mb-0">
+                <a href="{{ path('app_login') }}" class="text-decoration-none" style="color:var(--nj-primary)">
+                    <i class="bi bi-arrow-left me-1"></i>Connexion classique
+                </a>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+let stream = null;
+const video = document.getElementById('video');
+const placeholder = document.getElementById('cameraPlaceholder');
+const startBtn = document.getElementById('startBtn');
+const captureBtn = document.getElementById('captureBtn');
+const statusMsg = document.getElementById('statusMsg');
+
+function showStatus(msg, type) {
+    statusMsg.className = 'alert alert-' + type;
+    statusMsg.innerHTML = msg;
+    statusMsg.classList.remove('d-none');
+}
+
+async function startCamera() {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } });
+        video.srcObject = stream;
+        video.classList.remove('d-none');
+        placeholder.classList.add('d-none');
+        startBtn.classList.add('d-none');
+        captureBtn.classList.remove('d-none');
+        showStatus('<i class="bi bi-camera-video-fill me-2"></i>Caméra activée. Cliquez sur "Scanner mon visage".', 'info');
+    } catch (err) {
+        showStatus('<i class="bi bi-exclamation-triangle me-2"></i>Impossible d\'accéder à la caméra. Vérifiez les permissions.', 'danger');
+    }
+}
+
+async function captureAndLogin() {
+    captureBtn.disabled = true;
+    captureBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Analyse en cours...';
+    showStatus('<i class="bi bi-hourglass-split me-2"></i>Analyse du visage en cours...', 'warning');
+
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+
+    try {
+        const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.8));
+        const formData = new FormData();
+        formData.append('face_image', blob, 'face.jpg');
+
+        const response = await fetch('/api/face-login', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            showStatus('<i class="bi bi-check-circle me-2"></i>Visage reconnu ! Redirection...', 'success');
+            setTimeout(() => { window.location.href = data.redirect || '/'; }, 1000);
+        } else {
+            showStatus('<i class="bi bi-x-circle me-2"></i>' + (data.message || 'Visage non reconnu. Réessayez.'), 'danger');
+            captureBtn.disabled = false;
+            captureBtn.innerHTML = '<i class="bi bi-person-check me-2"></i>Scanner mon visage';
+        }
+    } catch (err) {
+        showStatus('<i class="bi bi-x-circle me-2"></i>Erreur de connexion. Réessayez.', 'danger');
+        captureBtn.disabled = false;
+        captureBtn.innerHTML = '<i class="bi bi-person-check me-2"></i>Scanner mon visage';
+    }
+}
+
+// Stop camera on page leave
+window.addEventListener('beforeunload', () => {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+});
+</script>
+{% endblock %}

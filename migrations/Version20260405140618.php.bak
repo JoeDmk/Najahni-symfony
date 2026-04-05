@@ -1,0 +1,237 @@
+<?php
+
+declare(strict_types=1);
+
+namespace DoctrineMigrations;
+
+use Doctrine\DBAL\Schema\Schema;
+use Doctrine\Migrations\AbstractMigration;
+
+/**
+ * Auto-generated Migration: Please modify to your needs!
+ */
+final class Version20260405140618 extends AbstractMigration
+{
+    public function getDescription(): string
+    {
+        return '';
+    }
+
+    public function up(Schema $schema): void
+    {
+        // this up() migration is auto-generated, please modify it to your needs
+        $this->addSql('CREATE TABLE messenger_messages (id BIGINT AUTO_INCREMENT NOT NULL, body LONGTEXT NOT NULL, headers LONGTEXT NOT NULL, queue_name VARCHAR(190) NOT NULL, created_at DATETIME NOT NULL, available_at DATETIME NOT NULL, delivered_at DATETIME DEFAULT NULL, INDEX IDX_75EA56E0FB7336F0 (queue_name), INDEX IDX_75EA56E0E3BD61CE (available_at), INDEX IDX_75EA56E016BA31DB (delivered_at), PRIMARY KEY (id)) DEFAULT CHARACTER SET utf8mb4');
+        $this->addSql('ALTER TABLE group_join_request DROP FOREIGN KEY `fk_gjr_group`');
+        $this->addSql('ALTER TABLE group_join_request DROP FOREIGN KEY `fk_gjr_user`');
+        $this->addSql('ALTER TABLE login_history DROP FOREIGN KEY `login_history_ibfk_1`');
+        $this->addSql('ALTER TABLE notification DROP FOREIGN KEY `notification_ibfk_1`');
+        $this->addSql('ALTER TABLE project DROP FOREIGN KEY `project_ibfk_1`');
+        $this->addSql('DROP TABLE group_join_request');
+        $this->addSql('DROP TABLE investment_contract');
+        $this->addSql('DROP TABLE login_history');
+        $this->addSql('DROP TABLE notification');
+        $this->addSql('DROP TABLE project');
+        $this->addSql('DROP INDEX idx_badge_actif ON badge');
+        $this->addSql('DROP INDEX idx_badge_condition_type ON badge');
+        $this->addSql('ALTER TABLE badge ADD condition_obtention LONGTEXT NOT NULL, ADD points_requis INT NOT NULL, ADD cours_requis INT NOT NULL, ADD niveau_requis INT NOT NULL, ADD categorie VARCHAR(50) NOT NULL, ADD rarete ENUM(\'COMMUN\',\'RARE\',\'EPIQUE\',\'LEGENDAIRE\') DEFAULT \'COMMUN\', DROP condition_text, DROP condition_type, DROP condition_valeur, DROP couleur, DROP points_bonus, CHANGE description description LONGTEXT DEFAULT NULL, CHANGE icone icone VARCHAR(50) NOT NULL, CHANGE actif actif TINYINT NOT NULL, CHANGE created_at created_at DATETIME NOT NULL');
+        $this->addSql('CREATE UNIQUE INDEX UNIQ_FEF0481D6C6E55B5 ON badge (nom)');
+        $this->addSql('ALTER TABLE comment CHANGE contenu contenu LONGTEXT NOT NULL, CHANGE rating rating NUMERIC(2, 1) DEFAULT NULL, CHANGE created_at created_at DATETIME NOT NULL, CHANGE updated_at updated_at DATETIME NOT NULL');
+        $this->addSql('ALTER TABLE comment RENAME INDEX idx_appr_comment_cours TO IDX_9474526C7ECF78B0');
+        $this->addSql('ALTER TABLE comment RENAME INDEX idx_appr_comment_user TO IDX_9474526CA76ED395');
+        $this->addSql('ALTER TABLE comments DROP FOREIGN KEY `fk_comment_thread`');
+        $this->addSql('ALTER TABLE comments DROP FOREIGN KEY `fk_comment_user`');
+        $this->addSql('ALTER TABLE comments CHANGE content content LONGTEXT NOT NULL, CHANGE created_at created_at DATETIME NOT NULL');
+        $this->addSql('ALTER TABLE comments ADD CONSTRAINT FK_5F9E962AE2904019 FOREIGN KEY (thread_id) REFERENCES threads (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE comments ADD CONSTRAINT FK_5F9E962AA76ED395 FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE comments RENAME INDEX idx_comment_thread TO IDX_5F9E962AE2904019');
+        $this->addSql('ALTER TABLE comments RENAME INDEX idx_comment_user TO IDX_5F9E962AA76ED395');
+        $this->addSql('DROP INDEX idx_cours_certification ON cours');
+        $this->addSql('DROP INDEX idx_cours_niveau ON cours');
+        $this->addSql('DROP INDEX idx_cours_type ON cours');
+        $this->addSql('ALTER TABLE cours ADD categorie VARCHAR(100) NOT NULL, ADD niveau_difficulte ENUM(\'DEBUTANT\',\'INTERMEDIAIRE\',\'AVANCE\',\'EXPERT\') NOT NULL DEFAULT \'DEBUTANT\', ADD actif TINYINT NOT NULL, DROP type, DROP niveau, DROP duree_minutes, CHANGE titre titre VARCHAR(255) NOT NULL, CHANGE description description LONGTEXT DEFAULT NULL, CHANGE certification certification TINYINT NOT NULL, CHANGE points_xp points_xp INT NOT NULL, CHANGE image_url image_url VARCHAR(500) DEFAULT NULL, CHANGE created_at created_at DATETIME NOT NULL, CHANGE updated_at updated_at DATETIME NOT NULL, CHANGE document_path document_path VARCHAR(500) DEFAULT NULL, CHANGE video_url video_url VARCHAR(500) DEFAULT NULL, CHANGE createur_id duree_estimee INT DEFAULT NULL');
+        $this->addSql('ALTER TABLE donnees_business DROP INDEX projet_id, ADD UNIQUE INDEX UNIQ_E8382063C18272 (projet_id)');
+        $this->addSql('ALTER TABLE donnees_business CHANGE taille_marche taille_marche VARCHAR(255) DEFAULT NULL, CHANGE modele_revenu modele_revenu VARCHAR(255) DEFAULT NULL, CHANGE couts_estimes couts_estimes DOUBLE PRECISION DEFAULT NULL, CHANGE revenus_attendus revenus_attendus DOUBLE PRECISION DEFAULT NULL, CHANGE niveau_risque niveau_risque VARCHAR(50) DEFAULT NULL, CHANGE force_equipe force_equipe INT DEFAULT NULL, CHANGE marge_estimee marge_estimee DOUBLE PRECISION DEFAULT NULL, CHANGE ratio_rentabilite ratio_rentabilite DOUBLE PRECISION DEFAULT NULL, CHANGE score_financier score_financier DOUBLE PRECISION DEFAULT NULL, CHANGE score_marche score_marche DOUBLE PRECISION DEFAULT NULL, CHANGE score_equipe_calcule score_equipe_calcule DOUBLE PRECISION DEFAULT NULL, CHANGE score_risque_calcule score_risque_calcule DOUBLE PRECISION DEFAULT NULL, CHANGE raw_couts raw_couts LONGTEXT DEFAULT NULL, CHANGE raw_revenus raw_revenus LONGTEXT DEFAULT NULL, CHANGE raw_force_equipe raw_force_equipe LONGTEXT DEFAULT NULL');
+        $this->addSql('ALTER TABLE event_participants DROP FOREIGN KEY `fk_ep_event`');
+        $this->addSql('ALTER TABLE event_participants DROP FOREIGN KEY `fk_ep_user`');
+        $this->addSql('ALTER TABLE event_participants ADD CONSTRAINT FK_9C7A7A6171F7E88B FOREIGN KEY (event_id) REFERENCES events (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE event_participants ADD CONSTRAINT FK_9C7A7A61A76ED395 FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE event_participants RENAME INDEX idx_ep_user TO IDX_9C7A7A61A76ED395');
+        $this->addSql('ALTER TABLE events DROP FOREIGN KEY `fk_event_creator`');
+        $this->addSql('ALTER TABLE events CHANGE description description LONGTEXT DEFAULT NULL, CHANGE capacity capacity INT NOT NULL, CHANGE created_at created_at DATETIME NOT NULL');
+        $this->addSql('ALTER TABLE events ADD CONSTRAINT FK_5387574ADE12AB56 FOREIGN KEY (created_by) REFERENCES user (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE events RENAME INDEX idx_event_creator TO IDX_5387574ADE12AB56');
+        $this->addSql('ALTER TABLE group_members DROP FOREIGN KEY `fk_gm_group`');
+        $this->addSql('ALTER TABLE group_members DROP FOREIGN KEY `fk_gm_user`');
+        $this->addSql('ALTER TABLE group_members CHANGE joined_at joined_at DATETIME NOT NULL');
+        $this->addSql('ALTER TABLE group_members ADD CONSTRAINT FK_C3A086F3FE54D947 FOREIGN KEY (group_id) REFERENCES `groups` (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE group_members ADD CONSTRAINT FK_C3A086F3A76ED395 FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE group_members RENAME INDEX idx_member_user TO IDX_C3A086F3A76ED395');
+        $this->addSql('ALTER TABLE `groups` DROP FOREIGN KEY `fk_groups_admin`');
+        $this->addSql('ALTER TABLE `groups` CHANGE description description LONGTEXT DEFAULT NULL, CHANGE created_at created_at DATETIME NOT NULL, CHANGE is_private is_private TINYINT NOT NULL');
+        $this->addSql('ALTER TABLE `groups` ADD CONSTRAINT FK_F06D39706D1BCE6F FOREIGN KEY (group_admin_id) REFERENCES user (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE `groups` RENAME INDEX idx_group_admin TO IDX_F06D39706D1BCE6F');
+        $this->addSql('ALTER TABLE investment_offer DROP FOREIGN KEY `fk_offer_investor`');
+        $this->addSql('ALTER TABLE investment_offer DROP FOREIGN KEY `fk_offer_opportunity`');
+        $this->addSql('DROP INDEX idx_offer_status ON investment_offer');
+        $this->addSql('ALTER TABLE investment_offer CHANGE status status ENUM(\'PENDING\',\'ACCEPTED\',\'REJECTED\') DEFAULT \'PENDING\', CHANGE paid paid TINYINT NOT NULL, CHANGE payment_intent_id payment_intent_id VARCHAR(255) DEFAULT NULL, CHANGE paid_at paid_at DATETIME DEFAULT NULL, CHANGE created_at created_at DATETIME NOT NULL, CHANGE updated_at updated_at DATETIME NOT NULL');
+        $this->addSql('ALTER TABLE investment_offer ADD CONSTRAINT FK_4615B1CA9AE528DA FOREIGN KEY (investor_id) REFERENCES user (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE investment_offer ADD CONSTRAINT FK_4615B1CA9A34590F FOREIGN KEY (opportunity_id) REFERENCES investment_opportunity (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE investment_offer RENAME INDEX idx_offer_investor TO IDX_4615B1CA9AE528DA');
+        $this->addSql('ALTER TABLE investment_offer RENAME INDEX idx_offer_opportunity TO IDX_4615B1CA9A34590F');
+        $this->addSql('ALTER TABLE investment_opportunity DROP FOREIGN KEY `fk_opportunity_project`');
+        $this->addSql('DROP INDEX idx_opportunity_status ON investment_opportunity');
+        $this->addSql('DROP INDEX idx_opportunity_deadline ON investment_opportunity');
+        $this->addSql('ALTER TABLE investment_opportunity CHANGE description description LONGTEXT DEFAULT NULL, CHANGE deadline deadline DATE DEFAULT NULL, CHANGE status status ENUM(\'OPEN\',\'CLOSED\',\'FUNDED\') DEFAULT \'OPEN\', CHANGE risk_score risk_score DOUBLE PRECISION DEFAULT NULL, CHANGE risk_label risk_label VARCHAR(50) DEFAULT NULL, CHANGE created_at created_at DATETIME NOT NULL, CHANGE updated_at updated_at DATETIME NOT NULL');
+        $this->addSql('ALTER TABLE investment_opportunity ADD CONSTRAINT FK_498180B166D1F9C FOREIGN KEY (project_id) REFERENCES projet (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE investment_opportunity RENAME INDEX idx_opportunity_project TO IDX_498180B166D1F9C');
+        $this->addSql('ALTER TABLE mentor_availability CHANGE created_at created_at DATETIME NOT NULL');
+        $this->addSql('ALTER TABLE mentor_availability RENAME INDEX idx_ma_mentor TO IDX_CB274DDFDB403044');
+        $this->addSql('ALTER TABLE mentorship_request CHANGE date date DATE DEFAULT NULL, CHANGE time time VARCHAR(50) DEFAULT NULL, CHANGE motivation motivation LONGTEXT DEFAULT NULL, CHANGE goals goals LONGTEXT DEFAULT NULL, CHANGE match_score match_score DOUBLE PRECISION DEFAULT NULL, CHANGE auto_approved auto_approved TINYINT NOT NULL, CHANGE status status VARCHAR(50) NOT NULL, CHANGE created_at created_at DATETIME NOT NULL, CHANGE updated_at updated_at DATETIME DEFAULT NULL');
+        $this->addSql('ALTER TABLE mentorship_request ADD CONSTRAINT FK_2F5D3C1A283063EA FOREIGN KEY (entrepreneur_id) REFERENCES user (id)');
+        $this->addSql('ALTER TABLE mentorship_request ADD CONSTRAINT FK_2F5D3C1ADB403044 FOREIGN KEY (mentor_id) REFERENCES user (id)');
+        $this->addSql('ALTER TABLE mentorship_request ADD CONSTRAINT FK_2F5D3C1A166D1F9C FOREIGN KEY (project_id) REFERENCES projet (id)');
+        $this->addSql('ALTER TABLE mentorship_request RENAME INDEX idx_mr_entrepreneur TO IDX_2F5D3C1A283063EA');
+        $this->addSql('ALTER TABLE mentorship_request RENAME INDEX idx_mr_mentor TO IDX_2F5D3C1ADB403044');
+        $this->addSql('ALTER TABLE mentorship_request RENAME INDEX idx_mr_project TO IDX_2F5D3C1A166D1F9C');
+        $this->addSql('ALTER TABLE mentorship_session CHANGE scheduled_at scheduled_at DATETIME DEFAULT NULL, CHANGE status status VARCHAR(50) NOT NULL, CHANGE meeting_link meeting_link VARCHAR(500) DEFAULT NULL, CHANGE mentor_feedback mentor_feedback LONGTEXT DEFAULT NULL, CHANGE entrepreneur_feedback entrepreneur_feedback LONGTEXT DEFAULT NULL, CHANGE created_at created_at DATETIME NOT NULL, CHANGE updated_at updated_at DATETIME DEFAULT NULL');
+        $this->addSql('ALTER TABLE mentorship_session RENAME INDEX idx_ms_request TO IDX_C48E665111D9B70F');
+        $this->addSql('ALTER TABLE post_reactions CHANGE reaction_type reaction_type ENUM(\'LIKE\',\'LOVE\',\'HAHA\',\'WOW\',\'SAD\',\'ANGRY\') NOT NULL DEFAULT \'LIKE\'');
+        $this->addSql('ALTER TABLE post_reactions RENAME INDEX idx_reaction_user TO IDX_991D0144A76ED395');
+        $this->addSql('ALTER TABLE posts DROP FOREIGN KEY `fk_post_user`');
+        $this->addSql('ALTER TABLE posts CHANGE content content LONGTEXT NOT NULL, CHANGE created_at created_at DATETIME NOT NULL, CHANGE image_url image_url VARCHAR(500) DEFAULT NULL');
+        $this->addSql('ALTER TABLE posts ADD CONSTRAINT FK_885DBAFAA76ED395 FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE posts RENAME INDEX idx_post_user TO IDX_885DBAFAA76ED395');
+        $this->addSql('ALTER TABLE progression DROP FOREIGN KEY `fk_progression_cours`');
+        $this->addSql('DROP INDEX idx_progression_etat ON progression');
+        $this->addSql('ALTER TABLE progression CHANGE pourcentage pourcentage NUMERIC(5, 2) NOT NULL, CHANGE points_xp points_xp INT NOT NULL, CHANGE niveau niveau INT NOT NULL, CHANGE etat etat ENUM(\'NON_COMMENCE\',\'EN_COURS\',\'COMPLETE\',\'CERTIFIE\') DEFAULT \'NON_COMMENCE\', CHANGE date_debut date_debut DATETIME NOT NULL, CHANGE date_obtention date_obtention DATETIME DEFAULT NULL, CHANGE updated_at updated_at DATETIME NOT NULL');
+        $this->addSql('ALTER TABLE progression ADD CONSTRAINT FK_D5B25073A76ED395 FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE progression ADD CONSTRAINT FK_D5B250737ECF78B0 FOREIGN KEY (cours_id) REFERENCES cours (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE progression RENAME INDEX idx_progression_user TO IDX_D5B25073A76ED395');
+        $this->addSql('ALTER TABLE progression RENAME INDEX idx_progression_cours TO IDX_D5B250737ECF78B0');
+        $this->addSql('ALTER TABLE progression RENAME INDEX uk_user_cours TO unique_user_cours');
+        $this->addSql('DROP INDEX idx_projet_entrepreneur ON projet');
+        $this->addSql('ALTER TABLE projet CHANGE titre titre VARCHAR(255) DEFAULT NULL, CHANGE description description LONGTEXT DEFAULT NULL, CHANGE secteur secteur VARCHAR(100) DEFAULT NULL, CHANGE etape etape VARCHAR(20) DEFAULT NULL, CHANGE statut statut VARCHAR(20) DEFAULT NULL, CHANGE date_creation date_creation DATE DEFAULT NULL, CHANGE statut_projet statut_projet VARCHAR(20) DEFAULT NULL, CHANGE score_global score_global DOUBLE PRECISION DEFAULT NULL, CHANGE diagnostic_ia diagnostic_ia LONGTEXT DEFAULT NULL, CHANGE date_soumission date_soumission DATE DEFAULT NULL, CHANGE date_evaluation date_evaluation DATE DEFAULT NULL');
+        $this->addSql('ALTER TABLE projet ADD CONSTRAINT FK_50159CA9A76ED395 FOREIGN KEY (user_id) REFERENCES user (id)');
+        $this->addSql('CREATE INDEX IDX_50159CA9A76ED395 ON projet (user_id)');
+        $this->addSql('ALTER TABLE threads DROP FOREIGN KEY `fk_thread_group`');
+        $this->addSql('ALTER TABLE threads DROP FOREIGN KEY `fk_thread_user`');
+        $this->addSql('ALTER TABLE threads CHANGE content content LONGTEXT NOT NULL, CHANGE created_at created_at DATETIME NOT NULL');
+        $this->addSql('ALTER TABLE threads ADD CONSTRAINT FK_6F8E3DDDFE54D947 FOREIGN KEY (group_id) REFERENCES `groups` (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE threads ADD CONSTRAINT FK_6F8E3DDDA76ED395 FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE threads RENAME INDEX idx_thread_group TO IDX_6F8E3DDDFE54D947');
+        $this->addSql('ALTER TABLE threads RENAME INDEX idx_thread_user TO IDX_6F8E3DDDA76ED395');
+        $this->addSql('ALTER TABLE user DROP preferred_currency, DROP preferred_theme, DROP preferred_language, CHANGE phone phone VARCHAR(20) DEFAULT NULL, CHANGE role role ENUM(\'ADMIN\',\'ENTREPRENEUR\',\'MENTOR\',\'INVESTISSEUR\') NOT NULL DEFAULT \'ENTREPRENEUR\', CHANGE bio bio LONGTEXT DEFAULT NULL, CHANGE profile_picture profile_picture VARCHAR(500) DEFAULT NULL, CHANGE company_name company_name VARCHAR(200) DEFAULT NULL, CHANGE linkedin_url linkedin_url VARCHAR(500) DEFAULT NULL, CHANGE address address VARCHAR(300) DEFAULT NULL, CHANGE date_of_birth date_of_birth DATE DEFAULT NULL, CHANGE verified verified TINYINT NOT NULL, CHANGE phone_verified phone_verified TINYINT NOT NULL, CHANGE is_active is_active TINYINT NOT NULL, CHANGE is_banned is_banned TINYINT NOT NULL, CHANGE created_at created_at DATETIME NOT NULL, CHANGE updated_at updated_at DATETIME NOT NULL, CHANGE google_provider_id google_provider_id VARCHAR(255) DEFAULT NULL, CHANGE face_registered face_registered TINYINT NOT NULL, CHANGE total_xp total_xp INT NOT NULL');
+        $this->addSql('ALTER TABLE user RENAME INDEX email TO UNIQ_8D93D649E7927C74');
+        $this->addSql('ALTER TABLE user_connection CHANGE created_at created_at DATETIME NOT NULL');
+        $this->addSql('ALTER TABLE user_connection RENAME INDEX followed_id TO IDX_8E90B58AD956F010');
+    }
+
+    public function down(Schema $schema): void
+    {
+        // this down() migration is auto-generated, please modify it to your needs
+        $this->addSql('CREATE TABLE group_join_request (id INT AUTO_INCREMENT NOT NULL, group_id INT NOT NULL, user_id INT NOT NULL, status ENUM(\'PENDING\', \'APPROVED\', \'REJECTED\') CHARACTER SET utf8mb4 DEFAULT \'\'\'PENDING\'\'\' COLLATE `utf8mb4_unicode_ci`, created_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL, INDEX idx_gjr_group (group_id), INDEX idx_gjr_user (user_id), PRIMARY KEY (id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_unicode_ci` ENGINE = InnoDB COMMENT = \'\' ');
+        $this->addSql('CREATE TABLE investment_contract (id INT AUTO_INCREMENT NOT NULL, offer_id INT NOT NULL, investor_id INT NOT NULL, entrepreneur_id INT NOT NULL, investor_signature VARCHAR(255) CHARACTER SET utf8mb4 DEFAULT \'NULL\' COLLATE `utf8mb4_general_ci`, entrepreneur_signature VARCHAR(255) CHARACTER SET utf8mb4 DEFAULT \'NULL\' COLLATE `utf8mb4_general_ci`, investor_signed_at DATETIME DEFAULT \'NULL\', entrepreneur_signed_at DATETIME DEFAULT \'NULL\', status VARCHAR(30) CHARACTER SET utf8mb4 DEFAULT \'\'\'PENDING\'\'\' COLLATE `utf8mb4_general_ci`, created_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL, UNIQUE INDEX unique_offer_contract (offer_id), PRIMARY KEY (id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_general_ci` ENGINE = InnoDB COMMENT = \'\' ');
+        $this->addSql('CREATE TABLE login_history (id INT AUTO_INCREMENT NOT NULL, user_id INT NOT NULL, ip_address VARCHAR(45) CHARACTER SET utf8mb4 DEFAULT \'NULL\' COLLATE `utf8mb4_general_ci`, device_info VARCHAR(500) CHARACTER SET utf8mb4 DEFAULT \'NULL\' COLLATE `utf8mb4_general_ci`, login_method VARCHAR(50) CHARACTER SET utf8mb4 DEFAULT \'\'\'PASSWORD\'\'\' COLLATE `utf8mb4_general_ci`, success TINYINT DEFAULT 1, location VARCHAR(255) CHARACTER SET utf8mb4 DEFAULT \'NULL\' COLLATE `utf8mb4_general_ci`, login_time DATETIME DEFAULT \'current_timestamp()\' NOT NULL, INDEX user_id (user_id), PRIMARY KEY (id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_general_ci` ENGINE = InnoDB COMMENT = \'\' ');
+        $this->addSql('CREATE TABLE notification (id INT AUTO_INCREMENT NOT NULL, user_id INT NOT NULL, title VARCHAR(255) CHARACTER SET utf8mb4 NOT NULL COLLATE `utf8mb4_general_ci`, message TEXT CHARACTER SET utf8mb4 NOT NULL COLLATE `utf8mb4_general_ci`, type VARCHAR(50) CHARACTER SET utf8mb4 DEFAULT \'\'\'INFO\'\'\' COLLATE `utf8mb4_general_ci`, is_read TINYINT DEFAULT 0, created_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL, INDEX user_id (user_id), PRIMARY KEY (id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_general_ci` ENGINE = InnoDB COMMENT = \'\' ');
+        $this->addSql('CREATE TABLE project (id INT AUTO_INCREMENT NOT NULL, title VARCHAR(200) CHARACTER SET utf8mb4 NOT NULL COLLATE `utf8mb4_general_ci`, description TEXT CHARACTER SET utf8mb4 DEFAULT NULL COLLATE `utf8mb4_general_ci`, sector VARCHAR(100) CHARACTER SET utf8mb4 DEFAULT \'NULL\' COLLATE `utf8mb4_general_ci`, funding_goal NUMERIC(15, 2) DEFAULT \'NULL\', current_funding NUMERIC(15, 2) DEFAULT \'0.00\', status ENUM(\'DRAFT\', \'PENDING\', \'APPROVED\', \'REJECTED\', \'FUNDED\') CHARACTER SET utf8mb4 DEFAULT \'\'\'PENDING\'\'\' COLLATE `utf8mb4_general_ci`, entrepreneur_id INT DEFAULT NULL, created_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL, updated_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL, INDEX entrepreneur_id (entrepreneur_id), PRIMARY KEY (id)) DEFAULT CHARACTER SET utf8mb4 COLLATE `utf8mb4_general_ci` ENGINE = InnoDB COMMENT = \'\' ');
+        $this->addSql('ALTER TABLE group_join_request ADD CONSTRAINT `fk_gjr_group` FOREIGN KEY (group_id) REFERENCES `groups` (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE group_join_request ADD CONSTRAINT `fk_gjr_user` FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE login_history ADD CONSTRAINT `login_history_ibfk_1` FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE notification ADD CONSTRAINT `notification_ibfk_1` FOREIGN KEY (user_id) REFERENCES user (id) ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE project ADD CONSTRAINT `project_ibfk_1` FOREIGN KEY (entrepreneur_id) REFERENCES user (id)');
+        $this->addSql('DROP TABLE messenger_messages');
+        $this->addSql('DROP INDEX UNIQ_FEF0481D6C6E55B5 ON badge');
+        $this->addSql('ALTER TABLE badge ADD condition_text TEXT DEFAULT NULL COMMENT \'Description textuelle de la condition\', ADD condition_type VARCHAR(50) NOT NULL COMMENT \'Type: XP_TOTAL, COURS_COMPLETE, QUIZ_REUSSI, etc.\', ADD condition_valeur INT DEFAULT 0 NOT NULL COMMENT \'Valeur num├®rique ├á atteindre\', ADD couleur VARCHAR(20) DEFAULT \'\'\'#3498db\'\'\' COMMENT \'Couleur HEX du badge\', ADD points_bonus INT DEFAULT 50 COMMENT \'Points XP bonus attribu├®s avec le badge\', DROP condition_obtention, DROP points_requis, DROP cours_requis, DROP niveau_requis, DROP categorie, DROP rarete, CHANGE description description TEXT DEFAULT NULL, CHANGE icone icone VARCHAR(50) NOT NULL COMMENT \'Emoji ou code ic├┤ne\', CHANGE actif actif TINYINT DEFAULT 1, CHANGE created_at created_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL');
+        $this->addSql('CREATE INDEX idx_badge_actif ON badge (actif)');
+        $this->addSql('CREATE INDEX idx_badge_condition_type ON badge (condition_type)');
+        $this->addSql('ALTER TABLE comment CHANGE contenu contenu TEXT NOT NULL, CHANGE rating rating NUMERIC(2, 1) DEFAULT \'NULL\', CHANGE created_at created_at DATETIME DEFAULT \'current_timestamp()\', CHANGE updated_at updated_at DATETIME DEFAULT \'current_timestamp()\'');
+        $this->addSql('ALTER TABLE comment RENAME INDEX idx_9474526ca76ed395 TO idx_appr_comment_user');
+        $this->addSql('ALTER TABLE comment RENAME INDEX idx_9474526c7ecf78b0 TO idx_appr_comment_cours');
+        $this->addSql('ALTER TABLE comments DROP FOREIGN KEY FK_5F9E962AE2904019');
+        $this->addSql('ALTER TABLE comments DROP FOREIGN KEY FK_5F9E962AA76ED395');
+        $this->addSql('ALTER TABLE comments CHANGE content content TEXT NOT NULL, CHANGE created_at created_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL');
+        $this->addSql('ALTER TABLE comments ADD CONSTRAINT `fk_comment_thread` FOREIGN KEY (thread_id) REFERENCES threads (id) ON UPDATE CASCADE ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE comments ADD CONSTRAINT `fk_comment_user` FOREIGN KEY (user_id) REFERENCES user (id) ON UPDATE CASCADE ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE comments RENAME INDEX idx_5f9e962aa76ed395 TO idx_comment_user');
+        $this->addSql('ALTER TABLE comments RENAME INDEX idx_5f9e962ae2904019 TO idx_comment_thread');
+        $this->addSql('ALTER TABLE cours ADD type ENUM(\'VIDEO\', \'TEXTE\', \'QUIZ\', \'MIXTE\') DEFAULT \'\'\'TEXTE\'\'\' NOT NULL, ADD niveau ENUM(\'DEBUTANT\', \'INTERMEDIAIRE\', \'AVANCE\', \'EXPERT\') DEFAULT \'\'\'DEBUTANT\'\'\' NOT NULL, ADD duree_minutes INT DEFAULT 30, DROP categorie, DROP niveau_difficulte, DROP actif, CHANGE titre titre VARCHAR(200) NOT NULL, CHANGE description description TEXT DEFAULT NULL, CHANGE points_xp points_xp INT DEFAULT 100 NOT NULL, CHANGE image_url image_url VARCHAR(500) DEFAULT \'NULL\', CHANGE certification certification TINYINT DEFAULT 0, CHANGE document_path document_path VARCHAR(500) DEFAULT \'NULL\', CHANGE video_url video_url VARCHAR(500) DEFAULT \'NULL\', CHANGE created_at created_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL, CHANGE updated_at updated_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL, CHANGE duree_estimee createur_id INT DEFAULT NULL');
+        $this->addSql('CREATE INDEX idx_cours_certification ON cours (certification)');
+        $this->addSql('CREATE INDEX idx_cours_niveau ON cours (niveau)');
+        $this->addSql('CREATE INDEX idx_cours_type ON cours (type)');
+        $this->addSql('ALTER TABLE donnees_business DROP INDEX UNIQ_E8382063C18272, ADD INDEX projet_id (projet_id)');
+        $this->addSql('ALTER TABLE donnees_business CHANGE taille_marche taille_marche VARCHAR(255) DEFAULT \'NULL\', CHANGE modele_revenu modele_revenu VARCHAR(255) DEFAULT \'NULL\', CHANGE couts_estimes couts_estimes DOUBLE PRECISION DEFAULT \'0\', CHANGE revenus_attendus revenus_attendus DOUBLE PRECISION DEFAULT \'0\', CHANGE niveau_risque niveau_risque VARCHAR(50) DEFAULT \'NULL\', CHANGE force_equipe force_equipe INT DEFAULT 0, CHANGE marge_estimee marge_estimee DOUBLE PRECISION DEFAULT \'0\', CHANGE ratio_rentabilite ratio_rentabilite DOUBLE PRECISION DEFAULT \'0\', CHANGE score_financier score_financier DOUBLE PRECISION DEFAULT \'0\', CHANGE score_marche score_marche DOUBLE PRECISION DEFAULT \'0\', CHANGE score_equipe_calcule score_equipe_calcule DOUBLE PRECISION DEFAULT \'0\', CHANGE score_risque_calcule score_risque_calcule DOUBLE PRECISION DEFAULT \'0\', CHANGE raw_couts raw_couts TEXT DEFAULT NULL, CHANGE raw_revenus raw_revenus TEXT DEFAULT NULL, CHANGE raw_force_equipe raw_force_equipe TEXT DEFAULT NULL');
+        $this->addSql('ALTER TABLE events DROP FOREIGN KEY FK_5387574ADE12AB56');
+        $this->addSql('ALTER TABLE events CHANGE description description TEXT DEFAULT NULL, CHANGE capacity capacity INT DEFAULT 0 NOT NULL, CHANGE created_at created_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL');
+        $this->addSql('ALTER TABLE events ADD CONSTRAINT `fk_event_creator` FOREIGN KEY (created_by) REFERENCES user (id) ON UPDATE CASCADE ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE events RENAME INDEX idx_5387574ade12ab56 TO idx_event_creator');
+        $this->addSql('ALTER TABLE event_participants DROP FOREIGN KEY FK_9C7A7A6171F7E88B');
+        $this->addSql('ALTER TABLE event_participants DROP FOREIGN KEY FK_9C7A7A61A76ED395');
+        $this->addSql('ALTER TABLE event_participants ADD CONSTRAINT `fk_ep_event` FOREIGN KEY (event_id) REFERENCES events (id) ON UPDATE CASCADE ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE event_participants ADD CONSTRAINT `fk_ep_user` FOREIGN KEY (user_id) REFERENCES user (id) ON UPDATE CASCADE ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE event_participants RENAME INDEX idx_9c7a7a61a76ed395 TO idx_ep_user');
+        $this->addSql('ALTER TABLE `groups` DROP FOREIGN KEY FK_F06D39706D1BCE6F');
+        $this->addSql('ALTER TABLE `groups` CHANGE description description TEXT DEFAULT NULL, CHANGE created_at created_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL, CHANGE is_private is_private TINYINT DEFAULT 0');
+        $this->addSql('ALTER TABLE `groups` ADD CONSTRAINT `fk_groups_admin` FOREIGN KEY (group_admin_id) REFERENCES user (id) ON UPDATE CASCADE ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE `groups` RENAME INDEX idx_f06d39706d1bce6f TO idx_group_admin');
+        $this->addSql('ALTER TABLE group_members DROP FOREIGN KEY FK_C3A086F3FE54D947');
+        $this->addSql('ALTER TABLE group_members DROP FOREIGN KEY FK_C3A086F3A76ED395');
+        $this->addSql('ALTER TABLE group_members CHANGE joined_at joined_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL');
+        $this->addSql('ALTER TABLE group_members ADD CONSTRAINT `fk_gm_group` FOREIGN KEY (group_id) REFERENCES `groups` (id) ON UPDATE CASCADE ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE group_members ADD CONSTRAINT `fk_gm_user` FOREIGN KEY (user_id) REFERENCES user (id) ON UPDATE CASCADE ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE group_members RENAME INDEX idx_c3a086f3a76ed395 TO idx_member_user');
+        $this->addSql('ALTER TABLE investment_offer DROP FOREIGN KEY FK_4615B1CA9AE528DA');
+        $this->addSql('ALTER TABLE investment_offer DROP FOREIGN KEY FK_4615B1CA9A34590F');
+        $this->addSql('ALTER TABLE investment_offer CHANGE status status ENUM(\'PENDING\', \'ACCEPTED\', \'REJECTED\') DEFAULT \'\'\'PENDING\'\'\', CHANGE paid paid TINYINT DEFAULT 0, CHANGE payment_intent_id payment_intent_id VARCHAR(255) DEFAULT \'NULL\', CHANGE paid_at paid_at DATETIME DEFAULT \'NULL\', CHANGE created_at created_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL, CHANGE updated_at updated_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL');
+        $this->addSql('ALTER TABLE investment_offer ADD CONSTRAINT `fk_offer_investor` FOREIGN KEY (investor_id) REFERENCES user (id) ON UPDATE CASCADE ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE investment_offer ADD CONSTRAINT `fk_offer_opportunity` FOREIGN KEY (opportunity_id) REFERENCES investment_opportunity (id) ON UPDATE CASCADE ON DELETE CASCADE');
+        $this->addSql('CREATE INDEX idx_offer_status ON investment_offer (status)');
+        $this->addSql('ALTER TABLE investment_offer RENAME INDEX idx_4615b1ca9a34590f TO idx_offer_opportunity');
+        $this->addSql('ALTER TABLE investment_offer RENAME INDEX idx_4615b1ca9ae528da TO idx_offer_investor');
+        $this->addSql('ALTER TABLE investment_opportunity DROP FOREIGN KEY FK_498180B166D1F9C');
+        $this->addSql('ALTER TABLE investment_opportunity CHANGE description description TEXT DEFAULT NULL, CHANGE deadline deadline DATE DEFAULT \'NULL\', CHANGE status status ENUM(\'OPEN\', \'CLOSED\', \'FUNDED\') DEFAULT \'\'\'OPEN\'\'\', CHANGE risk_score risk_score DOUBLE PRECISION DEFAULT \'NULL\', CHANGE risk_label risk_label VARCHAR(50) DEFAULT \'NULL\', CHANGE created_at created_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL, CHANGE updated_at updated_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL');
+        $this->addSql('ALTER TABLE investment_opportunity ADD CONSTRAINT `fk_opportunity_project` FOREIGN KEY (project_id) REFERENCES projet (id) ON UPDATE CASCADE ON DELETE CASCADE');
+        $this->addSql('CREATE INDEX idx_opportunity_status ON investment_opportunity (status)');
+        $this->addSql('CREATE INDEX idx_opportunity_deadline ON investment_opportunity (deadline)');
+        $this->addSql('ALTER TABLE investment_opportunity RENAME INDEX idx_498180b166d1f9c TO idx_opportunity_project');
+        $this->addSql('ALTER TABLE mentorship_request DROP FOREIGN KEY FK_2F5D3C1A283063EA');
+        $this->addSql('ALTER TABLE mentorship_request DROP FOREIGN KEY FK_2F5D3C1ADB403044');
+        $this->addSql('ALTER TABLE mentorship_request DROP FOREIGN KEY FK_2F5D3C1A166D1F9C');
+        $this->addSql('ALTER TABLE mentorship_request CHANGE date date DATE DEFAULT \'NULL\', CHANGE time time VARCHAR(50) DEFAULT \'NULL\', CHANGE motivation motivation TEXT DEFAULT NULL, CHANGE goals goals TEXT DEFAULT NULL, CHANGE match_score match_score FLOAT DEFAULT \'NULL\', CHANGE auto_approved auto_approved TINYINT DEFAULT 0, CHANGE status status VARCHAR(50) DEFAULT \'\'\'PENDING\'\'\', CHANGE created_at created_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL, CHANGE updated_at updated_at DATETIME DEFAULT \'NULL\'');
+        $this->addSql('ALTER TABLE mentorship_request RENAME INDEX idx_2f5d3c1adb403044 TO idx_mr_mentor');
+        $this->addSql('ALTER TABLE mentorship_request RENAME INDEX idx_2f5d3c1a166d1f9c TO idx_mr_project');
+        $this->addSql('ALTER TABLE mentorship_request RENAME INDEX idx_2f5d3c1a283063ea TO idx_mr_entrepreneur');
+        $this->addSql('ALTER TABLE mentorship_session CHANGE scheduled_at scheduled_at DATETIME DEFAULT \'NULL\', CHANGE status status VARCHAR(50) DEFAULT \'\'\'SCHEDULED\'\'\', CHANGE meeting_link meeting_link VARCHAR(500) DEFAULT \'NULL\', CHANGE mentor_feedback mentor_feedback TEXT DEFAULT NULL, CHANGE entrepreneur_feedback entrepreneur_feedback TEXT DEFAULT NULL, CHANGE created_at created_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL, CHANGE updated_at updated_at DATETIME DEFAULT \'NULL\'');
+        $this->addSql('ALTER TABLE mentorship_session RENAME INDEX idx_c48e665111d9b70f TO idx_ms_request');
+        $this->addSql('ALTER TABLE mentor_availability CHANGE created_at created_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL');
+        $this->addSql('ALTER TABLE mentor_availability RENAME INDEX idx_cb274ddfdb403044 TO idx_ma_mentor');
+        $this->addSql('ALTER TABLE posts DROP FOREIGN KEY FK_885DBAFAA76ED395');
+        $this->addSql('ALTER TABLE posts CHANGE content content TEXT NOT NULL, CHANGE created_at created_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL, CHANGE image_url image_url VARCHAR(500) DEFAULT \'NULL\'');
+        $this->addSql('ALTER TABLE posts ADD CONSTRAINT `fk_post_user` FOREIGN KEY (user_id) REFERENCES user (id) ON UPDATE CASCADE ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE posts RENAME INDEX idx_885dbafaa76ed395 TO idx_post_user');
+        $this->addSql('ALTER TABLE post_reactions CHANGE reaction_type reaction_type ENUM(\'LIKE\', \'LOVE\', \'HAHA\', \'WOW\', \'SAD\', \'ANGRY\') DEFAULT \'\'\'LIKE\'\'\' NOT NULL');
+        $this->addSql('ALTER TABLE post_reactions RENAME INDEX idx_991d0144a76ed395 TO idx_reaction_user');
+        $this->addSql('ALTER TABLE progression DROP FOREIGN KEY FK_D5B25073A76ED395');
+        $this->addSql('ALTER TABLE progression DROP FOREIGN KEY FK_D5B250737ECF78B0');
+        $this->addSql('ALTER TABLE progression CHANGE pourcentage pourcentage NUMERIC(5, 2) DEFAULT \'0.00\' COMMENT \'Pourcentage de 0.00 ├á 100.00\', CHANGE points_xp points_xp INT DEFAULT 0, CHANGE niveau niveau INT DEFAULT 1, CHANGE etat etat ENUM(\'NON_COMMENCE\', \'EN_COURS\', \'COMPLETE\', \'CERTIFIE\') DEFAULT \'\'\'NON_COMMENCE\'\'\', CHANGE date_debut date_debut DATETIME DEFAULT \'current_timestamp()\' NOT NULL, CHANGE date_obtention date_obtention DATETIME DEFAULT \'NULL\' COMMENT \'Date de compl├®tion du cours\', CHANGE updated_at updated_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL');
+        $this->addSql('ALTER TABLE progression ADD CONSTRAINT `fk_progression_cours` FOREIGN KEY (cours_id) REFERENCES cours (id) ON UPDATE CASCADE ON DELETE CASCADE');
+        $this->addSql('CREATE INDEX idx_progression_etat ON progression (etat)');
+        $this->addSql('ALTER TABLE progression RENAME INDEX idx_d5b25073a76ed395 TO idx_progression_user');
+        $this->addSql('ALTER TABLE progression RENAME INDEX idx_d5b250737ecf78b0 TO idx_progression_cours');
+        $this->addSql('ALTER TABLE progression RENAME INDEX unique_user_cours TO uk_user_cours');
+        $this->addSql('ALTER TABLE projet DROP FOREIGN KEY FK_50159CA9A76ED395');
+        $this->addSql('DROP INDEX IDX_50159CA9A76ED395 ON projet');
+        $this->addSql('ALTER TABLE projet CHANGE titre titre VARCHAR(255) DEFAULT \'NULL\', CHANGE description description TEXT DEFAULT NULL, CHANGE secteur secteur VARCHAR(100) DEFAULT \'NULL\', CHANGE etape etape VARCHAR(20) DEFAULT \'NULL\', CHANGE statut statut VARCHAR(20) DEFAULT \'NULL\', CHANGE date_creation date_creation DATE DEFAULT \'NULL\', CHANGE statut_projet statut_projet VARCHAR(20) DEFAULT \'\'\'BROUILLON\'\'\', CHANGE score_global score_global DOUBLE PRECISION DEFAULT \'0\', CHANGE diagnostic_ia diagnostic_ia TEXT DEFAULT NULL, CHANGE date_soumission date_soumission DATE DEFAULT \'NULL\', CHANGE date_evaluation date_evaluation DATE DEFAULT \'NULL\'');
+        $this->addSql('CREATE INDEX idx_projet_entrepreneur ON projet (entrepreneur_id)');
+        $this->addSql('ALTER TABLE threads DROP FOREIGN KEY FK_6F8E3DDDFE54D947');
+        $this->addSql('ALTER TABLE threads DROP FOREIGN KEY FK_6F8E3DDDA76ED395');
+        $this->addSql('ALTER TABLE threads CHANGE content content TEXT NOT NULL, CHANGE created_at created_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL');
+        $this->addSql('ALTER TABLE threads ADD CONSTRAINT `fk_thread_group` FOREIGN KEY (group_id) REFERENCES `groups` (id) ON UPDATE CASCADE ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE threads ADD CONSTRAINT `fk_thread_user` FOREIGN KEY (user_id) REFERENCES user (id) ON UPDATE CASCADE ON DELETE CASCADE');
+        $this->addSql('ALTER TABLE threads RENAME INDEX idx_6f8e3dddfe54d947 TO idx_thread_group');
+        $this->addSql('ALTER TABLE threads RENAME INDEX idx_6f8e3ddda76ed395 TO idx_thread_user');
+        $this->addSql('ALTER TABLE user ADD preferred_currency VARCHAR(3) DEFAULT \'\'\'EUR\'\'\', ADD preferred_theme VARCHAR(10) DEFAULT \'\'\'light\'\'\', ADD preferred_language VARCHAR(5) DEFAULT \'\'\'fr\'\'\', CHANGE phone phone VARCHAR(20) DEFAULT \'NULL\', CHANGE role role ENUM(\'ADMIN\', \'ENTREPRENEUR\', \'MENTOR\', \'INVESTISSEUR\') DEFAULT \'\'\'ENTREPRENEUR\'\'\' NOT NULL, CHANGE bio bio TEXT DEFAULT NULL, CHANGE profile_picture profile_picture VARCHAR(500) DEFAULT \'NULL\', CHANGE company_name company_name VARCHAR(200) DEFAULT \'NULL\', CHANGE linkedin_url linkedin_url VARCHAR(500) DEFAULT \'NULL\', CHANGE address address VARCHAR(300) DEFAULT \'NULL\', CHANGE date_of_birth date_of_birth DATE DEFAULT \'NULL\', CHANGE verified verified TINYINT DEFAULT 0 NOT NULL, CHANGE phone_verified phone_verified TINYINT DEFAULT 0 NOT NULL, CHANGE is_active is_active TINYINT DEFAULT 1 NOT NULL, CHANGE is_banned is_banned TINYINT DEFAULT 0 NOT NULL, CHANGE google_provider_id google_provider_id VARCHAR(255) DEFAULT \'NULL\', CHANGE face_registered face_registered TINYINT DEFAULT 0 NOT NULL, CHANGE created_at created_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL, CHANGE updated_at updated_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL, CHANGE total_xp total_xp INT DEFAULT 0 NOT NULL');
+        $this->addSql('ALTER TABLE user RENAME INDEX uniq_8d93d649e7927c74 TO email');
+        $this->addSql('ALTER TABLE user_connection CHANGE created_at created_at DATETIME DEFAULT \'current_timestamp()\' NOT NULL');
+        $this->addSql('ALTER TABLE user_connection RENAME INDEX idx_8e90b58ad956f010 TO followed_id');
+    }
+}

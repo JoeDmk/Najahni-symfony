@@ -1,0 +1,74 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Mes demandes de mentorat - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-mortarboard me-2"></i>Mentorat</h2>
+    <div class="d-flex gap-2">
+        <a href="{{ path('app_mentorat_mentors') }}" class="btn btn-nj"><i class="bi bi-search me-1"></i>Trouver un mentor</a>
+        <a href="{{ path('app_mentorat_availability') }}" class="btn btn-outline-primary"><i class="bi bi-calendar me-1"></i>Disponibilités</a>
+        <a href="{{ path('app_mentorat_sessions') }}" class="btn btn-outline-secondary"><i class="bi bi-camera-video me-1"></i>Sessions</a>
+    </div>
+</div>
+
+{# Sent Requests #}
+<h4 class="fw-bold mb-3">Demandes envoyées</h4>
+{% if sentRequests|length > 0 %}
+<div class="row g-3 mb-5">
+    {% for req in sentRequests %}
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm" style="border-radius:1rem">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="fw-bold mb-0">Mentor : {{ req.mentor.firstname }} {{ req.mentor.lastname }}</h6>
+                    <span class="badge bg-{{ req.status == 'ACCEPTED' ? 'success' : (req.status == 'REJECTED' ? 'danger' : 'warning text-dark') }}">{{ req.status }}</span>
+                </div>
+                {% if req.project %}<p class="small text-muted mb-1"><i class="bi bi-rocket me-1"></i>Projet : {{ req.project.titre }}</p>{% endif %}
+                <p class="small text-muted mb-1"><i class="bi bi-calendar me-1"></i>{{ req.date|date('d/m/Y') }} à {{ req.time }}</p>
+                {% if req.motivation %}<p class="small mb-0">{{ req.motivation }}</p>{% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<p class="text-muted mb-5">Aucune demande envoyée.</p>
+{% endif %}
+
+{# Received Requests (for mentors) #}
+{% if receivedRequests|length > 0 %}
+<h4 class="fw-bold mb-3">Demandes reçues</h4>
+<div class="row g-3">
+    {% for req in receivedRequests %}
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm" style="border-radius:1rem">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="fw-bold mb-0">De : {{ req.entrepreneur.firstname }} {{ req.entrepreneur.lastname }}</h6>
+                    <span class="badge bg-{{ req.status == 'ACCEPTED' ? 'success' : (req.status == 'REJECTED' ? 'danger' : 'warning text-dark') }}">{{ req.status }}</span>
+                </div>
+                {% if req.project %}<p class="small text-muted mb-1"><i class="bi bi-rocket me-1"></i>{{ req.project.titre }}</p>{% endif %}
+                <p class="small text-muted mb-1"><i class="bi bi-calendar me-1"></i>{{ req.date|date('d/m/Y') }} à {{ req.time }}</p>
+                {% if req.motivation %}<p class="small mb-2">{{ req.motivation }}</p>{% endif %}
+                {% if req.goals %}<p class="small text-muted mb-2"><strong>Objectifs:</strong> {{ req.goals }}</p>{% endif %}
+
+                {% if req.status == 'PENDING' %}
+                <div class="d-flex gap-2">
+                    <form method="post" action="{{ path('app_mentorat_request_respond', {id: req.id}) }}" class="flex-fill">
+                        <input type="hidden" name="action" value="accept">
+                        <button class="btn btn-sm btn-success w-100"><i class="bi bi-check-lg me-1"></i>Accepter</button>
+                    </form>
+                    <form method="post" action="{{ path('app_mentorat_request_respond', {id: req.id}) }}" class="flex-fill">
+                        <input type="hidden" name="action" value="reject">
+                        <button class="btn btn-sm btn-outline-danger w-100"><i class="bi bi-x-lg me-1"></i>Refuser</button>
+                    </form>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}Progressions - Admin Najahni{% endblock %}
+
+{% block main %}
+<h2 class="fw-bold mb-4"><i class="bi bi-bar-chart me-2"></i>Progressions</h2>
+
+<div class="card border-0 shadow-sm" style="border-radius:1rem">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-nj mb-0">
+                <thead><tr><th>Utilisateur</th><th>Cours</th><th>Progression</th><th>État</th><th>XP</th><th>Début</th></tr></thead>
+                <tbody>
+                    {% for p in pagination %}
+                    <tr>
+                        <td>{{ p.user.firstname }} {{ p.user.lastname }}</td>
+                        <td class="fw-semibold">{{ p.cours.titre }}</td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-fill" style="height:6px">
+                                    <div class="progress-bar" style="width:{{ p.pourcentage }}%;background:var(--nj-gradient)"></div>
+                                </div>
+                                <small>{{ p.pourcentage }}%</small>
+                            </div>
+                        </td>
+                        <td><span class="badge bg-{{ p.etat == 'COMPLETE' ? 'success' : (p.etat == 'EN_COURS' ? 'primary' : 'secondary') }}">{{ p.etat }}</span></td>
+                        <td>{{ p.pointsXp }}</td>
+                        <td>{{ p.dateDebut|date('d/m/Y') }}</td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center text-muted py-4">Aucune progression.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div class="d-flex justify-content-center mt-4">{{ knp_pagination_render(pagination) }}</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}{{ group.name }} - Najahni{% endblock %}
+
+{% block main %}
+<a href="{{ path('app_community_groups') }}" class="text-decoration-none text-muted"><i class="bi bi-arrow-left me-1"></i>Tous les groupes</a>
+
+<div class="row g-4 mt-3">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <h3 class="fw-bold mb-0">{{ group.name }}</h3>
+                {% if group.isPrivate %}
+                    <span class="badge bg-warning text-dark"><i class="bi bi-lock"></i> Privé</span>
+                {% endif %}
+            </div>
+            <p class="text-muted">{{ group.description }}</p>
+            <small class="text-muted"><i class="bi bi-person me-1"></i>Admin : {{ group.groupAdmin.firstname }} {{ group.groupAdmin.lastname }}</small>
+        </div>
+
+        {# New Thread Form #}
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
+            <h5 class="fw-bold mb-3">Nouvelle discussion</h5>
+            <form method="post" action="{{ path('app_community_thread_new', {id: group.id}) }}">
+                <div class="mb-3">
+                    <input type="text" name="title" class="form-control" placeholder="Titre de la discussion" required>
+                </div>
+                <div class="mb-3">
+                    <textarea name="content" class="form-control" rows="3" placeholder="Contenu..." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-nj"><i class="bi bi-chat-dots me-2"></i>Publier</button>
+            </form>
+        </div>
+
+        {# Threads #}
+        {% for thread in threads %}
+        <div class="card border-0 shadow-sm mb-3" style="border-radius:1rem">
+            <div class="card-body p-4">
+                <h5 class="fw-bold"><a href="{{ path('app_community_thread_show', {id: thread.id}) }}" class="text-decoration-none text-dark">{{ thread.title }}</a></h5>
+                <p class="text-muted mb-2">{{ thread.content|length > 200 ? thread.content|slice(0,200) ~ '...' : thread.content }}</p>
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">Par {{ thread.user.firstname }} {{ thread.user.lastname }} · {{ thread.createdAt|date('d/m/Y H:i') }}</small>
+                    <span class="badge bg-primary bg-opacity-10 text-primary"><i class="bi bi-chat me-1"></i>{{ thread.comments|length }}</span>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <p class="text-muted text-center py-3">Aucune discussion dans ce groupe.</p>
+        {% endfor %}
+    </div>
+
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h6 class="fw-bold mb-3"><i class="bi bi-people me-2"></i>Membres ({{ group.members|length }})</h6>
+            {% for member in group.members %}
+            <div class="d-flex align-items-center mb-2">
+                <div class="rounded-circle d-flex align-items-center justify-content-center me-2" style="width:32px;height:32px;background:var(--nj-gradient);color:#fff;font-size:.75rem">
+                    {{ member.user.firstname|first|upper }}{{ member.user.lastname|first|upper }}
+                </div>
+                <small>{{ member.user.firstname }} {{ member.user.lastname }}</small>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

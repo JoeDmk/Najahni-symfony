@@ -1,0 +1,61 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Historique de connexion - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-clock-history me-2"></i>Historique de connexion</h2>
+    <a href="{{ path('app_profile') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+</div>
+
+{% if history|length > 0 %}
+<div class="card border-0 shadow-sm" style="border-radius:1rem;overflow:hidden">
+    <div class="table-responsive">
+        <table class="table table-nj mb-0">
+            <thead>
+                <tr>
+                    <th>Date & Heure</th>
+                    <th>Méthode</th>
+                    <th>Adresse IP</th>
+                    <th>Appareil</th>
+                    <th>Statut</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entry in history %}
+                <tr>
+                    <td>{{ entry.loginTime|date('d/m/Y H:i:s') }}</td>
+                    <td>
+                        {% if entry.loginMethod == 'GOOGLE' %}
+                            <span class="badge bg-info"><i class="bi bi-google me-1"></i>Google</span>
+                        {% elseif entry.loginMethod == 'FACE_ID' %}
+                            <span class="badge" style="background:var(--nj-accent)"><i class="bi bi-person-bounding-box me-1"></i>Face ID</span>
+                        {% else %}
+                            <span class="badge bg-secondary"><i class="bi bi-key me-1"></i>Email/Mot de passe</span>
+                        {% endif %}
+                    </td>
+                    <td><code class="small">{{ entry.ipAddress }}</code></td>
+                    <td class="small text-muted" style="max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="{{ entry.deviceInfo }}">
+                        {{ entry.deviceInfo|length > 60 ? entry.deviceInfo|slice(0, 60) ~ '...' : entry.deviceInfo }}
+                    </td>
+                    <td>
+                        {% if entry.success %}
+                            <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Succès</span>
+                        {% else %}
+                            <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Échec</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📋</div>
+        <h4>Aucun historique</h4>
+        <p>Aucune connexion enregistrée.</p>
+    </div>
+{% endif %}
+{% endblock %}

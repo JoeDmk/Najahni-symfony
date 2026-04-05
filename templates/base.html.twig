@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="fr" data-bs-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Najahni{% endblock %}</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>🚀</text></svg>">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root{--nj-primary:#4361ee;--nj-secondary:#3a0ca3;--nj-accent:#7209b7;--nj-success:#06d6a0;--nj-warning:#ffd166;--nj-danger:#ef476f;--nj-dark:#1a1a2e;--nj-gradient:linear-gradient(135deg,var(--nj-primary),var(--nj-accent))}
+        *{box-sizing:border-box}
+        body{font-family:'Inter',sans-serif;background:#f0f2f5;min-height:100vh;color:#333}
+        .navbar-nj{background:var(--nj-gradient);box-shadow:0 4px 24px rgba(67,97,238,.25)}
+        .navbar-nj .navbar-brand{font-weight:800;font-size:1.5rem;letter-spacing:-.5px}
+        .navbar-nj .nav-link{color:rgba(255,255,255,.85)!important;font-weight:500;transition:all .2s;border-radius:.5rem;padding:.5rem 1rem!important}
+        .navbar-nj .nav-link:hover,.navbar-nj .nav-link.active{color:#fff!important;background:rgba(255,255,255,.18)}
+        .card{border:none;border-radius:1rem;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.06);transition:all .3s ease}
+        .card:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(0,0,0,.1)}
+        .btn-nj{background:var(--nj-gradient);border:none;color:#fff;font-weight:600;border-radius:.75rem;padding:.6rem 1.5rem;transition:all .3s}
+        .btn-nj:hover{transform:translateY(-2px);box-shadow:0 6px 20px rgba(67,97,238,.4);color:#fff}
+        .btn-outline-nj{border:2px solid var(--nj-primary);color:var(--nj-primary);font-weight:600;border-radius:.75rem;padding:.55rem 1.5rem;background:transparent;transition:all .3s}
+        .btn-outline-nj:hover{background:var(--nj-gradient);color:#fff;border-color:transparent;transform:translateY(-2px);box-shadow:0 6px 20px rgba(67,97,238,.3)}
+        .stat-card{border-radius:1rem;padding:1.5rem;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.06);position:relative;overflow:hidden;transition:all .3s ease}
+        .stat-card:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(0,0,0,.1)}
+        .stat-card.stat-gradient{background:var(--nj-gradient);color:#fff}
+        .stat-card.stat-gradient::after{content:'';position:absolute;top:-50%;right:-50%;width:100%;height:100%;background:rgba(255,255,255,.08);border-radius:50%}
+        .stat-card .stat-icon{font-size:2.5rem;opacity:.3;position:absolute;right:1rem;top:1rem}
+        .stat-card h3{font-size:2rem;font-weight:800;margin:0}
+        .table-nj{border-radius:1rem;overflow:hidden}
+        .table-nj thead{background:var(--nj-gradient);color:#fff}
+        .table-nj thead th{font-weight:600;padding:.85rem 1rem;border:none;white-space:nowrap}
+        .table-nj tbody td{padding:.85rem 1rem;vertical-align:middle}
+        .table-nj tbody tr{transition:background .2s}
+        .table-nj tbody tr:hover{background:rgba(67,97,238,.04)}
+        .sidebar{background:#fff;min-height:calc(100vh - 56px);border-right:1px solid #e9ecef;box-shadow:2px 0 12px rgba(0,0,0,.03)}
+        .sidebar .nav-link{color:#6c757d;padding:.75rem 1.25rem;border-radius:0;transition:all .2s;border-left:3px solid transparent}
+        .sidebar .nav-link:hover{color:var(--nj-primary);background:rgba(67,97,238,.05);border-left-color:var(--nj-primary)}
+        .sidebar .nav-link.active{color:var(--nj-primary);background:rgba(67,97,238,.08);border-left-color:var(--nj-primary);font-weight:600}
+        .sidebar .nav-link i{width:24px;text-align:center;margin-right:.5rem}
+        .page-header{margin-bottom:1.5rem}
+        .page-header h2{font-weight:700;color:var(--nj-dark)}
+        .fade-in{animation:fadeIn .5s ease-out}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+        .form-control:focus,.form-select:focus{border-color:var(--nj-primary);box-shadow:0 0 0 .2rem rgba(67,97,238,.15)}
+        .form-control,.form-select{border-radius:.75rem;padding:.6rem 1rem}
+        .hero-section{background:var(--nj-gradient);border-radius:1.5rem;padding:4rem 2rem;color:#fff;position:relative;overflow:hidden}
+        .hero-section::before{content:'';position:absolute;top:0;right:0;width:40%;height:100%;background:rgba(255,255,255,.05);border-radius:50% 0 0 50%}
+        .hero-section::after{content:'';position:absolute;bottom:-20%;left:-10%;width:50%;height:80%;background:rgba(255,255,255,.03);border-radius:50%;transform:rotate(-15deg)}
+        .module-card{text-align:center;padding:2rem 1.5rem;border-radius:1rem;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.06);transition:all .3s}
+        .module-card:hover{transform:translateY(-6px);box-shadow:0 16px 40px rgba(0,0,0,.12)}
+        .module-card .module-icon{width:72px;height:72px;border-radius:1rem;display:flex;align-items:center;justify-content:center;margin:0 auto 1rem;font-size:1.8rem}
+        .module-card h5{font-weight:700;margin-bottom:.5rem}
+        .module-card p{color:#6c757d;font-size:.9rem;margin-bottom:1rem}
+        .feature-badge{display:inline-flex;align-items:center;gap:.35rem;background:rgba(67,97,238,.08);color:var(--nj-primary);padding:.45rem .9rem;border-radius:2rem;font-size:.85rem;font-weight:500}
+        .empty-state{text-align:center;padding:4rem 2rem}
+        .empty-state .empty-icon{font-size:5rem;margin-bottom:1rem;opacity:.7}
+        .empty-state h4{font-weight:700;margin-bottom:.5rem}
+        .empty-state p{color:#6c757d;max-width:400px;margin:0 auto .5rem}
+        footer.nj-footer{background:var(--nj-dark);color:rgba(255,255,255,.7);padding:2.5rem 0 1.5rem}
+        footer.nj-footer a{color:rgba(255,255,255,.85);text-decoration:none;transition:color .2s}
+        footer.nj-footer a:hover{color:#fff}
+        .badge-role-ADMIN{background:#dc3545;color:#fff} .badge-role-ENTREPRENEUR{background:var(--nj-primary);color:#fff}
+        .badge-role-MENTOR{background:var(--nj-accent);color:#fff} .badge-role-INVESTISSEUR{background:var(--nj-secondary);color:#fff}
+    </style>
+    {% block stylesheets %}{% endblock %}
+</head>
+<body>
+    {% for label, messages in app.flashes %}
+        {% for message in messages %}
+        <div class="toast-container position-fixed top-0 end-0 p-3">
+            <div class="toast show border-0 shadow" role="alert">
+                <div class="toast-header bg-{{ label == 'success' ? 'success' : (label == 'danger' ? 'danger' : 'primary') }} text-white">
+                    <i class="bi bi-{{ label == 'success' ? 'check-circle' : (label == 'danger' ? 'exclamation-triangle' : 'info-circle') }} me-2"></i>
+                    <strong class="me-auto">{{ label|capitalize }}</strong>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                </div>
+                <div class="toast-body">{{ message }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    {% endfor %}
+
+    {% block body %}{% endblock %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded',()=>{
+        document.querySelectorAll('.toast').forEach(t=>new bootstrap.Toast(t,{delay:4000}).show());
+        document.querySelectorAll('.fade-in').forEach((el,i)=>{el.style.animationDelay=(i*.05)+'s'});
+    });
+    </script>
+    {% block javascripts %}{% endblock %}
+</body>
+</html>

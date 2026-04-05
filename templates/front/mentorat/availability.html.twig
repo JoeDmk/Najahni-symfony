@@ -1,0 +1,58 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Disponibilités - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-calendar-check me-2"></i>Mes Disponibilités</h2>
+    <a href="{{ path('app_mentorat_requests') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Demandes</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-5">
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h5 class="fw-bold mb-3">Ajouter un créneau</h5>
+            <form method="post" action="{{ path('app_mentorat_availability_new') }}">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Date</label>
+                    <input type="date" name="date" class="form-control" required>
+                </div>
+                <div class="row g-3">
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Début</label>
+                        <input type="time" name="start_time" class="form-control" required>
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label fw-semibold">Fin</label>
+                        <input type="time" name="end_time" class="form-control" required>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-nj w-100 mt-3"><i class="bi bi-plus-lg me-2"></i>Ajouter</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="col-md-7">
+        <div class="card border-0 shadow-sm" style="border-radius:1rem">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-nj mb-0">
+                        <thead><tr><th>Date</th><th>Début</th><th>Fin</th></tr></thead>
+                        <tbody>
+                            {% for a in availabilities %}
+                            <tr>
+                                <td>{{ a.date|date('d/m/Y') }}</td>
+                                <td>{{ a.startTime }}</td>
+                                <td>{{ a.endTime }}</td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="3" class="text-center text-muted py-4">Aucun créneau défini.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

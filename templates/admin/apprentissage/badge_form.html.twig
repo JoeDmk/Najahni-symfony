@@ -1,0 +1,66 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}{{ badge ? 'Modifier' : 'Ajouter' }} un badge - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-award me-2"></i>{{ badge ? 'Modifier' : 'Ajouter' }} un badge</h2>
+    <a href="{{ path('admin_badges') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+</div>
+
+<div class="card border-0 shadow-sm" style="border-radius:1rem">
+    <div class="card-body p-4">
+        <form method="post">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Nom</label>
+                    <input type="text" name="nom" class="form-control" value="{{ badge ? badge.nom }}" required>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">Icône (emoji)</label>
+                    <input type="text" name="icone" class="form-control" value="{{ badge ? badge.icone : '🏆' }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold">Rareté</label>
+                    <select name="rarete" class="form-select">
+                        {% for r in ['COMMUN', 'RARE', 'EPIQUE', 'LEGENDAIRE'] %}
+                            <option value="{{ r }}" {{ badge and badge.rarete == r ? 'selected' }}>{{ r }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label fw-semibold">Description</label>
+                    <textarea name="description" class="form-control" rows="3">{{ badge ? badge.description }}</textarea>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Condition d'obtention</label>
+                    <input type="text" name="condition_obtention" class="form-control" value="{{ badge ? badge.conditionObtention }}">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label fw-semibold">Catégorie</label>
+                    <input type="text" name="categorie" class="form-control" value="{{ badge ? badge.categorie }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Points XP requis</label>
+                    <input type="number" name="points_requis" class="form-control" value="{{ badge ? badge.pointsRequis : 0 }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Cours requis</label>
+                    <input type="number" name="cours_requis" class="form-control" value="{{ badge ? badge.coursRequis : 0 }}">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Niveau requis</label>
+                    <input type="number" name="niveau_requis" class="form-control" value="{{ badge ? badge.niveauRequis : 0 }}">
+                </div>
+                <div class="col-12">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="actif" value="1" id="actif" {{ (not badge) or badge.actif ? 'checked' }}>
+                        <label class="form-check-label" for="actif">Actif</label>
+                    </div>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-nj mt-4"><i class="bi bi-check-lg me-2"></i>{{ badge ? 'Enregistrer' : 'Créer' }}</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

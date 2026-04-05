@@ -1,0 +1,151 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}Dashboard Admin - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-speedometer2 me-2"></i>Tableau de bord</h2>
+    <span class="text-muted small"><i class="bi bi-clock me-1"></i>{{ "now"|date('d/m/Y H:i') }}</span>
+</div>
+
+{# Stats Cards Row 1 - Key Metrics #}
+<div class="row g-4 mb-4">
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card" style="border-left:4px solid var(--nj-primary)">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted small mb-1">Total Utilisateurs</p>
+                    <h3 class="fw-bold mb-0" style="color:var(--nj-dark)">{{ totalUsers }}</h3>
+                </div>
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:50px;height:50px;background:rgba(67,97,238,.1)">
+                    <i class="bi bi-people-fill" style="font-size:1.5rem;color:var(--nj-primary)"></i>
+                </div>
+            </div>
+            <div class="mt-2 small">
+                <span class="text-success"><i class="bi bi-check-circle"></i> {{ verifiedUsers }} vérifiés</span>
+                <span class="text-danger ms-2"><i class="bi bi-slash-circle"></i> {{ bannedUsers }} bannis</span>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card" style="border-left:4px solid var(--nj-accent)">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted small mb-1">Projets</p>
+                    <h3 class="fw-bold mb-0" style="color:var(--nj-dark)">{{ totalProjets }}</h3>
+                </div>
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:50px;height:50px;background:rgba(114,9,183,.1)">
+                    <i class="bi bi-rocket-takeoff" style="font-size:1.5rem;color:var(--nj-accent)"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card" style="border-left:4px solid #f72585">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted small mb-1">Cours</p>
+                    <h3 class="fw-bold mb-0" style="color:var(--nj-dark)">{{ totalCours }}</h3>
+                </div>
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:50px;height:50px;background:rgba(247,37,133,.1)">
+                    <i class="bi bi-book" style="font-size:1.5rem;color:#f72585"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card" style="border-left:4px solid var(--nj-secondary)">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted small mb-1">Opportunités</p>
+                    <h3 class="fw-bold mb-0" style="color:var(--nj-dark)">{{ totalOpportunities }}</h3>
+                </div>
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:50px;height:50px;background:rgba(58,12,163,.1)">
+                    <i class="bi bi-cash-stack" style="font-size:1.5rem;color:var(--nj-secondary)"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Stats Cards Row 2 - Roles Breakdown #}
+<div class="row g-4 mb-5">
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card stat-gradient" style="background:linear-gradient(135deg,#4361ee,#3a56d4)">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-person-gear me-3" style="font-size:2.2rem;opacity:.8"></i>
+                <div>
+                    <p class="small mb-0 opacity-75">Entrepreneurs</p>
+                    <h4 class="fw-bold mb-0">{{ totalEntrepreneurs }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card stat-gradient" style="background:linear-gradient(135deg,#7209b7,#5c0797)">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-mortarboard me-3" style="font-size:2.2rem;opacity:.8"></i>
+                <div>
+                    <p class="small mb-0 opacity-75">Mentors</p>
+                    <h4 class="fw-bold mb-0">{{ totalMentors }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card stat-gradient" style="background:linear-gradient(135deg,#3a0ca3,#2f0a82)">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-cash-coin me-3" style="font-size:2.2rem;opacity:.8"></i>
+                <div>
+                    <p class="small mb-0 opacity-75">Investisseurs</p>
+                    <h4 class="fw-bold mb-0">{{ totalInvestisseurs }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card stat-gradient" style="background:linear-gradient(135deg,#f72585,#d61e72)">
+            <div class="d-flex align-items-center">
+                <i class="bi bi-chat-dots me-3" style="font-size:2.2rem;opacity:.8"></i>
+                <div>
+                    <p class="small mb-0 opacity-75">Mentorats</p>
+                    <h4 class="fw-bold mb-0">{{ totalMentorships }}</h4>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# Upcoming Events #}
+{% if upcomingEvents|length > 0 %}
+<div class="card border-0 shadow-sm" style="border-radius:1rem">
+    <div class="card-body p-4">
+        <h5 class="fw-bold mb-4"><i class="bi bi-calendar-event me-2"></i>Événements à venir</h5>
+        <div class="table-responsive">
+            <table class="table table-nj mb-0">
+                <thead>
+                    <tr><th>Titre</th><th>Date</th><th>Capacité</th><th>Participants</th></tr>
+                </thead>
+                <tbody>
+                    {% for event in upcomingEvents %}
+                    <tr>
+                        <td class="fw-semibold">{{ event.title }}</td>
+                        <td>{{ event.eventDate|date('d/m/Y H:i') }}</td>
+                        <td>{{ event.capacity }}</td>
+                        <td>{{ event.participantsCount }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card border-0 shadow-sm" style="border-radius:1rem">
+    <div class="card-body p-5 text-center">
+        <i class="bi bi-calendar-x text-muted" style="font-size:3rem"></i>
+        <p class="text-muted mt-2 mb-0">Aucun événement à venir pour le moment</p>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

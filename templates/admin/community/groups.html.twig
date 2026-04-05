@@ -1,0 +1,36 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}Gestion Groupes - Najahni{% endblock %}
+
+{% block main %}
+<h2 class="fw-bold mb-4"><i class="bi bi-people me-2"></i>Groupes</h2>
+
+<div class="card border-0 shadow-sm" style="border-radius:1rem">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-nj mb-0">
+                <thead><tr><th>Nom</th><th>Admin</th><th>Membres</th><th>Privé</th><th>Créé le</th><th class="text-end">Actions</th></tr></thead>
+                <tbody>
+                    {% for group in pagination %}
+                    <tr>
+                        <td class="fw-semibold">{{ group.name }}</td>
+                        <td>{{ group.groupAdmin.firstname }} {{ group.groupAdmin.lastname }}</td>
+                        <td>{{ group.members|length }}</td>
+                        <td>{{ group.isPrivate ? '🔒' : '🔓' }}</td>
+                        <td>{{ group.createdAt|date('d/m/Y') }}</td>
+                        <td class="text-end">
+                            <form method="post" action="{{ path('admin_community_groups_delete', {id: group.id}) }}" class="d-inline" onsubmit="return confirm('Supprimer ?')">
+                                <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="6" class="text-center text-muted py-4">Aucun groupe.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div class="d-flex justify-content-center mt-4">{{ knp_pagination_render(pagination) }}</div>
+{% endblock %}

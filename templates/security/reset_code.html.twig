@@ -1,0 +1,86 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Code de réinitialisation - Najahni{% endblock %}
+
+{% block body %}
+<div class="min-vh-100 d-flex align-items-center justify-content-center" style="background:var(--nj-gradient)">
+    <div class="card shadow-lg border-0" style="width:460px;border-radius:1.5rem">
+        <div class="card-body p-5">
+            <div class="text-center mb-4">
+                <div class="d-inline-flex align-items-center justify-content-center rounded-circle mb-3" style="width:80px;height:80px;background:rgba(67,97,238,.1)">
+                    <i class="bi bi-shield-lock" style="font-size:2.5rem;color:var(--nj-primary)"></i>
+                </div>
+                <h3 class="fw-bold">Entrez le code</h3>
+                <p class="text-muted">Un code à 4 chiffres a été envoyé à votre adresse email.</p>
+            </div>
+
+            <form method="post" id="resetCodeForm">
+                <input type="hidden" name="action" value="verify">
+                <div class="mb-4">
+                    <label class="form-label fw-semibold text-center d-block">Code de réinitialisation</label>
+                    <div class="d-flex justify-content-center gap-2" id="codeInputs">
+                        <input type="text" class="form-control text-center fw-bold code-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" style="width:60px;height:60px;font-size:1.8rem;border-radius:1rem" autofocus>
+                        <input type="text" class="form-control text-center fw-bold code-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" style="width:60px;height:60px;font-size:1.8rem;border-radius:1rem">
+                        <input type="text" class="form-control text-center fw-bold code-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" style="width:60px;height:60px;font-size:1.8rem;border-radius:1rem">
+                        <input type="text" class="form-control text-center fw-bold code-digit" maxlength="1" pattern="[0-9]" inputmode="numeric" style="width:60px;height:60px;font-size:1.8rem;border-radius:1rem">
+                    </div>
+                    <input type="hidden" name="code" id="codeValue">
+                </div>
+                <button type="submit" class="btn btn-nj w-100 py-2 mb-3">
+                    <i class="bi bi-check-circle me-2"></i>Vérifier le code
+                </button>
+            </form>
+
+            <div class="text-center">
+                <form method="post" class="d-inline">
+                    <input type="hidden" name="action" value="resend">
+                    <button type="submit" class="btn btn-link text-decoration-none" style="color:var(--nj-primary)">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Renvoyer le code
+                    </button>
+                </form>
+            </div>
+
+            <div class="text-center mt-3">
+                <small class="text-muted"><i class="bi bi-clock me-1"></i>Le code expire dans 5 minutes</small>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const digits = document.querySelectorAll('.code-digit');
+    const codeValue = document.getElementById('codeValue');
+    const form = document.getElementById('resetCodeForm');
+
+    digits.forEach((input, idx) => {
+        input.addEventListener('input', (e) => {
+            const val = e.target.value.replace(/\D/g, '');
+            e.target.value = val;
+            if (val && idx < digits.length - 1) digits[idx + 1].focus();
+            updateCode();
+        });
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !e.target.value && idx > 0) {
+                digits[idx - 1].focus();
+            }
+        });
+        input.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const paste = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '').slice(0, 4);
+            paste.split('').forEach((ch, i) => { if (digits[i]) digits[i].value = ch; });
+            if (paste.length > 0) digits[Math.min(paste.length, digits.length) - 1].focus();
+            updateCode();
+        });
+    });
+
+    function updateCode() {
+        codeValue.value = Array.from(digits).map(d => d.value).join('');
+    }
+
+    form.addEventListener('submit', () => updateCode());
+});
+</script>
+{% endblock %}

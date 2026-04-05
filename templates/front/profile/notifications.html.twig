@@ -1,0 +1,45 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Notifications - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-bell me-2"></i>Notifications</h2>
+    <div class="d-flex gap-2">
+        <form method="post" action="{{ path('app_profile_notifications_read_all') }}">
+            <button type="submit" class="btn btn-outline-secondary btn-sm"><i class="bi bi-check-all me-1"></i>Tout marquer comme lu</button>
+        </form>
+        <a href="{{ path('app_profile') }}" class="btn btn-outline-secondary btn-sm"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+    </div>
+</div>
+
+{% if notifications|length > 0 %}
+    <div class="d-flex flex-column gap-2">
+        {% for notif in notifications %}
+        <div class="card border-0 shadow-sm p-3 {{ not notif.read ? 'border-start border-4' : '' }}" style="border-radius:.75rem;{{ not notif.read ? 'border-left-color:var(--nj-primary)!important' : '' }}">
+            <div class="d-flex align-items-start gap-3">
+                <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0" style="width:42px;height:42px;background:{{ notif.typeColor }}20">
+                    <i class="bi bi-{{ notif.typeIcon }}" style="color:{{ notif.typeColor }};font-size:1.2rem"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h6 class="fw-bold mb-1 {{ not notif.read ? '' : 'text-muted' }}">{{ notif.title }}</h6>
+                        <small class="text-muted">{{ notif.createdAt|date('d/m H:i') }}</small>
+                    </div>
+                    <p class="mb-0 small text-muted">{{ notif.message }}</p>
+                </div>
+                {% if not notif.read %}
+                    <span class="badge rounded-pill bg-primary" style="font-size:.5rem">&bull;</span>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="empty-state">
+        <div class="empty-icon">🔔</div>
+        <h4>Aucune notification</h4>
+        <p>Vous n'avez pas encore de notifications.</p>
+    </div>
+{% endif %}
+{% endblock %}

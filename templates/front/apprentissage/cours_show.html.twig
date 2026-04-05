@@ -1,0 +1,98 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}{{ cours.titre }} - Najahni{% endblock %}
+
+{% block main %}
+<a href="{{ path('app_apprentissage_cours') }}" class="text-decoration-none text-muted"><i class="bi bi-arrow-left me-1"></i>Tous les cours</a>
+
+<div class="row g-4 mt-3">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
+            <div class="d-flex flex-wrap gap-2 mb-3">
+                <span class="badge bg-primary bg-opacity-10 text-primary">{{ cours.categorie }}</span>
+                <span class="badge bg-info bg-opacity-10 text-info">{{ cours.niveauDifficulte }}</span>
+                {% if cours.certification %}<span class="badge bg-success">🎓 Certifiant</span>{% endif %}
+            </div>
+            <h2 class="fw-bold mb-3">{{ cours.titre }}</h2>
+            <p>{{ cours.description }}</p>
+
+            {% if cours.videoUrl %}
+            <div class="ratio ratio-16x9 mt-3">
+                <iframe src="{{ cours.videoUrl }}" allowfullscreen></iframe>
+            </div>
+            {% endif %}
+        </div>
+
+        {# Comments/Reviews #}
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h5 class="fw-bold mb-3"><i class="bi bi-chat-left-text me-2"></i>Avis ({{ comments|length }})</h5>
+
+            <form method="post" action="{{ path('app_apprentissage_comment', {id: cours.id}) }}" class="mb-4">
+                <div class="mb-2">
+                    <textarea name="contenu" class="form-control" rows="2" placeholder="Votre avis sur ce cours..." required></textarea>
+                </div>
+                <div class="d-flex gap-2 align-items-center">
+                    <label class="small fw-semibold">Note :</label>
+                    <select name="rating" class="form-select form-select-sm" style="width:80px">
+                        {% for i in ['1.0','2.0','3.0','4.0','5.0'] %}<option value="{{ i }}">{{ i }}</option>{% endfor %}
+                    </select>
+                    <button class="btn btn-sm btn-nj ms-auto"><i class="bi bi-send me-1"></i>Publier</button>
+                </div>
+            </form>
+
+            {% for comment in comments %}
+            <div class="border-bottom pb-3 mb-3">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <strong class="small">{{ comment.user.firstname }} {{ comment.user.lastname }}</strong>
+                    <span class="text-warning small">{% for i in 1..5 %}{{ i <= comment.rating ? '★' : '☆' }}{% endfor %}</span>
+                </div>
+                <p class="small mb-0">{{ comment.contenu }}</p>
+            </div>
+            {% else %}
+            <p class="text-muted small">Aucun avis pour le moment.</p>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        {# Progression #}
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
+            <h6 class="fw-bold mb-3"><i class="bi bi-bar-chart me-2"></i>Progression</h6>
+            {% if progression %}
+                <div class="text-center mb-3">
+                    <div class="display-4 fw-bold" style="color:var(--nj-primary)">{{ progression.pourcentage }}%</div>
+                    <span class="badge bg-{{ progression.etat == 'COMPLETE' ? 'success' : (progression.etat == 'EN_COURS' ? 'primary' : 'secondary') }}">{{ progression.etat }}</span>
+                </div>
+                <div class="progress mb-3" style="height:10px">
+                    <div class="progress-bar" style="width:{{ progression.pourcentage }}%;background:var(--nj-gradient)"></div>
+                </div>
+                <form method="post" action="{{ path('app_apprentissage_progress_update', {id: cours.id}) }}">
+                    <div class="input-group">
+                        <input type="number" name="pourcentage" min="{{ progression.pourcentage }}" max="100" class="form-control" value="{{ progression.pourcentage }}" placeholder="%">
+                        <button class="btn btn-nj"><i class="bi bi-arrow-up"></i></button>
+                    </div>
+                </form>
+                {% if progression.pointsXp > 0 %}
+                <p class="small text-success mt-2 mb-0"><i class="bi bi-star me-1"></i>{{ progression.pointsXp }} XP gagnés</p>
+                {% endif %}
+            {% else %}
+                <p class="text-muted small mb-3">Vous n'êtes pas encore inscrit à ce cours.</p>
+                <form method="post" action="{{ path('app_apprentissage_enroll', {id: cours.id}) }}">
+                    <button class="btn btn-nj w-100"><i class="bi bi-play-circle me-2"></i>S'inscrire</button>
+                </form>
+            {% endif %}
+        </div>
+
+        {# Course Info #}
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h6 class="fw-bold mb-3">Informations</h6>
+            <ul class="list-unstyled mb-0">
+                <li class="mb-2"><i class="bi bi-clock text-muted me-2"></i>Durée : {{ cours.dureeEstimee }} min</li>
+                <li class="mb-2"><i class="bi bi-star text-muted me-2"></i>{{ cours.pointsXp }} XP</li>
+                <li class="mb-2"><i class="bi bi-bar-chart text-muted me-2"></i>{{ cours.niveauDifficulte }}</li>
+                <li><i class="bi bi-tag text-muted me-2"></i>{{ cours.categorie }}</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
