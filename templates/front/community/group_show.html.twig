@@ -8,19 +8,84 @@
 <div class="row g-4 mt-3">
     <div class="col-md-8">
         <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
-            <div class="d-flex justify-content-between align-items-start mb-2">
-                <h3 class="fw-bold mb-0">{{ group.name }}</h3>
-                {% if group.isPrivate %}
-                    <span class="badge bg-warning text-dark"><i class="bi bi-lock"></i> Privé</span>
-                {% endif %}
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+                <div>
+                    <div class="d-flex align-items-center gap-2 mb-2 flex-wrap">
+                        <h2 class="fw-bold mb-0">{{ group.name }}</h2>
+                        {% if group.isPrivate %}
+                        <span class="badge bg-warning text-dark"><i class="bi bi-lock"></i> Privé</span>
+                        {% else %}
+                        <span class="badge bg-success-subtle text-success-emphasis">Public</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-muted mb-3">{{ group.description }}</p>
+                    <div class="d-flex flex-wrap gap-3 small text-muted">
+                        <span><i class="bi bi-person me-1"></i>Admin : {{ group.groupAdmin.firstname }} {{ group.groupAdmin.lastname }}</span>
+                        <span><i class="bi bi-people me-1"></i>{{ group.membersCount }} membres</span>
+                        <span><i class="bi bi-chat me-1"></i>{{ threads|length }} discussions</span>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    {% if not isMember and not group.isPrivate %}
+                    <form method="post" action="{{ path('app_community_group_join', {id: group.id}) }}">
+                        <button class="btn btn-sm btn-nj"><i class="bi bi-box-arrow-in-right me-1"></i>Rejoindre</button>
+                    </form>
+                    {% elseif not isMember and group.isPrivate and not hasPendingRequest %}
+                    <form method="post" action="{{ path('app_community_group_join', {id: group.id}) }}">
+                        <button class="btn btn-sm btn-nj"><i class="bi bi-shield-lock me-1"></i>Demander l'acces</button>
+                    </form>
+                    {% elseif not isMember and group.isPrivate and hasPendingRequest %}
+                    <form method="post" action="{{ path('app_community_group_request_cancel', {id: group.id}) }}">
+                        <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-hourglass-split me-1"></i>Annuler la demande</button>
+                    </form>
+                    {% elseif isMember and not isOwner %}
+                    <form method="post" action="{{ path('app_community_group_leave', {id: group.id}) }}">
+                        <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-box-arrow-left me-1"></i>Quitter</button>
+                    </form>
+                    {% endif %}
+
+                    {% if isOwner %}
+                    <form method="post" action="{{ path('app_community_group_delete', {id: group.id}) }}">
+                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>Supprimer</button>
+                    </form>
+                    {% endif %}
+                </div>
             </div>
-            <p class="text-muted">{{ group.description }}</p>
-            <small class="text-muted"><i class="bi bi-person me-1"></i>Admin : {{ group.groupAdmin.firstname }} {{ group.groupAdmin.lastname }}</small>
         </div>
 
-        {# New Thread Form #}
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
+            <h5 class="fw-bold mb-3">Acces et adhesion</h5>
+            {% if isOwner %}
+            <div class="rounded-4 border border-primary-subtle bg-primary-subtle p-3 small text-muted">
+                Vous administrez ce groupe. Vous avez deja un acces complet et pouvez approuver les demandes privees depuis le panneau de droite.
+            </div>
+            {% elseif isMember %}
+            <div class="rounded-4 border border-success-subtle bg-success-subtle p-3 small text-muted">
+                Vous etes membre de ce groupe et pouvez consulter les discussions ainsi que publier de nouveaux fils.
+            </div>
+            {% elseif hasPendingRequest %}
+            <div class="rounded-4 border border-warning-subtle bg-warning-subtle p-3 small text-muted">
+                Votre demande d'acces est en attente d'approbation par l'administrateur du groupe.
+            </div>
+            {% elseif group.isPrivate %}
+            <div class="rounded-4 border border-warning-subtle bg-warning-subtle p-3 small text-muted">
+                Ce groupe est prive. Vous pouvez voir sa fiche, mais il faut une approbation avant d'acceder au contenu et aux discussions.
+            </div>
+            {% else %}
+            <div class="rounded-4 border border-info-subtle bg-info-subtle p-3 small text-muted">
+                Ce groupe est public. Rejoignez-le pour participer aux discussions.
+            </div>
+            {% endif %}
+        </div>
+
+        {% if not canViewContent %}
+        <div class="rounded-4 border border-warning-subtle bg-warning-subtle p-4 small text-muted mb-4">
+            Le contenu de ce groupe reste verrouille tant que votre acces n'a pas ete approuve. Une fois membre, vous pourrez ouvrir les fils, commenter et utiliser les outils IA.
+        </div>
+        {% else %}
         <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
             <h5 class="fw-bold mb-3">Nouvelle discussion</h5>
+            {% if canParticipate %}
             <form method="post" action="{{ path('app_community_thread_new', {id: group.id}) }}">
                 <div class="mb-3">
                     <input type="text" name="title" class="form-control" placeholder="Titre de la discussion" required>
@@ -30,27 +95,36 @@
                 </div>
                 <button type="submit" class="btn btn-nj"><i class="bi bi-chat-dots me-2"></i>Publier</button>
             </form>
+            {% else %}
+            <div class="rounded-4 border border-warning-subtle bg-warning-subtle p-3 small text-muted">
+                Rejoignez ce groupe pour lancer une discussion ou commenter les fils existants.
+            </div>
+            {% endif %}
         </div>
 
-        {# Threads #}
         {% for thread in threads %}
         <div class="card border-0 shadow-sm mb-3" style="border-radius:1rem">
             <div class="card-body p-4">
                 <h5 class="fw-bold"><a href="{{ path('app_community_thread_show', {id: thread.id}) }}" class="text-decoration-none text-dark">{{ thread.title }}</a></h5>
-                <p class="text-muted mb-2">{{ thread.content|length > 200 ? thread.content|slice(0,200) ~ '...' : thread.content }}</p>
-                <div class="d-flex justify-content-between align-items-center">
+                <p class="text-muted mb-2">{{ thread.content|length > 200 ? thread.content|slice(0, 200) ~ '...' : thread.content }}</p>
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <small class="text-muted">Par {{ thread.user.firstname }} {{ thread.user.lastname }} · {{ thread.createdAt|date('d/m/Y H:i') }}</small>
-                    <span class="badge bg-primary bg-opacity-10 text-primary"><i class="bi bi-chat me-1"></i>{{ thread.comments|length }}</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-primary bg-opacity-10 text-primary"><i class="bi bi-chat me-1"></i>{{ thread.comments|length }}</span>
+                        <a href="{{ path('app_community_thread_show', {id: thread.id}) }}" class="btn btn-sm btn-outline-primary">Ouvrir</a>
+                    </div>
                 </div>
             </div>
         </div>
         {% else %}
         <p class="text-muted text-center py-3">Aucune discussion dans ce groupe.</p>
         {% endfor %}
+        {% endif %}
     </div>
 
     <div class="col-md-4">
-        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+        {% if canViewContent %}
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
             <h6 class="fw-bold mb-3"><i class="bi bi-people me-2"></i>Membres ({{ group.members|length }})</h6>
             {% for member in group.members %}
             <div class="d-flex align-items-center mb-2">
@@ -61,6 +135,38 @@
             </div>
             {% endfor %}
         </div>
+        {% else %}
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
+            <h6 class="fw-bold mb-3"><i class="bi bi-lock me-2"></i>Contenu reserve</h6>
+            <p class="text-muted small mb-0">La liste des membres et le fil de discussion seront visibles une fois votre acces approuve.</p>
+        </div>
+        {% endif %}
+
+        {% if isOwner %}
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h6 class="fw-bold mb-3"><i class="bi bi-person-check me-2"></i>Demandes en attente</h6>
+            {% if pendingRequests is empty %}
+            <p class="text-muted small mb-0">Aucune demande en attente.</p>
+            {% else %}
+            <div class="d-flex flex-column gap-3">
+                {% for pendingRequest in pendingRequests %}
+                <div class="border rounded-4 p-3">
+                    <div class="fw-semibold">{{ pendingRequest.firstname }} {{ pendingRequest.lastname }}</div>
+                    <div class="small text-muted mb-3">{{ pendingRequest.email }}</div>
+                    <div class="d-flex gap-2">
+                        <form method="post" action="{{ path('app_community_group_request_approve', {groupId: group.id, requestId: pendingRequest.id}) }}">
+                            <button class="btn btn-sm btn-nj"><i class="bi bi-check-lg me-1"></i>Approuver</button>
+                        </form>
+                        <form method="post" action="{{ path('app_community_group_request_reject', {groupId: group.id, requestId: pendingRequest.id}) }}">
+                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-x-lg me-1"></i>Refuser</button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
     </div>
 </div>
 {% endblock %}

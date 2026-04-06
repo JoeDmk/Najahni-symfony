@@ -1,0 +1,240 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}{{ event.title }} - Najahni{% endblock %}
+
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    .community-ticket-qr {
+        width: 220px;
+        max-width: 100%;
+        border-radius: 1rem;
+        border: 1px solid rgba(0, 0, 0, .06);
+        background: #fff;
+        padding: .75rem;
+    }
+
+    .community-meta-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 1rem;
+    }
+
+    .community-meta-item {
+        border-radius: 1rem;
+        padding: 1rem;
+        background: rgba(67, 97, 238, .05);
+        border: 1px solid rgba(67, 97, 238, .08);
+    }
+</style>
+{% endblock %}
+
+{% block main %}
+<a href="{{ path('app_community_events') }}" class="text-decoration-none text-muted"><i class="bi bi-arrow-left me-1"></i>Tous les evenements</a>
+
+<div class="row g-4 mt-3">
+    <div class="col-xl-8">
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+                <div>
+                    <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                        <h2 class="fw-bold mb-0">{{ event.title }}</h2>
+                        {% if isCreator %}
+                        <span class="badge bg-primary">Organisateur</span>
+                        {% endif %}
+                        {% if isParticipant %}
+                        <span class="badge bg-success">Inscrit</span>
+                        {% endif %}
+                    </div>
+                    <p class="text-muted mb-0" style="white-space:pre-wrap">{{ event.description }}</p>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    {% if isCreator %}
+                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#edit-event-form"><i class="bi bi-pencil-square me-1"></i>Modifier</button>
+                    <form method="post" action="{{ path('app_community_event_delete', {id: event.id}) }}">
+                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>Supprimer</button>
+                    </form>
+                    {% elseif isParticipant %}
+                    <form method="post" action="{{ path('app_community_event_leave', {id: event.id}) }}">
+                        <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-box-arrow-left me-1"></i>Quitter</button>
+                    </form>
+                    {% elseif not isFull %}
+                    <form method="post" action="{{ path('app_community_event_join', {id: event.id}) }}">
+                        <button class="btn btn-sm btn-nj"><i class="bi bi-check-circle me-1"></i>S'inscrire</button>
+                    </form>
+                    {% else %}
+                    <button class="btn btn-sm btn-secondary" disabled>Complet</button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="community-meta-grid mb-4">
+                <div class="community-meta-item">
+                    <div class="small text-uppercase text-muted fw-semibold mb-1">Date</div>
+                    <div class="fw-semibold">{{ event.eventDate|date('d/m/Y H:i') }}</div>
+                </div>
+                <div class="community-meta-item">
+                    <div class="small text-uppercase text-muted fw-semibold mb-1">Capacite</div>
+                    <div class="fw-semibold">{{ event.capacity > 0 ? event.capacity : 'Illimitee' }}</div>
+                </div>
+                <div class="community-meta-item">
+                    <div class="small text-uppercase text-muted fw-semibold mb-1">Participants</div>
+                    <div class="fw-semibold">{{ event.participantsCount }}</div>
+                </div>
+                <div class="community-meta-item">
+                    <div class="small text-uppercase text-muted fw-semibold mb-1">Organisateur</div>
+                    <div class="fw-semibold">{{ event.createdBy.firstname }} {{ event.createdBy.lastname }}</div>
+                </div>
+            </div>
+
+            {% if isCreator %}
+            <div class="collapse" id="edit-event-form">
+                <div class="border rounded-4 p-3 bg-light-subtle">
+                    <form method="post" action="{{ path('app_community_event_update', {id: event.id}) }}">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Titre</label>
+                            <input type="text" name="title" class="form-control" value="{{ event.title }}" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Description</label>
+                            <textarea name="description" class="form-control" rows="4" required>{{ event.description }}</textarea>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Date et heure</label>
+                                <input type="datetime-local" name="event_date" class="form-control" value="{{ event.eventDate|date('Y-m-d\\TH:i') }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Capacite</label>
+                                <input type="number" name="capacity" min="1" class="form-control" value="{{ event.capacity > 0 ? event.capacity : 1 }}" required>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-nj btn-sm mt-3">Enregistrer</button>
+                    </form>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="row g-4 mt-1">
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm h-100" style="border-radius:1rem">
+                    <div class="card-body p-4">
+                        <h5 class="fw-bold mb-3"><i class="bi bi-cloud-sun me-2"></i>Meteo</h5>
+                        {% if weather.status == 'available' %}
+                        <div class="d-flex flex-column gap-2">
+                            <div class="fw-semibold">{{ weather.label }}</div>
+                            <div class="text-muted">{{ weather.temperature_range }}</div>
+                            <div class="text-muted">{{ weather.rain_label }}</div>
+                            <div class="small text-muted">Source : {{ weather.source }}</div>
+                        </div>
+                        {% else %}
+                        <div class="text-muted">{{ weather.message }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6">
+                <div class="card border-0 shadow-sm h-100" style="border-radius:1rem">
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                            <h5 class="fw-bold mb-0"><i class="bi bi-stars me-2"></i>Assistant IA</h5>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <form method="post" action="{{ path('app_community_event_ai', {id: event.id}) }}">
+                                    <input type="hidden" name="mode" value="summary">
+                                    <button class="btn btn-sm {{ eventAiMode == 'summary' ? 'btn-nj' : 'btn-outline-nj' }}">Resume</button>
+                                </form>
+                                <form method="post" action="{{ path('app_community_event_ai', {id: event.id}) }}">
+                                    <input type="hidden" name="mode" value="promo">
+                                    <button class="btn btn-sm {{ eventAiMode == 'promo' ? 'btn-nj' : 'btn-outline-nj' }}">Promo</button>
+                                </form>
+                                <form method="post" action="{{ path('app_community_event_ai', {id: event.id}) }}">
+                                    <input type="hidden" name="mode" value="checklist">
+                                    <button class="btn btn-sm {{ eventAiMode == 'checklist' ? 'btn-nj' : 'btn-outline-nj' }}">Checklist</button>
+                                </form>
+                            </div>
+                        </div>
+                        {% if eventAiOutput %}
+                        <div style="white-space:pre-wrap">{{ eventAiOutput }}</div>
+                        {% else %}
+                        <div class="text-muted">Choisissez un mode pour generer un texte adapte a cet evenement.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if ticket %}
+        <div class="card border-0 shadow-sm mt-4" style="border-radius:1rem">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-qr-code me-2"></i>Votre ticket</h5>
+                <div class="row g-4 align-items-center">
+                    <div class="col-md-4 text-center">
+                        <img src="{{ ticket.qr_url }}" alt="QR ticket" class="community-ticket-qr">
+                    </div>
+                    <div class="col-md-8">
+                        <div class="small text-uppercase text-muted fw-semibold mb-2">Code manuel</div>
+                        <div class="fw-semibold mb-3">{{ ticket.manual_code }}</div>
+                        <div class="small text-uppercase text-muted fw-semibold mb-2">Payload signe</div>
+                        <textarea class="form-control" rows="4" readonly>{{ ticket.payload }}</textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {% if isCreator %}
+        <div class="card border-0 shadow-sm mt-4" style="border-radius:1rem">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-shield-check me-2"></i>Validation des tickets</h5>
+                {% if ticketValidation %}
+                <div class="alert {{ ticketValidation.valid ? 'alert-success' : 'alert-danger' }} mb-3">
+                    <div class="fw-semibold mb-1">{{ ticketValidation.message }}</div>
+                    {% if ticketValidation.payload %}
+                    <div class="small text-break">{{ ticketValidation.payload }}</div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                <form method="post" action="{{ path('app_community_event_ticket_validate', {id: event.id}) }}" enctype="multipart/form-data">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Payload du ticket</label>
+                        <textarea name="payload" class="form-control" rows="4" placeholder="Collez le contenu signe du ticket..."></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Ou image QR</label>
+                        <input type="file" name="ticket_image" class="form-control" accept="image/*">
+                    </div>
+                    <button type="submit" class="btn btn-nj btn-sm">Verifier le ticket</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="col-xl-4">
+        <div class="card border-0 shadow-sm" style="border-radius:1rem">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-3"><i class="bi bi-people me-2"></i>Participants ({{ participants|length }})</h5>
+                <div class="d-flex flex-column gap-3">
+                    {% for participant in participants %}
+                    <div class="d-flex justify-content-between align-items-center gap-2">
+                        <div>
+                            <div class="fw-semibold">{{ participant.user.firstname }} {{ participant.user.lastname }}</div>
+                            <div class="small text-muted">{{ participant.user.email }}</div>
+                        </div>
+                        {% if isCreator and participant.user != event.createdBy %}
+                        <form method="post" action="{{ path('app_community_event_remove_participant', {eventId: event.id, userId: participant.user.id}) }}">
+                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-person-dash"></i></button>
+                        </form>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="text-muted">Aucun participant pour le moment.</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

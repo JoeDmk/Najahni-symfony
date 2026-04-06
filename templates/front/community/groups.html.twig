@@ -4,13 +4,20 @@
 
 {% block main %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold mb-0"><i class="bi bi-people me-2"></i>Groupes</h2>
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-people me-2"></i>Groupes</h2>
+        <p class="text-muted mb-0">Consultez les groupes ouverts, rejoignez-les, ou gerez vos espaces prives.</p>
+    </div>
     <a href="{{ path('app_community_group_new') }}" class="btn btn-nj"><i class="bi bi-plus-lg me-2"></i>Créer un groupe</a>
 </div>
 
 {% if groups|length > 0 %}
 <div class="row g-4">
     {% for group in groups %}
+    {% set isMember = group.hasMember(app.user) %}
+    {% set isOwner = group.groupAdmin == app.user or is_granted('ROLE_ADMIN') %}
+    {% set canAccess = (not group.isPrivate) or isMember or is_granted('ROLE_ADMIN') %}
+    {% set hasPendingRequest = pendingRequestGroupIds[group.id] is defined %}
     <div class="col-md-6 col-lg-4">
         <div class="card border-0 shadow-sm h-100" style="border-radius:1rem">
             <div class="card-body p-4">
@@ -22,10 +29,42 @@
                         <span class="badge bg-success"><i class="bi bi-unlock"></i> Public</span>
                     {% endif %}
                 </div>
-                <p class="text-muted small mb-3">{{ group.description|length > 100 ? group.description|slice(0,100) ~ '...' : group.description }}</p>
-                <div class="d-flex justify-content-between align-items-center">
-                    <small class="text-muted"><i class="bi bi-people me-1"></i>{{ group.members|length }} membres</small>
-                    <a href="{{ path('app_community_group_show', {id: group.id}) }}" class="btn btn-sm btn-outline-primary">Voir</a>
+                <p class="text-muted small mb-3">{{ group.description|length > 120 ? group.description|slice(0,120) ~ '...' : group.description }}</p>
+                <div class="small text-muted d-flex flex-column gap-2 mb-3">
+                    <span><i class="bi bi-person-badge me-2"></i>{{ group.groupAdmin.firstname }} {{ group.groupAdmin.lastname }}</span>
+                    <span><i class="bi bi-people me-2"></i>{{ group.membersCount }} membres</span>
+                    <span><i class="bi bi-chat-dots me-2"></i>{{ group.threads|length }} discussions</span>
+                </div>
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <a href="{{ path('app_community_group_show', {id: group.id}) }}" class="btn btn-sm btn-outline-primary">Ouvrir</a>
+
+                    {% if not isMember and not group.isPrivate %}
+                    <form method="post" action="{{ path('app_community_group_join', {id: group.id}) }}">
+                        <button class="btn btn-sm btn-nj"><i class="bi bi-box-arrow-in-right me-1"></i>Rejoindre</button>
+                    </form>
+                    {% elseif not isMember and group.isPrivate and not isOwner and not hasPendingRequest %}
+                    <form method="post" action="{{ path('app_community_group_join', {id: group.id}) }}">
+                        <button class="btn btn-sm btn-nj"><i class="bi bi-shield-lock me-1"></i>Demander l'acces</button>
+                    </form>
+                    {% elseif not isMember and group.isPrivate and hasPendingRequest %}
+                    <form method="post" action="{{ path('app_community_group_request_cancel', {id: group.id}) }}">
+                        <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-hourglass-split me-1"></i>Annuler la demande</button>
+                    </form>
+                    {% elseif isMember and not isOwner %}
+                    <form method="post" action="{{ path('app_community_group_leave', {id: group.id}) }}">
+                        <button class="btn btn-sm btn-outline-secondary"><i class="bi bi-box-arrow-left me-1"></i>Quitter</button>
+                    </form>
+                    {% endif %}
+
+                    {% if group.isPrivate and not canAccess %}
+                    <span class="badge text-bg-warning">Prive - approbation requise</span>
+                    {% endif %}
+
+                    {% if isOwner %}
+                    <form method="post" action="{{ path('app_community_group_delete', {id: group.id}) }}" class="ms-auto">
+                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>Supprimer</button>
+                    </form>
+                    {% endif %}
                 </div>
             </div>
         </div>

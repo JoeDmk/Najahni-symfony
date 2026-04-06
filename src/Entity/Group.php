@@ -61,4 +61,28 @@ class Group
     public function getThreads(): Collection { return $this->threads; }
     /** @return Collection<int, GroupMember> */
     public function getMembers(): Collection { return $this->members; }
+
+    public function getMembersCount(): int
+    {
+        return $this->members->count();
+    }
+
+    public function hasMember(?User $user): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        if ($this->groupAdmin?->getId() === $user->getId()) {
+            return true;
+        }
+
+        foreach ($this->members as $member) {
+            if ($member->getUser()?->getId() === $user->getId()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 }

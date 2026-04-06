@@ -53,4 +53,46 @@ class Post
     public function getReactions(): Collection { return $this->reactions; }
 
     public function getReactionsCount(): int { return $this->reactions->count(); }
+
+    public function getReactionCountForType(string $type): int
+    {
+        return count(array_filter(
+            $this->reactions->toArray(),
+            static fn (PostReaction $reaction): bool => $reaction->getReactionType() === $type,
+        ));
+    }
+
+    public function getReactionTypeForUser(?User $user): ?string
+    {
+        if ($user === null) {
+            return null;
+        }
+
+        foreach ($this->reactions as $reaction) {
+            if ($reaction->getUser()?->getId() === $user->getId()) {
+                return $reaction->getReactionType();
+            }
+        }
+
+        return null;
+    }
+
+    public function getReactionSummary(): array
+    {
+        $summary = [
+            PostReaction::TYPE_LIKE => 0,
+            PostReaction::TYPE_LOVE => 0,
+            PostReaction::TYPE_HAHA => 0,
+            PostReaction::TYPE_WOW => 0,
+            PostReaction::TYPE_SAD => 0,
+            PostReaction::TYPE_ANGRY => 0,
+        ];
+
+        foreach ($this->reactions as $reaction) {
+            $type = $reaction->getReactionType();
+            $summary[$type] = ($summary[$type] ?? 0) + 1;
+        }
+
+        return $summary;
+    }
 }

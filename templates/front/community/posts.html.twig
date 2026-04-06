@@ -2,19 +2,223 @@
 
 {% block title %}Fil d'actualité - Najahni{% endblock %}
 
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    .community-feed-toolbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: .75rem;
+    }
+
+    .community-post-copy {
+        white-space: pre-wrap;
+        line-height: 1.65;
+    }
+
+    .community-post-image {
+        width: 100%;
+        max-height: 420px;
+        object-fit: cover;
+        border-radius: 1rem;
+        border: 1px solid rgba(0, 0, 0, .05);
+    }
+
+    .community-reaction-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: .8rem;
+    }
+
+    .community-reaction-picker {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: .45rem;
+    }
+
+    .community-reaction-picker.is-submitting {
+        pointer-events: none;
+    }
+
+    .community-reaction-trigger,
+    .community-reaction-toggle {
+        appearance: none;
+        border: 1px solid rgba(67, 97, 238, .16);
+        background: #fff;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #314063;
+        transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background-color .18s ease;
+    }
+
+    .community-reaction-trigger {
+        gap: .55rem;
+        padding: .55rem .95rem;
+        border-radius: 999px;
+        font-weight: 600;
+    }
+
+    .community-reaction-toggle {
+        width: 2.6rem;
+        height: 2.6rem;
+        border-radius: 999px;
+        font-size: 1.1rem;
+        font-weight: 700;
+    }
+
+    .community-reaction-trigger:hover,
+    .community-reaction-trigger.active,
+    .community-reaction-toggle:hover,
+    .community-reaction-picker.is-open .community-reaction-toggle {
+        transform: translateY(-1px);
+        border-color: rgba(67, 97, 238, .4);
+        background: rgba(67, 97, 238, .08);
+        box-shadow: 0 10px 24px rgba(67, 97, 238, .12);
+    }
+
+    .community-reaction-trigger-icon {
+        font-size: 1.1rem;
+    }
+
+    .community-picker-menu {
+        position: absolute;
+        left: 0;
+        bottom: calc(100% + .7rem);
+        z-index: 12;
+        min-width: 13rem;
+        padding: .5rem;
+        border-radius: 1rem;
+        border: 1px solid rgba(67, 97, 238, .16);
+        background: rgba(255, 255, 255, .98);
+        box-shadow: 0 20px 45px rgba(49, 64, 99, .16);
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+        transform: translateY(.45rem) scale(.98);
+        transition: opacity .16s ease, transform .16s ease, visibility .16s ease;
+    }
+
+    .community-reaction-menu {
+        display: flex;
+        gap: .35rem;
+        min-width: 0;
+    }
+
+    .community-reaction-menu form {
+        margin: 0;
+    }
+
+    .community-reaction-option {
+        appearance: none;
+        border: none;
+        background: transparent;
+        color: #314063;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: .25rem;
+        padding: .15rem;
+        cursor: pointer;
+    }
+
+    .community-reaction-option-emoji {
+        display: grid;
+        place-items: center;
+        width: 2.7rem;
+        height: 2.7rem;
+        border-radius: 999px;
+        border: 1px solid rgba(49, 64, 99, .1);
+        background: rgba(255, 255, 255, .94);
+        font-size: 1.35rem;
+        transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+    }
+
+    .community-reaction-option:hover .community-reaction-option-emoji,
+    .community-reaction-option:focus-visible .community-reaction-option-emoji {
+        transform: translateY(-.22rem) scale(1.06);
+        box-shadow: 0 14px 24px rgba(49, 64, 99, .16);
+    }
+
+    .community-reaction-option-label {
+        font-size: .72rem;
+        color: #67748e;
+    }
+
+    .community-reaction-option.active .community-reaction-option-emoji {
+        border-color: rgba(67, 97, 238, .35);
+        background: rgba(67, 97, 238, .1);
+    }
+
+    .community-reaction-option-remove .community-reaction-option-emoji {
+        font-size: 1.2rem;
+    }
+
+    .community-reaction-picker:hover .community-picker-menu,
+    .community-reaction-picker:focus-within .community-picker-menu,
+    .community-reaction-picker.is-open .community-picker-menu {
+        opacity: 1;
+        visibility: visible;
+        pointer-events: auto;
+        transform: translateY(0) scale(1);
+    }
+
+    .community-reaction-caption {
+        font-size: .94rem;
+        color: #67748e;
+    }
+
+    .community-side-card {
+        position: sticky;
+        top: 5.5rem;
+    }
+
+    @media (max-width: 991px) {
+        .community-feed-toolbar {
+            grid-template-columns: 1fr;
+        }
+
+        .community-side-card {
+            position: static;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block main %}
 <div class="row g-4">
-    <div class="col-md-8">
-        <h2 class="fw-bold mb-4"><i class="bi bi-chat-square-text me-2"></i>Fil d'actualité</h2>
+    <div class="col-xl-8">
+        <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+            <div>
+                <h2 class="fw-bold mb-1"><i class="bi bi-chat-square-text me-2"></i>Fil d'actualité</h2>
+                <p class="text-muted mb-0">Publiez, traduisez et gerez vos reactions sans recharger toute la page.</p>
+            </div>
+            <form method="get" action="{{ path('app_community_posts') }}" class="community-feed-toolbar w-100">
+                <input type="search" name="q" value="{{ search }}" class="form-control" placeholder="Rechercher un auteur ou un texte...">
+                <select name="sort" class="form-select">
+                    <option value="newest" {{ sort == 'newest' ? 'selected' }}>Plus recentes</option>
+                    <option value="oldest" {{ sort == 'oldest' ? 'selected' }}>Plus anciennes</option>
+                    <option value="reactions" {{ sort == 'reactions' ? 'selected' }}>Plus de reactions</option>
+                </select>
+                <button type="submit" class="btn btn-outline-nj"><i class="bi bi-funnel me-2"></i>Filtrer</button>
+            </form>
+        </div>
 
         {# New Post Form #}
         <div class="card border-0 shadow-sm mb-4" style="border-radius:1rem">
             <div class="card-body p-4">
-                <form method="post" action="{{ path('app_community_post_new') }}">
-                    <textarea name="content" class="form-control mb-3" rows="3" placeholder="Quoi de neuf ? Partagez avec la communauté..." maxlength="500" required></textarea>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <small class="text-muted">Max 500 caractères</small>
-                        <button type="submit" class="btn btn-nj"><i class="bi bi-send me-2"></i>Publier</button>
+                <form method="post" action="{{ path('app_community_post_new') }}" enctype="multipart/form-data">
+                    <textarea name="content" class="form-control mb-3" rows="3" placeholder="Quoi de neuf ? Partagez avec la communauté..." maxlength="500"></textarea>
+                    <div class="row g-3 align-items-center">
+                        <div class="col-md-6">
+                            <input type="file" name="image" class="form-control" accept="image/*">
+                        </div>
+                        <div class="col-md-6 d-flex justify-content-between align-items-center">
+                            <small class="text-muted">Texte ou image, max 500 caracteres</small>
+                            <button type="submit" class="btn btn-nj"><i class="bi bi-send me-2"></i>Publier</button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -22,7 +226,14 @@
 
         {# Posts Feed #}
         {% for post in posts %}
-        <div class="card border-0 shadow-sm mb-3" style="border-radius:1rem">
+        {% set myReaction = post.getReactionTypeForUser(app.user) %}
+        {% set summary = post.reactionSummary %}
+        {% set reactionCaption = post.reactionsCount > 0 ? post.reactionsCount ~ ' reactions' : 'Pas encore de reaction' %}
+        {% set currentReactionMeta = myReaction and reactionMeta[myReaction] is defined ? reactionMeta[myReaction] : reactionMeta['LIKE'] %}
+        {% if myReaction and reactionMeta[myReaction] is defined %}
+            {% set reactionCaption = reactionCaption ~ ' · Vous avez choisi ' ~ reactionMeta[myReaction].label %}
+        {% endif %}
+        <div class="card border-0 shadow-sm mb-3" style="border-radius:1rem" data-post-id="{{ post.id }}">
             <div class="card-body p-4">
                 <div class="d-flex align-items-center mb-3">
                     <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:42px;height:42px;background:var(--nj-gradient);color:#fff">
@@ -32,27 +243,86 @@
                         <h6 class="fw-bold mb-0">{{ post.user.firstname }} {{ post.user.lastname }}</h6>
                         <small class="text-muted">{{ post.createdAt|date('d/m/Y H:i') }}</small>
                     </div>
-                    {% if post.user == app.user or is_granted('ROLE_ADMIN') %}
-                    <form method="post" action="{{ path('app_community_post_delete', {id: post.id}) }}" class="ms-auto">
-                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                    </form>
-                    {% endif %}
+                    <div class="ms-auto d-flex gap-2 align-items-center">
+                        <select class="form-select form-select-sm community-translation-select" data-translate-url="{{ path('app_community_post_translate', {id: post.id}) }}" style="width:auto">
+                            <option value="original">Original</option>
+                            {% for code, label in translationLanguages %}
+                            <option value="{{ code }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        {% if post.user == app.user or is_granted('ROLE_ADMIN') %}
+                        <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#edit-post-{{ post.id }}"><i class="bi bi-pencil-square"></i></button>
+                        <form method="post" action="{{ path('app_community_post_delete', {id: post.id}) }}">
+                            <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
+                        </form>
+                        {% endif %}
+                    </div>
                 </div>
-                <p class="mb-3">{{ post.content }}</p>
+
+                <p class="mb-2 community-post-copy" data-post-text data-original-text="{{ post.content|e('html_attr') }}">{{ post.content }}</p>
+                <small class="text-muted d-block mb-3" data-translation-status>Texte original</small>
+
+                {% if post.imageUrl %}
+                <img src="{{ post.imageUrl }}" alt="Illustration de publication" class="community-post-image mb-3">
+                {% endif %}
+
+                {% if post.user == app.user or is_granted('ROLE_ADMIN') %}
+                <div class="collapse mb-3" id="edit-post-{{ post.id }}">
+                    <div class="border rounded-4 p-3 bg-light-subtle">
+                        <form method="post" action="{{ path('app_community_post_update', {id: post.id}) }}" enctype="multipart/form-data">
+                            <textarea name="content" class="form-control mb-3" rows="3" maxlength="500">{{ post.content }}</textarea>
+                            <div class="row g-3 align-items-center">
+                                <div class="col-md-6">
+                                    <input type="file" name="image" class="form-control" accept="image/*">
+                                </div>
+                                <div class="col-md-6 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                                    {% if post.imageUrl %}
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="remove_image" id="remove-image-{{ post.id }}" value="1">
+                                        <label class="form-check-label small" for="remove-image-{{ post.id }}">Supprimer l'image</label>
+                                    </div>
+                                    {% endif %}
+                                    <button type="submit" class="btn btn-sm btn-nj">Enregistrer</button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                {% endif %}
 
                 {# Reactions #}
-                <div class="d-flex gap-1 flex-wrap">
-                    {% for type in ['LIKE', 'LOVE', 'HAHA', 'WOW', 'SAD', 'ANGRY'] %}
-                    {% set emoji = {'LIKE': '👍', 'LOVE': '❤️', 'HAHA': '😂', 'WOW': '😮', 'SAD': '😢', 'ANGRY': '😡'} %}
-                    <form method="post" action="{{ path('app_community_post_react', {id: post.id}) }}" class="d-inline">
-                        <input type="hidden" name="type" value="{{ type }}">
-                        <button class="btn btn-sm btn-outline-secondary rounded-pill px-2 py-1">
-                            {{ emoji[type] }}
-                            {% set count = post.reactions|filter(r => r.reactionType == type)|length %}
-                            {% if count > 0 %}<small>{{ count }}</small>{% endif %}
-                        </button>
-                    </form>
-                    {% endfor %}
+                <div class="community-reaction-bar">
+                    <div class="community-reaction-picker" data-picker-root data-reaction-picker data-react-url="{{ path('app_community_post_react', {id: post.id}) }}" data-remove-url="{{ path('app_community_post_unreact', {id: post.id}) }}">
+                        <form method="post" action="{{ myReaction ? path('app_community_post_unreact', {id: post.id}) : path('app_community_post_react', {id: post.id}) }}" data-async-reaction data-reaction-main-form>
+                            <input type="hidden" name="reaction" value="LIKE">
+                            <button class="community-reaction-trigger {{ myReaction ? 'active' }}" type="submit" data-reaction-trigger>
+                                <span class="community-reaction-trigger-icon" data-reaction-trigger-icon>{{ myReaction ? currentReactionMeta.emoji : reactionMeta['LIKE'].emoji }}</span>
+                                <span data-reaction-trigger-label>{{ myReaction ? currentReactionMeta.label : 'J\'aime' }}</span>
+                            </button>
+                        </form>
+
+                        <button class="community-reaction-toggle" type="button" data-picker-toggle aria-expanded="false" aria-label="Choisir une reaction">+</button>
+
+                        <div class="community-picker-menu community-reaction-menu" data-picker-menu>
+                            {% for type, meta in reactionMeta %}
+                            <form method="post" action="{{ path('app_community_post_react', {id: post.id}) }}" data-async-reaction>
+                                <input type="hidden" name="reaction" value="{{ type }}">
+                                <button class="community-reaction-option {{ myReaction == type ? 'active' }}" type="submit" title="{{ meta.label }}" aria-label="{{ meta.label }}" data-reaction-option data-reaction-type="{{ type }}">
+                                    <span class="community-reaction-option-emoji">{{ meta.emoji }}</span>
+                                    <span class="community-reaction-option-label">{{ meta.label }}</span>
+                                </button>
+                            </form>
+                            {% endfor %}
+
+                            <form method="post" action="{{ path('app_community_post_unreact', {id: post.id}) }}" data-async-reaction data-reaction-remove-form {{ myReaction ? '' : 'hidden' }}>
+                                <button class="community-reaction-option community-reaction-option-remove" type="submit" title="Retirer la reaction" aria-label="Retirer la reaction">
+                                    <span class="community-reaction-option-emoji">×</span>
+                                    <span class="community-reaction-option-label">Retirer</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    <small class="community-reaction-caption" data-reaction-caption>{{ reactionCaption }}</small>
                 </div>
             </div>
         </div>
@@ -65,16 +335,231 @@
     </div>
 
     {# Sidebar #}
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm mb-3" style="border-radius:1rem">
-            <div class="card-body p-4">
-                <h6 class="fw-bold mb-3"><i class="bi bi-grid me-2"></i>Navigation</h6>
-                <div class="d-grid gap-2">
-                    <a href="{{ path('app_community_groups') }}" class="btn btn-outline-primary text-start"><i class="bi bi-people me-2"></i>Groupes</a>
-                    <a href="{{ path('app_community_events') }}" class="btn btn-outline-primary text-start"><i class="bi bi-calendar-event me-2"></i>Événements</a>
+    <div class="col-xl-4">
+        <div class="community-side-card d-flex flex-column gap-3">
+            <div class="card border-0 shadow-sm" style="border-radius:1rem">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-3"><i class="bi bi-grid me-2"></i>Navigation</h6>
+                    <div class="d-grid gap-2">
+                        <a href="{{ path('app_community_groups') }}" class="btn btn-outline-primary text-start"><i class="bi bi-people me-2"></i>Groupes</a>
+                        <a href="{{ path('app_community_events') }}" class="btn btn-outline-primary text-start"><i class="bi bi-calendar-event me-2"></i>Événements</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm" style="border-radius:1rem">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-3"><i class="bi bi-stars me-2"></i>Ce qui change</h6>
+                    <div class="small text-muted d-flex flex-column gap-2">
+                        <span>Reactions mises a jour sans retour en haut de page.</span>
+                        <span>Traduction a la demande en francais, anglais et arabe.</span>
+                        <span>Edition de publication avec image locale sans toucher aux autres modules.</span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const reactionMeta = {
+        LIKE: { label: 'J\'aime', emoji: '👍' },
+        LOVE: { label: 'Love', emoji: '❤️' },
+        HAHA: { label: 'Haha', emoji: '😂' },
+        WOW: { label: 'Wow', emoji: '😮' },
+        SAD: { label: 'Sad', emoji: '😢' },
+        ANGRY: { label: 'Angry', emoji: '😡' },
+    };
+
+    const closePickers = (except = null) => {
+        document.querySelectorAll('[data-picker-root]').forEach((root) => {
+            if (root === except) {
+                return;
+            }
+
+            root.classList.remove('is-open');
+            const toggle = root.querySelector('[data-picker-toggle]');
+            if (toggle instanceof HTMLButtonElement) {
+                toggle.setAttribute('aria-expanded', 'false');
+            }
+        });
+    };
+
+    const setReactionError = (picker, message) => {
+        const caption = picker.closest('.community-reaction-bar')?.querySelector('[data-reaction-caption]');
+        if (!(caption instanceof HTMLElement)) {
+            return;
+        }
+
+        const previous = caption.dataset.previousCaption || caption.textContent || '';
+        caption.textContent = message;
+
+        window.setTimeout(() => {
+            caption.textContent = previous;
+        }, 1500);
+    };
+
+    const applyReactionState = (picker, payload) => {
+        const reaction = typeof payload.myReaction === 'string' ? payload.myReaction : '';
+        const current = reaction !== '' ? (reactionMeta[reaction] || reactionMeta.LIKE) : reactionMeta.LIKE;
+        const mainForm = picker.querySelector('[data-reaction-main-form]');
+        const trigger = picker.querySelector('[data-reaction-trigger]');
+        const icon = picker.querySelector('[data-reaction-trigger-icon]');
+        const label = picker.querySelector('[data-reaction-trigger-label]');
+        const caption = picker.closest('.community-reaction-bar')?.querySelector('[data-reaction-caption]');
+        const removeForm = picker.querySelector('[data-reaction-remove-form]');
+
+        if (mainForm instanceof HTMLFormElement) {
+            mainForm.action = reaction === ''
+                ? (picker.dataset.reactUrl || mainForm.action)
+                : (picker.dataset.removeUrl || mainForm.action);
+        }
+
+        if (trigger instanceof HTMLButtonElement) {
+            trigger.classList.toggle('active', reaction !== '');
+        }
+
+        if (icon instanceof HTMLElement) {
+            icon.textContent = payload.currentEmoji || current.emoji;
+        }
+
+        if (label instanceof HTMLElement) {
+            label.textContent = payload.currentLabel || current.label;
+        }
+
+        if (caption instanceof HTMLElement) {
+            caption.textContent = payload.caption || (payload.reactionsCount > 0 ? `${payload.reactionsCount} reactions` : 'Pas encore de reaction');
+            caption.dataset.previousCaption = caption.textContent;
+        }
+
+        if (removeForm instanceof HTMLFormElement) {
+            removeForm.hidden = reaction === '';
+        }
+
+        picker.querySelectorAll('[data-reaction-option]').forEach((button) => {
+            if (!(button instanceof HTMLButtonElement)) {
+                return;
+            }
+
+            button.classList.toggle('active', button.dataset.reactionType === reaction);
+        });
+
+        closePickers();
+    };
+
+    document.addEventListener('click', (event) => {
+        const target = event.target instanceof Element ? event.target : null;
+        if (target === null) {
+            return;
+        }
+
+        const toggle = target.closest('[data-picker-toggle]');
+        if (toggle instanceof HTMLButtonElement) {
+            const root = toggle.closest('[data-picker-root]');
+            if (!(root instanceof HTMLElement)) {
+                return;
+            }
+
+            const willOpen = !root.classList.contains('is-open');
+            closePickers(willOpen ? root : null);
+            root.classList.toggle('is-open', willOpen);
+            toggle.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+            return;
+        }
+
+        if (!target.closest('[data-picker-root]')) {
+            closePickers();
+        }
+    });
+
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closePickers();
+        }
+    });
+
+    document.querySelectorAll('[data-reaction-picker]').forEach((picker) => {
+        picker.addEventListener('submit', async (event) => {
+            const target = event.target;
+            const form = target instanceof HTMLFormElement && target.matches('[data-async-reaction]') ? target : null;
+
+            if (form === null) {
+                return;
+            }
+
+            event.preventDefault();
+
+            if (!(picker instanceof HTMLElement) || picker.classList.contains('is-submitting')) {
+                return;
+            }
+
+            picker.classList.add('is-submitting');
+
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                    },
+                    body: new FormData(form),
+                    credentials: 'same-origin',
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || data.ok !== true) {
+                    throw new Error(data.message || 'La reaction a echoue.');
+                }
+
+                applyReactionState(picker, data);
+            } catch (error) {
+                setReactionError(picker, error instanceof Error ? error.message : 'La reaction a echoue.');
+            } finally {
+                picker.classList.remove('is-submitting');
+            }
+        });
+    });
+
+    document.querySelectorAll('.community-translation-select').forEach((select) => {
+        select.addEventListener('change', async () => {
+            const card = select.closest('[data-post-id]');
+            const url = select.dataset.translateUrl;
+            const textNode = card.querySelector('[data-post-text]');
+            const statusNode = card.querySelector('[data-translation-status]');
+            const originalText = textNode.dataset.originalText || '';
+
+            try {
+                select.setAttribute('disabled', 'disabled');
+                const response = await fetch(`${url}?target=${encodeURIComponent(select.value)}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                    },
+                });
+
+                const data = await response.json();
+
+                if (!response.ok || !data.ok) {
+                    throw new Error(data.message || 'La traduction est indisponible.');
+                }
+
+                textNode.textContent = data.text;
+                statusNode.textContent = data.is_original
+                    ? 'Texte original'
+                    : `Traduit de ${data.source_label} vers ${data.target_label}`;
+            } catch (error) {
+                textNode.textContent = originalText;
+                statusNode.textContent = error.message;
+                select.value = 'original';
+            } finally {
+                select.removeAttribute('disabled');
+            }
+        });
+    });
+});
+</script>
 {% endblock %}

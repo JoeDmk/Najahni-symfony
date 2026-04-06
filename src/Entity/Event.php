@@ -64,4 +64,24 @@ class Event
     public function getParticipants(): Collection { return $this->participants; }
     public function getParticipantsCount(): int { return $this->participants->count(); }
     public function hasCapacity(): bool { return $this->capacity === 0 || $this->getParticipantsCount() < $this->capacity; }
+
+    public function hasParticipant(?User $user): bool
+    {
+        return $this->getParticipantForUser($user) !== null;
+    }
+
+    public function getParticipantForUser(?User $user): ?EventParticipant
+    {
+        if ($user === null) {
+            return null;
+        }
+
+        foreach ($this->participants as $participant) {
+            if ($participant->getUser()?->getId() === $user->getId()) {
+                return $participant;
+            }
+        }
+
+        return null;
+    }
 }
