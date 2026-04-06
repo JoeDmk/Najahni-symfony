@@ -1,0 +1,98 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Chatbot Mentorat - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-mortarboard me-2"></i>Mentorat</h2>
+</div>
+
+{# ── 4-Tab Navigation (role-aware) ── #}
+{% set userRole = app.user.role %}
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item"><a class="nav-link" href="{{ path('app_mentorat_requests') }}"><i class="bi bi-send me-1"></i>Demandes</a></li>
+    <li class="nav-item"><a class="nav-link" href="{{ path('app_mentorat_sessions') }}"><i class="bi bi-camera-video me-1"></i>Sessions</a></li>
+    {% if userRole == 'MENTOR' %}
+        <li class="nav-item"><a class="nav-link" href="{{ path('app_mentorat_availability') }}"><i class="bi bi-calendar-check me-1"></i>Disponibilités</a></li>
+    {% endif %}
+    <li class="nav-item"><a class="nav-link active" href="{{ path('app_mentorat_chatbot') }}"><i class="bi bi-robot me-1"></i>Chatbot</a></li>
+</ul>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm" style="border-radius:1rem">
+            <div class="card-header bg-white border-0 pt-4 px-4">
+                <h5 class="fw-bold mb-0"><i class="bi bi-robot me-2"></i>Assistant Mentorat</h5>
+                <p class="text-muted small mb-0">Posez vos questions sur le mentorat, les demandes, les sessions...</p>
+            </div>
+            <div class="card-body p-4">
+                <div id="chatMessages" style="height:400px;overflow-y:auto;border:1px solid #e9ecef;border-radius:0.75rem;padding:1rem;background:#f8f9fa;" class="mb-3">
+                    <div class="d-flex mb-3">
+                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2" style="width:32px;height:32px;min-width:32px"><i class="bi bi-robot"></i></div>
+                        <div class="bg-white p-2 px-3 rounded-3 shadow-sm" style="max-width:80%">
+                            <small>Bonjour ! Je suis l'assistant Najahni. Comment puis-je vous aider avec le mentorat ?</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="chatInput" class="form-control" placeholder="Tapez votre message..." onkeypress="if(event.key==='Enter')sendMessage()">
+                    <button class="btn btn-nj" onclick="sendMessage()"><i class="bi bi-send"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const faq = {
+    'demande': 'Pour créer une demande de mentorat, allez dans l\'onglet "Demandes" puis cliquez sur "Trouver un mentor". Choisissez un mentor et remplissez le formulaire.',
+    'session': 'Les sessions sont créées automatiquement lorsqu\'une demande est acceptée. Vous pouvez aussi en créer manuellement depuis l\'onglet "Sessions".',
+    'disponibilité': 'En tant que mentor, vous pouvez gérer vos créneaux dans l\'onglet "Disponibilités". Ajoutez, modifiez ou supprimez vos horaires.',
+    'matching': 'Le score de matching est calculé automatiquement en fonction de votre profil, secteur, bio et vérification. Un score ≥ 70% provoque l\'auto-acceptation.',
+    'export': 'Vous pouvez exporter vos sessions en PDF ou Excel depuis l\'onglet "Sessions" en cliquant sur les boutons d\'export.',
+    'feedback': 'Après qu\'une session est marquée comme "terminée", vous pouvez laisser un feedback et une note de 1 à 5.',
+    'annuler': 'Vous pouvez annuler une demande en attente depuis l\'onglet "Demandes" en cliquant sur le bouton d\'annulation.',
+    'modifier': 'Les demandes en attente ou annulées peuvent être modifiées. Cliquez sur l\'icône crayon dans la colonne Actions.',
+    'statut': 'Les statuts possibles sont : En attente, Accepté, Auto-accepté, Refusé, Annulé, Terminé.',
+};
+
+function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    input.value = '';
+
+    appendMessage(text, 'user');
+
+    const lower = text.toLowerCase();
+    let reply = 'Je ne suis pas sûr de comprendre. Essayez de me poser une question sur : demandes, sessions, disponibilités, matching, export, feedback, annulation ou modification.';
+    for (const [key, val] of Object.entries(faq)) {
+        if (lower.includes(key)) { reply = val; break; }
+    }
+
+    setTimeout(function() { appendMessage(reply, 'bot'); }, 500);
+}
+
+function appendMessage(text, sender) {
+    const container = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = 'd-flex mb-3' + (sender === 'user' ? ' justify-content-end' : '');
+
+    if (sender === 'bot') {
+        div.innerHTML = '<div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2" style="width:32px;height:32px;min-width:32px"><i class="bi bi-robot"></i></div>'
+            + '<div class="bg-white p-2 px-3 rounded-3 shadow-sm" style="max-width:80%"><small>' + escapeHtml(text) + '</small></div>';
+    } else {
+        div.innerHTML = '<div class="bg-primary bg-opacity-10 p-2 px-3 rounded-3" style="max-width:80%"><small>' + escapeHtml(text) + '</small></div>';
+    }
+
+    container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
+}
+
+function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+}
+</script>
+{% endblock %}

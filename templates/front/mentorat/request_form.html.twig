@@ -4,7 +4,7 @@
 
 {% block main %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold mb-0"><i class="bi bi-send me-2"></i>Demande de mentorat</h2>
+    <h2 class="fw-bold mb-0"><i class="bi bi-send me-2"></i>Nouvelle demande de mentorat</h2>
     <a href="{{ path('app_mentorat_mentors') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Retour</a>
 </div>
 
@@ -14,6 +14,7 @@
             <div class="card-body p-4">
                 <h5 class="fw-bold mb-4">Envoyer une demande à {{ mentor.firstname }} {{ mentor.lastname }}</h5>
                 <form method="post">
+                    <input type="hidden" name="_token" value="{{ csrf_token('mentorat_request') }}">
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Projet (optionnel)</label>
                         <select name="project_id" class="form-select">
@@ -26,20 +27,33 @@
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Date souhaitée</label>
-                            <input type="date" name="date" class="form-control" required>
+                            <input type="date" name="date" class="form-control" required value="{{ prefillDate|default('') }}">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label fw-semibold">Heure</label>
-                            <input type="time" name="time" class="form-control" required>
+                            <input type="time" name="time" class="form-control" required value="{{ prefillTime|default('') }}">
                         </div>
                     </div>
                     <div class="mb-3 mt-3">
                         <label class="form-label fw-semibold">Motivation</label>
-                        <textarea name="motivation" class="form-control" rows="3" placeholder="Pourquoi souhaitez-vous ce mentorat ?" required></textarea>
+                        <textarea name="motivation" id="motivationText" class="form-control" rows="3" placeholder="Pourquoi souhaitez-vous ce mentorat ?" required></textarea>
+                        {# Voice recording option #}
+                        <div class="mt-2">
+                            <button type="button" id="voiceRecordBtn" class="btn btn-sm btn-outline-secondary" onclick="toggleRecording()">
+                                <i class="bi bi-mic me-1"></i><span id="voiceBtnLabel">Enregistrer vocalement</span>
+                            </button>
+                            <span id="voiceStatus" class="ms-2 small text-muted"></span>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Objectifs</label>
-                        <textarea name="goals" class="form-control" rows="3" placeholder="Quels sont vos objectifs ?"></textarea>
+                        <textarea name="goals" id="goalsText" class="form-control" rows="3" placeholder="Quels sont vos objectifs ?"></textarea>
+                        <div class="mt-2">
+                            <button type="button" id="voiceGoalsBtn" class="btn btn-sm btn-outline-secondary" onclick="toggleGoalsRecording()">
+                                <i class="bi bi-mic me-1"></i><span id="voiceGoalsBtnLabel">Enregistrer vocalement</span>
+                            </button>
+                            <span id="voiceGoalsStatus" class="ms-2 small text-muted"></span>
+                        </div>
                     </div>
                     <button type="submit" class="btn btn-nj btn-lg"><i class="bi bi-send me-2"></i>Envoyer la demande</button>
                 </form>
@@ -57,7 +71,121 @@
             <h5 class="fw-bold text-center">{{ mentor.firstname }} {{ mentor.lastname }}</h5>
             {% if mentor.bio %}<p class="text-muted small">{{ mentor.bio }}</p>{% endif %}
             {% if mentor.companyName %}<p class="small"><i class="bi bi-building me-1"></i>{{ mentor.companyName }}</p>{% endif %}
+            {% if mentor.linkedinUrl %}<p class="small"><a href="{{ mentor.linkedinUrl }}" target="_blank"><i class="bi bi-linkedin me-1"></i>LinkedIn</a></p>{% endif %}
+        </div>
+
+        <div class="card border-0 shadow-sm p-4 mt-3" style="border-radius:1rem">
+            <h6 class="fw-bold mb-2"><i class="bi bi-info-circle me-1"></i>Comment ça marche ?</h6>
+            <ul class="small text-muted mb-0">
+                <li>Un score de compatibilité est calculé automatiquement</li>
+                <li>Si le score ≥ 70%, la demande est auto-acceptée</li>
+                <li>Sinon, le mentor reçoit votre demande et peut l'accepter ou la refuser</li>
+                <li>Une session est créée automatiquement lors de l'acceptation</li>
+            </ul>
         </div>
     </div>
 </div>
+
+<script>
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecording = false;
+
+function toggleRecording() {
+    if (isRecording) {
+        stopRecording();
+    } else {
+        startRecording();
+    }
+}
+
+function startRecording() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        document.getElementById('voiceStatus').textContent = 'Enregistrement vocal non supporté par ce navigateur.';
+        return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
+        mediaRecorder.ondataavailable = function(e) { audioChunks.push(e.data); };
+        mediaRecorder.onstop = function() {
+            stream.getTracks().forEach(function(t) { t.stop(); });
+            var blob = new Blob(audioChunks, { type: 'audio/webm' });
+            transcribeAudio(blob);
+        };
+        mediaRecorder.start();
+        isRecording = true;
+        document.getElementById('voiceRecordBtn').classList.replace('btn-outline-secondary', 'btn-danger');
+        document.getElementById('voiceBtnLabel').textContent = 'Arrêter l\'enregistrement';
+        document.getElementById('voiceStatus').textContent = 'Enregistrement en cours...';
+    }).catch(function() {
+        document.getElementById('voiceStatus').textContent = 'Accès micro refusé.';
+    });
+}
+
+function stopRecording() {
+    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+        mediaRecorder.stop();
+    }
+    isRecording = false;
+    document.getElementById('voiceRecordBtn').classList.replace('btn-danger', 'btn-outline-secondary');
+    document.getElementById('voiceBtnLabel').textContent = 'Enregistrer vocalement';
+    document.getElementById('voiceStatus').textContent = 'Transcription...';
+}
+
+function transcribeAudio(blob) {
+    transcribeToField('motivationText', 'voiceStatus');
+}
+
+function transcribeToField(fieldId, statusId) {
+    var recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.lang = 'fr-FR';
+    recognition.interimResults = false;
+    recognition.onresult = function(e) {
+        var text = e.results[0][0].transcript;
+        var field = document.getElementById(fieldId);
+        field.value += (field.value ? ' ' : '') + text;
+        document.getElementById(statusId).textContent = 'Transcription ajoutée !';
+    };
+    recognition.onerror = function() {
+        document.getElementById(statusId).textContent = 'Erreur de transcription.';
+    };
+    recognition.start();
+}
+
+/* Goals voice recording */
+let goalsRecorder = null, goalsChunks = [], goalsRecording = false;
+function toggleGoalsRecording() {
+    if (goalsRecording) { stopGoalsRecording(); } else { startGoalsRecording(); }
+}
+function startGoalsRecording() {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        document.getElementById('voiceGoalsStatus').textContent = 'Non supporté.';
+        return;
+    }
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
+        goalsRecorder = new MediaRecorder(stream);
+        goalsChunks = [];
+        goalsRecorder.ondataavailable = function(e) { goalsChunks.push(e.data); };
+        goalsRecorder.onstop = function() {
+            stream.getTracks().forEach(function(t) { t.stop(); });
+            transcribeToField('goalsText', 'voiceGoalsStatus');
+        };
+        goalsRecorder.start();
+        goalsRecording = true;
+        document.getElementById('voiceGoalsBtn').classList.replace('btn-outline-secondary', 'btn-danger');
+        document.getElementById('voiceGoalsBtnLabel').textContent = 'Arrêter';
+        document.getElementById('voiceGoalsStatus').textContent = 'Enregistrement...';
+    }).catch(function() {
+        document.getElementById('voiceGoalsStatus').textContent = 'Accès micro refusé.';
+    });
+}
+function stopGoalsRecording() {
+    if (goalsRecorder && goalsRecorder.state !== 'inactive') goalsRecorder.stop();
+    goalsRecording = false;
+    document.getElementById('voiceGoalsBtn').classList.replace('btn-danger', 'btn-outline-secondary');
+    document.getElementById('voiceGoalsBtnLabel').textContent = 'Enregistrer vocalement';
+    document.getElementById('voiceGoalsStatus').textContent = 'Transcription...';
+}
+</script>
 {% endblock %}

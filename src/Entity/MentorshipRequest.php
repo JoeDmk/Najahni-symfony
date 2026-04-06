@@ -14,10 +14,11 @@ use Symfony\Component\Validator\Constraints as Assert;
 class MentorshipRequest
 {
     public const STATUS_PENDING = 'PENDING';
-    public const STATUS_AUTO_ACCEPTED = 'auto_accepted';
-    public const STATUS_REJECTED = 'rejected';
-    public const STATUS_CANCELLED = 'cancelled';
-    public const STATUS_COMPLETED = 'completed';
+    public const STATUS_ACCEPTED = 'ACCEPTED';
+    public const STATUS_AUTO_ACCEPTED = 'AUTO_ACCEPTED';
+    public const STATUS_REJECTED = 'REJECTED';
+    public const STATUS_CANCELLED = 'CANCELLED';
+    public const STATUS_COMPLETED = 'COMPLETED';
 
     #[ORM\Id]
     #[ORM\GeneratedValue]

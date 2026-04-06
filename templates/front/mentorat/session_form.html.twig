@@ -1,0 +1,76 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}{{ session ? 'Modifier la session' : 'Nouvelle session' }} - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-camera-video me-2"></i>{{ session ? 'Modifier la session' : 'Nouvelle session' }}</h2>
+    <a href="{{ path('app_mentorat_sessions') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm" style="border-radius:1rem">
+            <div class="card-body p-4">
+                <form method="post" action="{{ session ? path('app_mentorat_session_edit', {id: session.id}) : path('app_mentorat_session_new') }}">
+                    <input type="hidden" name="_token" value="{{ session ? csrf_token('mentorat_session_edit_' ~ session.id) : csrf_token('mentorat_session_new') }}">
+
+                    {% if not session %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Demande de mentorat associée</label>
+                        <select name="request_id" class="form-select" required>
+                            <option value="">-- Sélectionner une demande acceptée --</option>
+                            {% for r in acceptedRequests %}
+                            <option value="{{ r.id }}">
+                                {{ r.mentor.firstname }} {{ r.mentor.lastname }} ↔ {{ r.entrepreneur.firstname }} {{ r.entrepreneur.lastname }}
+                                ({{ r.date|date('d/m/Y') }})
+                                {% if r.project %} — {{ r.project.titre }}{% endif %}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    {% endif %}
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Date et heure</label>
+                            <input type="datetime-local" name="scheduled_at" class="form-control"
+                                   value="{{ session ? session.scheduledAt|date('Y-m-d\\TH:i') : '' }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Durée (minutes)</label>
+                            <input type="number" name="duration" class="form-control" min="15" max="480" step="15"
+                                   value="{{ session ? session.durationMinutes : 60 }}" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3 mt-3">
+                        <label class="form-label fw-semibold">Lien de réunion (optionnel)</label>
+                        <input type="url" name="meeting_link" class="form-control" placeholder="https://meet.google.com/..."
+                               value="{{ session ? session.meetingLink : '' }}">
+                    </div>
+
+                    {% if session %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Statut</label>
+                        <select name="status" class="form-select">
+                            <option value="scheduled" {{ session.status == 'scheduled' ? 'selected' : '' }}>Planifiée</option>
+                            <option value="completed" {{ session.status == 'completed' ? 'selected' : '' }}>Terminée</option>
+                            <option value="cancelled" {{ session.status == 'cancelled' ? 'selected' : '' }}>Annulée</option>
+                            <option value="no_show" {{ session.status == 'no_show' ? 'selected' : '' }}>Absent</option>
+                        </select>
+                    </div>
+                    {% endif %}
+
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-nj btn-lg">
+                            <i class="bi bi-{{ session ? 'check-lg' : 'plus-lg' }} me-2"></i>{{ session ? 'Enregistrer' : 'Créer la session' }}
+                        </button>
+                        <a href="{{ path('app_mentorat_sessions') }}" class="btn btn-outline-secondary btn-lg">Annuler</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -4,15 +4,31 @@
 
 {% block main %}
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold mb-0"><i class="bi bi-calendar-check me-2"></i>Mes Disponibilités</h2>
-    <a href="{{ path('app_mentorat_requests') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Demandes</a>
+    <h2 class="fw-bold mb-0"><i class="bi bi-mortarboard me-2"></i>Mentorat</h2>
 </div>
 
+{# ── 4-Tab Navigation (role-aware) ── #}
+{% set userRole = app.user.role %}
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item"><a class="nav-link" href="{{ path('app_mentorat_requests') }}"><i class="bi bi-send me-1"></i>Demandes</a></li>
+    <li class="nav-item"><a class="nav-link" href="{{ path('app_mentorat_sessions') }}"><i class="bi bi-camera-video me-1"></i>Sessions</a></li>
+    {% if userRole == 'MENTOR' %}
+        <li class="nav-item"><a class="nav-link active" href="{{ path('app_mentorat_availability') }}"><i class="bi bi-calendar-check me-1"></i>Disponibilités</a></li>
+    {% endif %}
+    <li class="nav-item"><a class="nav-link" href="{{ path('app_mentorat_chatbot') }}"><i class="bi bi-robot me-1"></i>Chatbot</a></li>
+</ul>
+
+{% for message in app.flashes('success') %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endfor %}
+
 <div class="row g-4">
+    {# ── Add Form ── #}
     <div class="col-md-5">
         <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
-            <h5 class="fw-bold mb-3">Ajouter un créneau</h5>
+            <h5 class="fw-bold mb-3"><i class="bi bi-plus-circle me-1"></i>Ajouter un créneau</h5>
             <form method="post" action="{{ path('app_mentorat_availability_new') }}">
+                <input type="hidden" name="_token" value="{{ csrf_token('mentorat_availability') }}">
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Date</label>
                     <input type="date" name="date" class="form-control" required>
@@ -32,21 +48,44 @@
         </div>
     </div>
 
+    {# ── Availability List with edit/delete ── #}
     <div class="col-md-7">
         <div class="card border-0 shadow-sm" style="border-radius:1rem">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-nj mb-0">
-                        <thead><tr><th>Date</th><th>Début</th><th>Fin</th></tr></thead>
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light"><tr><th>Date</th><th>Début</th><th>Fin</th><th>Actions</th></tr></thead>
                         <tbody>
                             {% for a in availabilities %}
-                            <tr>
+                            <tr id="avail-row-{{ a.id }}">
                                 <td>{{ a.date|date('d/m/Y') }}</td>
-                                <td>{{ a.startTime }}</td>
-                                <td>{{ a.endTime }}</td>
+                                <td>{{ a.startTime|date('H:i') }}</td>
+                                <td>{{ a.endTime|date('H:i') }}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" title="Modifier" onclick="toggleEditRow({{ a.id }}, '{{ a.date|date('Y-m-d') }}', '{{ a.startTime|date('H:i') }}', '{{ a.endTime|date('H:i') }}')"><i class="bi bi-pencil"></i></button>
+                                        <form method="post" action="{{ path('app_mentorat_availability_delete', {id: a.id}) }}" class="d-inline" onsubmit="return confirm('Supprimer ce créneau ?')">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('mentorat_avail_del_' ~ a.id) }}">
+                                            <button class="btn btn-outline-danger" title="Supprimer"><i class="bi bi-trash"></i></button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {# Hidden inline edit row #}
+                            <tr id="avail-edit-{{ a.id }}" style="display:none" class="table-warning">
+                                <td colspan="4">
+                                    <form method="post" action="{{ path('app_mentorat_availability_edit', {id: a.id}) }}" class="d-flex gap-2 align-items-end">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('mentorat_avail_edit_' ~ a.id) }}">
+                                        <div><label class="form-label small mb-0">Date</label><input type="date" name="date" class="form-control form-control-sm" id="edit-date-{{ a.id }}"></div>
+                                        <div><label class="form-label small mb-0">Début</label><input type="time" name="start_time" class="form-control form-control-sm" id="edit-start-{{ a.id }}"></div>
+                                        <div><label class="form-label small mb-0">Fin</label><input type="time" name="end_time" class="form-control form-control-sm" id="edit-end-{{ a.id }}"></div>
+                                        <button class="btn btn-sm btn-success"><i class="bi bi-check-lg"></i></button>
+                                        <button type="button" class="btn btn-sm btn-secondary" onclick="toggleEditRow({{ a.id }})"><i class="bi bi-x-lg"></i></button>
+                                    </form>
+                                </td>
                             </tr>
                             {% else %}
-                            <tr><td colspan="3" class="text-center text-muted py-4">Aucun créneau défini.</td></tr>
+                            <tr><td colspan="4" class="text-center text-muted py-4">Aucun créneau défini.</td></tr>
                             {% endfor %}
                         </tbody>
                     </table>
@@ -55,4 +94,18 @@
         </div>
     </div>
 </div>
+
+<script>
+function toggleEditRow(id, date, start, end) {
+    var row = document.getElementById('avail-edit-' + id);
+    if (row.style.display === 'none') {
+        row.style.display = '';
+        if (date) document.getElementById('edit-date-' + id).value = date;
+        if (start) document.getElementById('edit-start-' + id).value = start;
+        if (end) document.getElementById('edit-end-' + id).value = end;
+    } else {
+        row.style.display = 'none';
+    }
+}
+</script>
 {% endblock %}

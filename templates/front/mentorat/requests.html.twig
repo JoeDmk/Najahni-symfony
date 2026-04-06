@@ -1,67 +1,144 @@
 {% extends 'front/layout.html.twig' %}
 
-{% block title %}Mes demandes de mentorat - Najahni{% endblock %}
+{% block title %}Demandes de mentorat - Najahni{% endblock %}
 
 {% block main %}
+{% set userRole = app.user.role %}
+
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="fw-bold mb-0"><i class="bi bi-mortarboard me-2"></i>Mentorat</h2>
-    <div class="d-flex gap-2">
+    {% if userRole == 'ENTREPRENEUR' %}
         <a href="{{ path('app_mentorat_mentors') }}" class="btn btn-nj"><i class="bi bi-search me-1"></i>Trouver un mentor</a>
-        <a href="{{ path('app_mentorat_availability') }}" class="btn btn-outline-primary"><i class="bi bi-calendar me-1"></i>Disponibilités</a>
-        <a href="{{ path('app_mentorat_sessions') }}" class="btn btn-outline-secondary"><i class="bi bi-camera-video me-1"></i>Sessions</a>
-    </div>
+    {% endif %}
 </div>
 
-{# Sent Requests #}
-<h4 class="fw-bold mb-3">Demandes envoyées</h4>
+{# ── 4-Tab Navigation ── #}
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item"><a class="nav-link active" href="{{ path('app_mentorat_requests') }}"><i class="bi bi-send me-1"></i>Demandes</a></li>
+    <li class="nav-item"><a class="nav-link" href="{{ path('app_mentorat_sessions') }}"><i class="bi bi-camera-video me-1"></i>Sessions</a></li>
+    {% if userRole == 'MENTOR' %}
+        <li class="nav-item"><a class="nav-link" href="{{ path('app_mentorat_availability') }}"><i class="bi bi-calendar-check me-1"></i>Disponibilités</a></li>
+    {% endif %}
+    <li class="nav-item"><a class="nav-link" href="{{ path('app_mentorat_chatbot') }}"><i class="bi bi-robot me-1"></i>Chatbot</a></li>
+</ul>
+
+{% for message in app.flashes('success') %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endfor %}
+{% for message in app.flashes('warning') %}
+    <div class="alert alert-warning alert-dismissible fade show" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endfor %}
+
+{# ═══════════════════════════════════════════
+   🟣 VUE ENTREPRENEUR — Demandes envoyées (lecture seule, cartes)
+   ═══════════════════════════════════════════ #}
+{% if userRole == 'ENTREPRENEUR' %}
+<h4 class="fw-bold mb-3"><i class="bi bi-arrow-up-right me-1"></i>Mes demandes envoyées</h4>
 {% if sentRequests|length > 0 %}
-<div class="row g-3 mb-5">
+<div class="row g-3 mb-4">
     {% for req in sentRequests %}
-    <div class="col-md-6">
-        <div class="card border-0 shadow-sm" style="border-radius:1rem">
+    <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm h-100" style="border-radius:1rem">
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h6 class="fw-bold mb-0">Mentor : {{ req.mentor.firstname }} {{ req.mentor.lastname }}</h6>
-                    <span class="badge bg-{{ req.status == 'ACCEPTED' ? 'success' : (req.status == 'REJECTED' ? 'danger' : 'warning text-dark') }}">{{ req.status }}</span>
+                    <h6 class="fw-bold mb-0">{{ req.mentor.firstname }} {{ req.mentor.lastname }}</h6>
+                    {% if req.status == 'AUTO_ACCEPTED' %}
+                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Auto-accepté</span>
+                    {% elseif req.status == 'ACCEPTED' %}
+                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Accepté</span>
+                    {% elseif req.status == 'PENDING' %}
+                        <span class="badge bg-primary"><i class="bi bi-hourglass-split me-1"></i>En révision</span>
+                    {% elseif req.status == 'REJECTED' %}
+                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Refusé</span>
+                    {% elseif req.status == 'CANCELLED' %}
+                        <span class="badge bg-warning text-dark"><i class="bi bi-slash-circle me-1"></i>Annulé</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ req.status }}</span>
+                    {% endif %}
                 </div>
-                {% if req.project %}<p class="small text-muted mb-1"><i class="bi bi-rocket me-1"></i>Projet : {{ req.project.titre }}</p>{% endif %}
+                {% if req.project %}
+                    <p class="small text-muted mb-1"><i class="bi bi-rocket me-1"></i>{{ req.project.titre }}</p>
+                {% endif %}
                 <p class="small text-muted mb-1"><i class="bi bi-calendar me-1"></i>{{ req.date|date('d/m/Y') }} à {{ req.time }}</p>
-                {% if req.motivation %}<p class="small mb-0">{{ req.motivation }}</p>{% endif %}
+                {% if req.matchScore is not null %}
+                    <p class="small mb-1">
+                        <i class="bi bi-bullseye me-1"></i>Match :
+                        <span class="badge bg-{{ req.matchScore >= 70 ? 'success' : (req.matchScore >= 40 ? 'warning text-dark' : 'secondary') }}">{{ req.matchScore }}%</span>
+                    </p>
+                {% endif %}
+                {% if req.motivation %}
+                    <p class="small text-muted mb-0 mt-2">{{ req.motivation|length > 100 ? req.motivation|slice(0,100) ~ '...' : req.motivation }}</p>
+                {% endif %}
             </div>
         </div>
     </div>
     {% endfor %}
 </div>
 {% else %}
-<p class="text-muted mb-5">Aucune demande envoyée.</p>
+<div class="text-center py-4 mb-4">
+    <i class="bi bi-send" style="font-size:3rem;color:var(--nj-primary)"></i>
+    <p class="text-muted mt-2">Aucune demande envoyée. <a href="{{ path('app_mentorat_mentors') }}">Trouver un mentor</a></p>
+</div>
+{% endif %}
 {% endif %}
 
-{# Received Requests (for mentors) #}
+{# ═══════════════════════════════════════════
+   🔵 VUE MENTOR — Demandes reçues (cartes avec Accept/Reject)
+   ═══════════════════════════════════════════ #}
+{% if userRole == 'MENTOR' %}
+<h4 class="fw-bold mb-3"><i class="bi bi-inbox me-1"></i>Demandes reçues</h4>
 {% if receivedRequests|length > 0 %}
-<h4 class="fw-bold mb-3">Demandes reçues</h4>
 <div class="row g-3">
     {% for req in receivedRequests %}
-    <div class="col-md-6">
-        <div class="card border-0 shadow-sm" style="border-radius:1rem">
+    <div class="col-md-6 col-lg-4">
+        <div class="card border-0 shadow-sm h-100" style="border-radius:1rem">
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h6 class="fw-bold mb-0">De : {{ req.entrepreneur.firstname }} {{ req.entrepreneur.lastname }}</h6>
-                    <span class="badge bg-{{ req.status == 'ACCEPTED' ? 'success' : (req.status == 'REJECTED' ? 'danger' : 'warning text-dark') }}">{{ req.status }}</span>
+                    <h6 class="fw-bold mb-0">{{ req.entrepreneur.firstname }} {{ req.entrepreneur.lastname }}</h6>
+                    {% if req.status == 'AUTO_ACCEPTED' %}
+                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Auto-accepté</span>
+                    {% elseif req.status == 'ACCEPTED' %}
+                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Accepté</span>
+                    {% elseif req.status == 'PENDING' %}
+                        <span class="badge bg-primary"><i class="bi bi-hourglass-split me-1"></i>En révision</span>
+                    {% elseif req.status == 'REJECTED' %}
+                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Refusé</span>
+                    {% elseif req.status == 'CANCELLED' %}
+                        <span class="badge bg-warning text-dark"><i class="bi bi-slash-circle me-1"></i>Annulé</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ req.status }}</span>
+                    {% endif %}
                 </div>
-                {% if req.project %}<p class="small text-muted mb-1"><i class="bi bi-rocket me-1"></i>{{ req.project.titre }}</p>{% endif %}
+                {% if req.project %}
+                    <p class="small text-muted mb-1"><i class="bi bi-rocket me-1"></i>{{ req.project.titre }}</p>
+                {% endif %}
                 <p class="small text-muted mb-1"><i class="bi bi-calendar me-1"></i>{{ req.date|date('d/m/Y') }} à {{ req.time }}</p>
-                {% if req.motivation %}<p class="small mb-2">{{ req.motivation }}</p>{% endif %}
-                {% if req.goals %}<p class="small text-muted mb-2"><strong>Objectifs:</strong> {{ req.goals }}</p>{% endif %}
+                {% if req.matchScore is not null %}
+                    <p class="small mb-1">
+                        <i class="bi bi-bullseye me-1"></i>Match :
+                        <span class="badge bg-{{ req.matchScore >= 70 ? 'success' : (req.matchScore >= 40 ? 'warning text-dark' : 'secondary') }}">{{ req.matchScore }}%</span>
+                    </p>
+                {% endif %}
+                {% if req.motivation %}
+                    <p class="small text-muted mb-2">{{ req.motivation|length > 100 ? req.motivation|slice(0,100) ~ '...' : req.motivation }}</p>
+                {% endif %}
+                {% if req.goals %}
+                    <p class="small text-muted mb-2"><strong>Objectifs :</strong> {{ req.goals|length > 80 ? req.goals|slice(0,80) ~ '...' : req.goals }}</p>
+                {% endif %}
 
+                {# Accept / Reject buttons (only for PENDING) #}
                 {% if req.status == 'PENDING' %}
+                <hr class="my-2">
                 <div class="d-flex gap-2">
                     <form method="post" action="{{ path('app_mentorat_request_respond', {id: req.id}) }}" class="flex-fill">
+                        <input type="hidden" name="_token" value="{{ csrf_token('mentorat_respond_' ~ req.id) }}">
                         <input type="hidden" name="action" value="accept">
                         <button class="btn btn-sm btn-success w-100"><i class="bi bi-check-lg me-1"></i>Accepter</button>
                     </form>
                     <form method="post" action="{{ path('app_mentorat_request_respond', {id: req.id}) }}" class="flex-fill">
+                        <input type="hidden" name="_token" value="{{ csrf_token('mentorat_respond_' ~ req.id) }}">
                         <input type="hidden" name="action" value="reject">
-                        <button class="btn btn-sm btn-outline-danger w-100"><i class="bi bi-x-lg me-1"></i>Refuser</button>
+                        <button class="btn btn-sm btn-outline-danger w-100"><i class="bi bi-x-lg me-1"></i>Rejeter</button>
                     </form>
                 </div>
                 {% endif %}
@@ -70,5 +147,37 @@
     </div>
     {% endfor %}
 </div>
+{% else %}
+<div class="text-center py-4">
+    <i class="bi bi-inbox" style="font-size:3rem;color:var(--nj-primary)"></i>
+    <p class="text-muted mt-2">Aucune demande reçue pour le moment.</p>
+</div>
+{% endif %}
+{% endif %}
+
+{# ═══════════════════════════════════════════
+   Fallback if user has both roles or ADMIN — show both sections
+   ═══════════════════════════════════════════ #}
+{% if userRole != 'ENTREPRENEUR' and userRole != 'MENTOR' %}
+    {% if sentRequests|length > 0 %}
+    <h4 class="fw-bold mb-3">Demandes envoyées</h4>
+    <div class="row g-3 mb-4">
+        {% for req in sentRequests %}
+        <div class="col-md-6"><div class="card border-0 shadow-sm p-3" style="border-radius:1rem">
+            <strong>{{ req.mentor.firstname }} {{ req.mentor.lastname }}</strong> — {{ req.status }} — {{ req.date|date('d/m/Y') }}
+        </div></div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% if receivedRequests|length > 0 %}
+    <h4 class="fw-bold mb-3">Demandes reçues</h4>
+    <div class="row g-3">
+        {% for req in receivedRequests %}
+        <div class="col-md-6"><div class="card border-0 shadow-sm p-3" style="border-radius:1rem">
+            <strong>{{ req.entrepreneur.firstname }} {{ req.entrepreneur.lastname }}</strong> — {{ req.status }} — {{ req.date|date('d/m/Y') }}
+        </div></div>
+        {% endfor %}
+    </div>
+    {% endif %}
 {% endif %}
 {% endblock %}

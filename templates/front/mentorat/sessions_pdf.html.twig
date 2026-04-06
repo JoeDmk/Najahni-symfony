@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Sessions de Mentorat — Najahni</title>
+    <style>
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #333; margin: 20px; }
+        h1 { color: #4361ee; font-size: 18px; margin-bottom: 5px; }
+        .subtitle { color: #888; font-size: 11px; margin-bottom: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: #4361ee; color: #fff; padding: 8px 6px; text-align: left; font-size: 11px; }
+        td { padding: 7px 6px; border-bottom: 1px solid #e0e0e0; font-size: 11px; }
+        tr:nth-child(even) td { background: #f9f9f9; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: bold; }
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-danger { background: #f8d7da; color: #721c24; }
+        .badge-primary { background: #cce5ff; color: #004085; }
+        .badge-secondary { background: #e2e3e5; color: #383d41; }
+        .footer { margin-top: 30px; text-align: center; color: #aaa; font-size: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Sessions de Mentorat</h1>
+    <div class="subtitle">Exporté le {{ "now"|date('d/m/Y H:i') }} — Najahni</div>
+
+    {% if sessions|length > 0 %}
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>{{ userRole == 'MENTOR' ? 'Entrepreneur' : 'Mentor' }}</th>
+                <th>Date</th>
+                <th>Durée</th>
+                <th>Statut</th>
+                <th>Mon feedback</th>
+                <th>Ma note</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for s in sessions %}
+            {% set req = s.mentorshipRequest %}
+            <tr>
+                <td>{{ s.id }}</td>
+                <td>
+                    {% if req %}
+                        {% if userRole == 'MENTOR' %}
+                            {{ req.entrepreneur.firstname }} {{ req.entrepreneur.lastname }}
+                        {% else %}
+                            {{ req.mentor.firstname }} {{ req.mentor.lastname }}
+                        {% endif %}
+                    {% else %}-{% endif %}
+                </td>
+                <td>{{ s.scheduledAt|date('d/m/Y H:i') }}</td>
+                <td>{{ s.durationMinutes }} min</td>
+                <td>
+                    {% if s.status == 'completed' %}
+                        <span class="badge badge-success">Terminée</span>
+                    {% elseif s.status == 'cancelled' %}
+                        <span class="badge badge-danger">Annulée</span>
+                    {% elseif s.status == 'no_show' %}
+                        <span class="badge badge-secondary">Absent</span>
+                    {% else %}
+                        <span class="badge badge-primary">Planifiée</span>
+                    {% endif %}
+                </td>
+                {% if userRole == 'MENTOR' %}
+                    <td>{{ s.mentorFeedback ?? '-' }}</td>
+                    <td>{{ s.mentorRating ? s.mentorRating ~ '/5' : '-' }}</td>
+                {% else %}
+                    <td>{{ s.entrepreneurFeedback ?? '-' }}</td>
+                    <td>{{ s.entrepreneurRating ? s.entrepreneurRating ~ '/5' : '-' }}</td>
+                {% endif %}
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+        <p>Aucune session trouvée.</p>
+    {% endif %}
+
+    <div class="footer">Najahni — Plateforme de Mentorat</div>
+</body>
+</html>

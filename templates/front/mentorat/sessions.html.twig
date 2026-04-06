@@ -3,62 +3,140 @@
 {% block title %}Sessions de mentorat - Najahni{% endblock %}
 
 {% block main %}
+{% set userRole = app.user.role %}
+
 <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2 class="fw-bold mb-0"><i class="bi bi-camera-video me-2"></i>Sessions</h2>
-    <a href="{{ path('app_mentorat_requests') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Demandes</a>
+    <h2 class="fw-bold mb-0"><i class="bi bi-mortarboard me-2"></i>Mentorat</h2>
+    <div class="d-flex gap-2">
+        <a href="{{ path('app_mentorat_sessions_export_pdf') }}" class="btn btn-outline-danger btn-sm"><i class="bi bi-file-earmark-pdf me-1"></i>PDF</a>
+        <a href="{{ path('app_mentorat_sessions_export_excel') }}" class="btn btn-outline-success btn-sm"><i class="bi bi-file-earmark-excel me-1"></i>Excel</a>
+        {% if userRole == 'MENTOR' %}
+            <a href="{{ path('app_mentorat_session_new') }}" class="btn btn-nj btn-sm"><i class="bi bi-plus-lg me-1"></i>Nouvelle session</a>
+        {% endif %}
+    </div>
 </div>
 
-{% if sessions|length > 0 %}
-<div class="row g-4">
-    {% for session in sessions %}
-    <div class="col-md-6">
-        <div class="card border-0 shadow-sm" style="border-radius:1rem">
-            <div class="card-body p-4">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div>
-                        <h6 class="fw-bold mb-0">
-                            {% if session.mentorshipRequest %}
-                            {{ session.mentorshipRequest.mentor.firstname }} {{ session.mentorshipRequest.mentor.lastname }}
-                            ↔
-                            {{ session.mentorshipRequest.entrepreneur.firstname }} {{ session.mentorshipRequest.entrepreneur.lastname }}
-                            {% else %}Session de mentorat{% endif %}
-                        </h6>
-                    </div>
-                    <span class="badge bg-{{ session.status == 'completed' ? 'success' : (session.status == 'cancelled' ? 'danger' : 'primary') }}">{{ session.status }}</span>
-                </div>
-                <p class="small text-muted mb-1"><i class="bi bi-calendar me-1"></i>{{ session.scheduledAt|date('d/m/Y H:i') }}</p>
-                <p class="small text-muted mb-2"><i class="bi bi-clock me-1"></i>{{ session.durationMinutes }} min</p>
-                {% if session.meetingLink %}
-                    <a href="{{ session.meetingLink }}" class="btn btn-sm btn-outline-primary mb-2" target="_blank"><i class="bi bi-camera-video me-1"></i>Rejoindre</a>
-                {% endif %}
+{# ── 4-Tab Navigation (role-aware) ── #}
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item"><a class="nav-link" href="{{ path('app_mentorat_requests') }}"><i class="bi bi-send me-1"></i>Demandes</a></li>
+    <li class="nav-item"><a class="nav-link active" href="{{ path('app_mentorat_sessions') }}"><i class="bi bi-camera-video me-1"></i>Sessions</a></li>
+    {% if userRole == 'MENTOR' %}
+        <li class="nav-item"><a class="nav-link" href="{{ path('app_mentorat_availability') }}"><i class="bi bi-calendar-check me-1"></i>Disponibilités</a></li>
+    {% endif %}
+    <li class="nav-item"><a class="nav-link" href="{{ path('app_mentorat_chatbot') }}"><i class="bi bi-robot me-1"></i>Chatbot</a></li>
+</ul>
 
-                {# Feedback form #}
-                {% if session.status == 'completed' %}
-                <hr>
-                <form method="post" action="{{ path('app_mentorat_session_feedback', {id: session.id}) }}">
-                    <div class="mb-2">
-                        <label class="form-label fw-semibold small">Votre feedback</label>
-                        <textarea name="feedback" class="form-control form-control-sm" rows="2"></textarea>
-                    </div>
-                    <div class="mb-2">
-                        <label class="form-label fw-semibold small">Note (1-5)</label>
-                        <select name="rating" class="form-select form-select-sm" style="width:80px">
-                            {% for i in 1..5 %}<option>{{ i }}</option>{% endfor %}
-                        </select>
-                    </div>
-                    <button class="btn btn-sm btn-nj"><i class="bi bi-send me-1"></i>Envoyer</button>
-                </form>
+{% for message in app.flashes('success') %}
+    <div class="alert alert-success alert-dismissible fade show" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endfor %}
+
+{% if sessions|length > 0 %}
+<div class="table-responsive">
+    <table class="table table-hover align-middle">
+        <thead class="table-light">
+            <tr>
+                <th>ID</th>
+                <th>{{ userRole == 'MENTOR' ? 'Entrepreneur' : 'Mentor' }}</th>
+                <th>Date prévue</th>
+                <th>Durée</th>
+                <th>Statut</th>
+                <th>Lien réunion</th>
+                {% if userRole == 'MENTOR' %}
+                    <th>Mon feedback</th>
+                    <th>Ma note</th>
+                {% else %}
+                    <th>Mon feedback</th>
+                    <th>Ma note</th>
                 {% endif %}
-            </div>
-        </div>
-    </div>
-    {% endfor %}
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for session in sessions %}
+            {% set req = session.mentorshipRequest %}
+            <tr>
+                <td class="fw-semibold">{{ session.id }}</td>
+                <td>
+                    {% if req %}
+                        {% if userRole == 'MENTOR' %}
+                            {{ req.entrepreneur.firstname }} {{ req.entrepreneur.lastname }}
+                        {% else %}
+                            {{ req.mentor.firstname }} {{ req.mentor.lastname }}
+                        {% endif %}
+                    {% else %}-{% endif %}
+                </td>
+                <td>{{ session.scheduledAt|date('d/m/Y H:i') }}</td>
+                <td>{{ session.durationMinutes }} min</td>
+                <td>
+                    {% if session.status == 'completed' %}
+                        <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Terminée</span>
+                    {% elseif session.status == 'cancelled' %}
+                        <span class="badge bg-danger"><i class="bi bi-x-circle me-1"></i>Annulée</span>
+                    {% elseif session.status == 'no_show' %}
+                        <span class="badge bg-secondary"><i class="bi bi-eye-slash me-1"></i>Absent</span>
+                    {% else %}
+                        <span class="badge bg-primary"><i class="bi bi-calendar-event me-1"></i>Planifiée</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if session.meetingLink %}
+                        <a href="{{ session.meetingLink }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="bi bi-camera-video me-1"></i>Rejoindre</a>
+                    {% else %}<span class="text-muted">—</span>{% endif %}
+                </td>
+                {% if userRole == 'MENTOR' %}
+                    <td>{{ session.mentorFeedback ?? '—' }}</td>
+                    <td>{{ session.mentorRating ? session.mentorRating ~ '/5' : '—' }}</td>
+                {% else %}
+                    <td>{{ session.entrepreneurFeedback ?? '—' }}</td>
+                    <td>{{ session.entrepreneurRating ? session.entrepreneurRating ~ '/5' : '—' }}</td>
+                {% endif %}
+                <td>
+                    {% if userRole == 'MENTOR' %}
+                    <div class="btn-group btn-group-sm">
+                        <a href="{{ path('app_mentorat_session_edit', {id: session.id}) }}" class="btn btn-outline-primary" title="Modifier"><i class="bi bi-pencil"></i></a>
+                        <form method="post" action="{{ path('app_mentorat_session_delete', {id: session.id}) }}" class="d-inline" onsubmit="return confirm('Supprimer cette session ?')">
+                            <input type="hidden" name="_token" value="{{ csrf_token('mentorat_session_del_' ~ session.id) }}">
+                            <button class="btn btn-outline-danger" title="Supprimer"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </div>
+                    {% else %}
+                    <span class="text-muted small">Lecture seule</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {# ── Feedback row for completed sessions ── #}
+            {% if session.status == 'completed' %}
+            <tr class="table-light">
+                <td colspan="9">
+                    <form method="post" action="{{ path('app_mentorat_session_feedback', {id: session.id}) }}" class="d-flex gap-2 align-items-end">
+                        <input type="hidden" name="_token" value="{{ csrf_token('mentorat_feedback_' ~ session.id) }}">
+                        <div class="flex-grow-1">
+                            <label class="form-label small mb-0 fw-semibold">Votre feedback</label>
+                            <input type="text" name="feedback" class="form-control form-control-sm" placeholder="Votre avis sur cette session...">
+                        </div>
+                        <div style="width:80px">
+                            <label class="form-label small mb-0 fw-semibold">Note</label>
+                            <select name="rating" class="form-select form-select-sm">
+                                {% for i in 1..5 %}<option>{{ i }}</option>{% endfor %}
+                            </select>
+                        </div>
+                        <button class="btn btn-sm btn-nj"><i class="bi bi-send me-1"></i>Envoyer</button>
+                    </form>
+                </td>
+            </tr>
+            {% endif %}
+        {% endfor %}
+        </tbody>
+    </table>
 </div>
 {% else %}
 <div class="text-center py-5">
-    <div style="font-size:5rem">📹</div>
+    <i class="bi bi-camera-video" style="font-size:4rem;color:var(--nj-primary)"></i>
     <h4 class="fw-bold mt-3">Aucune session</h4>
     <p class="text-muted">Les sessions apparaîtront après acceptation d'une demande de mentorat</p>
+    {% if userRole == 'MENTOR' %}
+        <a href="{{ path('app_mentorat_session_new') }}" class="btn btn-nj"><i class="bi bi-plus-lg me-1"></i>Créer une session</a>
+    {% endif %}
 </div>
 {% endif %}
 {% endblock %}

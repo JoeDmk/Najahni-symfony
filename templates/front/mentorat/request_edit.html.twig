@@ -1,0 +1,65 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Modifier la demande - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-pencil me-2"></i>Modifier la demande</h2>
+    <a href="{{ path('app_mentorat_requests') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm" style="border-radius:1rem">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-4">Demande à {{ req.mentor.firstname }} {{ req.mentor.lastname }}</h5>
+                <form method="post">
+                    <input type="hidden" name="_token" value="{{ csrf_token('mentorat_request_edit_' ~ req.id) }}">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Projet (optionnel)</label>
+                        <select name="project_id" class="form-select">
+                            <option value="">Aucun projet spécifique</option>
+                            {% for p in projets %}
+                            <option value="{{ p.id }}" {{ req.project and req.project.id == p.id ? 'selected' : '' }}>{{ p.titre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Date souhaitée</label>
+                            <input type="date" name="date" class="form-control" value="{{ req.date|date('Y-m-d') }}" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Heure</label>
+                            <input type="time" name="time" class="form-control" value="{{ req.time }}" required>
+                        </div>
+                    </div>
+                    <div class="mb-3 mt-3">
+                        <label class="form-label fw-semibold">Motivation</label>
+                        <textarea name="motivation" class="form-control" rows="3" required>{{ req.motivation }}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Objectifs</label>
+                        <textarea name="goals" class="form-control" rows="3">{{ req.goals }}</textarea>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-nj btn-lg"><i class="bi bi-check-lg me-2"></i>Enregistrer</button>
+                        <a href="{{ path('app_mentorat_requests') }}" class="btn btn-outline-secondary btn-lg">Annuler</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h6 class="fw-bold mb-2">Informations</h6>
+            <p class="small text-muted mb-1"><strong>Statut:</strong> {{ req.status }}</p>
+            {% if req.matchScore is not null %}
+            <p class="small text-muted mb-1"><strong>Match:</strong> {{ req.matchScore }}%</p>
+            {% endif %}
+            <p class="small text-muted mb-0"><strong>Créée le:</strong> {{ req.createdAt|date('d/m/Y H:i') }}</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
