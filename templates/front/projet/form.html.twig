@@ -24,7 +24,12 @@
             <div class="row g-3">
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">Secteur</label>
-                    <input type="text" name="secteur" class="form-control" value="{{ projet ? projet.secteur }}" placeholder="ex: Tech, Santé...">
+                    <select name="secteur" class="form-select" required>
+                        <option value="">-- Choisir un secteur --</option>
+                        {% for s in ['Technologie', 'Santé', 'Éducation', 'Finance', 'Commerce', 'Agriculture', 'Tourisme', 'Immobilier', 'Transport', 'Énergie', 'Alimentation', 'Mode & Textile', 'Industrie', 'Services', 'Artisanat'] %}
+                            <option value="{{ s }}" {{ projet and projet.secteur == s ? 'selected' }}>{{ s }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">Étape</label>
@@ -52,20 +57,20 @@
             {% set db = projet ? projet.donneesBusiness : null %}
             <div class="mb-3">
                 <label class="form-label fw-semibold">Taille du marché (DT)</label>
-                <input type="number" step="0.01" name="taille_marche" class="form-control" value="{{ db ? db.tailleMarche }}">
+                <input type="number" step="0.01" name="taille_marche" class="form-control" value="{{ db ? db.tailleMarche }}" required>
             </div>
             <div class="mb-3">
                 <label class="form-label fw-semibold">Modèle de revenu</label>
-                <input type="text" name="modele_revenu" class="form-control" value="{{ db ? db.modeleRevenu }}">
+                <input type="text" name="modele_revenu" class="form-control" value="{{ db ? db.modeleRevenu }}" required>
             </div>
             <div class="row g-3">
                 <div class="col-6">
                     <label class="form-label fw-semibold">Coûts estimés (DT)</label>
-                    <input type="number" step="0.01" name="couts_estimes" class="form-control" value="{{ db ? db.coutsEstimes }}">
+                    <input type="number" step="0.01" name="couts_estimes" class="form-control" value="{{ db ? db.coutsEstimes }}" required>
                 </div>
                 <div class="col-6">
                     <label class="form-label fw-semibold">Revenus attendus (DT)</label>
-                    <input type="number" step="0.01" name="revenus_attendus" class="form-control" value="{{ db ? db.revenusAttendus }}">
+                    <input type="number" step="0.01" name="revenus_attendus" class="form-control" value="{{ db ? db.revenusAttendus }}" required>
                 </div>
             </div>
             <div class="row g-3 mt-1">
@@ -79,7 +84,7 @@
                 </div>
                 <div class="col-6">
                     <label class="form-label fw-semibold">Force d'équipe (1-10)</label>
-                    <input type="number" min="1" max="10" name="force_equipe" class="form-control" value="{{ db ? db.forceEquipe }}">
+                    <input type="number" min="1" max="10" name="force_equipe" class="form-control" value="{{ db ? db.forceEquipe }}" required>
                 </div>
             </div>
         </div>

@@ -14,11 +14,30 @@ class ProjetRepository extends ServiceEntityRepository
         return $this->findBy(['user' => $user], ['dateCreation' => 'DESC']);
     }
 
-    public function findBySearch(string $q)
+    public function findByUserWithFilters($user, ?string $search = null, ?string $secteur = null, string $sort = 'dateCreation', string $direction = 'DESC'): array
     {
-        return $this->createQueryBuilder('p')
-            ->where('p.titre LIKE :q OR p.secteur LIKE :q')
-            ->setParameter('q', '%'.$q.'%')
-            ->orderBy('p.dateCreation', 'DESC');
+        $allowedSorts = ['dateCreation', 'titre', 'secteur', 'statutProjet', 'scoreGlobal'];
+        if (!in_array($sort, $allowedSorts, true)) {
+            $sort = 'dateCreation';
+        }
+        $direction = strtoupper($direction) === 'ASC' ? 'ASC' : 'DESC';
+
+        $qb = $this->createQueryBuilder('p')
+            ->where('p.user = :user')
+            ->setParameter('user', $user);
+
+        if ($search) {
+            $qb->andWhere('p.titre LIKE :q OR p.description LIKE :q OR p.secteur LIKE :q')
+               ->setParameter('q', '%'.$search.'%');
+        }
+
+        if ($secteur) {
+            $qb->andWhere('p.secteur = :secteur')
+               ->setParameter('secteur', $secteur);
+        }
+
+        return $qb->orderBy('p.'.$sort, $direction)
+                   ->getQuery()
+                   ->getResult();
     }
 }

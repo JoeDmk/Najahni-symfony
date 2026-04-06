@@ -11,20 +11,40 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[Route('/projets')]
 #[IsGranted('ROLE_USER')]
 class ProjetController extends AbstractController
 {
+    public const SECTEURS = [
+        'Technologie', 'Santé', 'Éducation', 'Finance', 'Commerce',
+        'Agriculture', 'Tourisme', 'Immobilier', 'Transport', 'Énergie',
+        'Alimentation', 'Mode & Textile', 'Industrie', 'Services', 'Artisanat',
+    ];
+
     #[Route('', name: 'app_projet_index')]
-    public function index(ProjetRepository $repo): Response
+    public function index(Request $request, ProjetRepository $repo): Response
     {
-        $projets = $repo->findByUser($this->getUser());
-        return $this->render('front/projet/index.html.twig', ['projets' => $projets]);
+        $search = $request->query->get('q', '');
+        $secteur = $request->query->get('secteur', '');
+        $sort = $request->query->get('sort', 'dateCreation');
+        $direction = $request->query->get('dir', 'DESC');
+
+        $projets = $repo->findByUserWithFilters($this->getUser(), $search ?: null, $secteur ?: null, $sort, $direction);
+
+        return $this->render('front/projet/index.html.twig', [
+            'projets' => $projets,
+            'secteurs' => self::SECTEURS,
+            'search' => $search,
+            'selectedSecteur' => $secteur,
+            'sort' => $sort,
+            'direction' => $direction,
+        ]);
     }
 
     #[Route('/new', name: 'app_projet_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $em): Response
+    public function new(Request $request, EntityManagerInterface $em, ValidatorInterface $validator): Response
     {
         if ($request->isMethod('POST')) {
             $projet = new Projet();
@@ -37,6 +57,18 @@ class ProjetController extends AbstractController
             $this->hydrateDonnees($donnees, $request);
             $donnees->setProjet($projet);
             $projet->setDonneesBusiness($donnees);
+
+            $errors = $validator->validate($projet);
+            $erreursDonnees = $validator->validate($donnees);
+            if (count($errors) > 0 || count($erreursDonnees) > 0) {
+                foreach ($errors as $error) {
+                    $this->addFlash('error', $error->getMessage());
+                }
+                foreach ($erreursDonnees as $error) {
+                    $this->addFlash('error', $error->getMessage());
+                }
+                return $this->render('front/projet/form.html.twig', ['projet' => $projet]);
+            }
 
             $em->persist($projet);
             $em->persist($donnees);
@@ -56,7 +88,7 @@ class ProjetController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_projet_edit', methods: ['GET', 'POST'])]
-    public function edit(Projet $projet, Request $request, EntityManagerInterface $em): Response
+    public function edit(Projet $projet, Request $request, EntityManagerInterface $em, ValidatorInterface $validator): Response
     {
         if ($projet->getUser() !== $this->getUser() && !$this->isGranted('ROLE_ADMIN')) {
             throw $this->createAccessDeniedException();
@@ -64,9 +96,23 @@ class ProjetController extends AbstractController
 
         if ($request->isMethod('POST')) {
             $this->hydrateProjet($projet, $request);
-            if ($projet->getDonneesBusiness()) {
-                $this->hydrateDonnees($projet->getDonneesBusiness(), $request);
+            $donnees = $projet->getDonneesBusiness();
+            if ($donnees) {
+                $this->hydrateDonnees($donnees, $request);
             }
+
+            $errors = $validator->validate($projet);
+            $erreursDonnees = $donnees ? $validator->validate($donnees) : [];
+            if (count($errors) > 0 || count($erreursDonnees) > 0) {
+                foreach ($errors as $error) {
+                    $this->addFlash('error', $error->getMessage());
+                }
+                foreach ($erreursDonnees as $error) {
+                    $this->addFlash('error', $error->getMessage());
+                }
+                return $this->render('front/projet/form.html.twig', ['projet' => $projet]);
+            }
+
             $em->flush();
             $this->addFlash('success', 'Projet modifié avec succès !');
             return $this->redirectToRoute('app_projet_show', ['id' => $projet->getId()]);

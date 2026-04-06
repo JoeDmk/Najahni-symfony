@@ -4,6 +4,7 @@ namespace App\Entity;
 use App\Repository\DonneesBusinessRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: DonneesBusinessRepository::class)]
 #[ORM\Table(name: 'donnees_business')]
@@ -15,21 +16,28 @@ class DonneesBusiness
     private ?int $id = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Assert\NotBlank(message: 'La taille du marché est obligatoire.')]
     private ?string $tailleMarche = null;
 
     #[ORM\Column(length: 255, nullable: true)]
+    #[Assert\NotBlank(message: 'Le modèle de revenu est obligatoire.')]
     private ?string $modeleRevenu = null;
 
     #[ORM\Column(nullable: true)]
+    #[Assert\NotNull(message: 'Les coûts estimés sont obligatoires.')]
     private ?float $coutsEstimes = 0;
 
     #[ORM\Column(nullable: true)]
+    #[Assert\NotNull(message: 'Les revenus attendus sont obligatoires.')]
     private ?float $revenusAttendus = 0;
 
     #[ORM\Column(length: 50, nullable: true)]
+    #[Assert\NotBlank(message: 'Le niveau de risque est obligatoire.')]
     private ?string $niveauRisque = null;
 
     #[ORM\Column(nullable: true)]
+    #[Assert\NotNull(message: "La force d'équipe est obligatoire.")]
+    #[Assert\Range(min: 1, max: 10, notInRangeMessage: "La force d'équipe doit être entre 1 et 10.")]
     private ?int $forceEquipe = 0;
 
     #[ORM\OneToOne(targetEntity: Projet::class, inversedBy: 'donneesBusiness')]

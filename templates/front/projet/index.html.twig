@@ -8,6 +8,50 @@
     <a href="{{ path('app_projet_new') }}" class="btn btn-nj"><i class="bi bi-plus-lg me-2"></i>Nouveau Projet</a>
 </div>
 
+{# Barre de recherche, filtre et tri #}
+<div class="card border-0 shadow-sm mb-4 p-3" style="border-radius:1rem">
+    <form method="get" action="{{ path('app_projet_index') }}">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label fw-semibold small mb-1">Rechercher</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                    <input type="text" name="q" class="form-control" placeholder="Titre, description, secteur..." value="{{ search }}">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold small mb-1">Secteur</label>
+                <select name="secteur" class="form-select">
+                    <option value="">Tous les secteurs</option>
+                    {% for s in secteurs %}
+                        <option value="{{ s }}" {{ selectedSecteur == s ? 'selected' }}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-semibold small mb-1">Trier par</label>
+                <div class="input-group">
+                    <select name="sort" class="form-select">
+                        <option value="dateCreation" {{ sort == 'dateCreation' ? 'selected' }}>Date de création</option>
+                        <option value="titre" {{ sort == 'titre' ? 'selected' }}>Titre</option>
+                        <option value="secteur" {{ sort == 'secteur' ? 'selected' }}>Secteur</option>
+                        <option value="statutProjet" {{ sort == 'statutProjet' ? 'selected' }}>Statut</option>
+                        <option value="scoreGlobal" {{ sort == 'scoreGlobal' ? 'selected' }}>Score</option>
+                    </select>
+                    <select name="dir" class="form-select" style="max-width:90px">
+                        <option value="DESC" {{ direction == 'DESC' ? 'selected' }}>Desc</option>
+                        <option value="ASC" {{ direction == 'ASC' ? 'selected' }}>Asc</option>
+                    </select>
+                </div>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-nj flex-fill"><i class="bi bi-funnel me-1"></i>Filtrer</button>
+                <a href="{{ path('app_projet_index') }}" class="btn btn-outline-secondary" title="Réinitialiser"><i class="bi bi-x-lg"></i></a>
+            </div>
+        </div>
+    </form>
+</div>
+
 {% if projets|length > 0 %}
 <div class="row g-4">
     {% for projet in projets %}
