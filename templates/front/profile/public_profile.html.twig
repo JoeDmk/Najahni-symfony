@@ -1,0 +1,178 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}{{ profileUser.firstname }} {{ profileUser.lastname }} - Najahni{% endblock %}
+
+{% block main %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        {# Profile Header Card #}
+        <div class="card border-0 shadow-sm mb-4" style="border-radius:1.5rem;overflow:hidden">
+            <div style="height:120px;background:var(--nj-gradient)"></div>
+            <div class="card-body text-center" style="margin-top:-60px">
+                <div class="d-inline-flex align-items-center justify-content-center rounded-circle border border-4 border-white shadow" style="width:110px;height:110px;background:var(--nj-gradient);color:#fff;font-size:2.5rem;font-weight:700">
+                    {{ profileUser.firstname|first|upper }}{{ profileUser.lastname|first|upper }}
+                </div>
+                <h3 class="fw-bold mt-3 mb-0">{{ profileUser.firstname }} {{ profileUser.lastname }}</h3>
+                <span class="badge bg-primary bg-opacity-10 text-primary mt-2" style="font-size:.85rem">
+                    <i class="bi bi-{{ profileUser.role == 'MENTOR' ? 'mortarboard' : (profileUser.role == 'INVESTISSEUR' ? 'graph-up-arrow' : (profileUser.role == 'ADMIN' ? 'shield-lock' : 'rocket-takeoff')) }} me-1"></i>
+                    {{ profileUser.role }}
+                </span>
+
+                {% if profileUser.bio %}
+                    <p class="text-muted mt-3 mb-0 mx-auto" style="max-width:500px">{{ profileUser.bio }}</p>
+                {% endif %}
+
+                {# Follow + Stats Row #}
+                <div class="d-flex justify-content-center gap-4 mt-4 mb-2">
+                    <div class="text-center">
+                        <h5 class="fw-bold mb-0" id="followersCount">{{ followersCount }}</h5>
+                        <small class="text-muted">Followers</small>
+                    </div>
+                    <div class="text-center">
+                        <h5 class="fw-bold mb-0">{{ followingCount }}</h5>
+                        <small class="text-muted">Suivis</small>
+                    </div>
+                    <div class="text-center">
+                        <h5 class="fw-bold mb-0">{{ stats.posts }}</h5>
+                        <small class="text-muted">Publications</small>
+                    </div>
+                </div>
+
+                {% if not isOwn %}
+                <button id="followBtn" class="btn {{ isFollowing ? 'btn-outline-primary' : 'btn-nj' }} px-4 mt-2"
+                        data-url="{{ path('app_user_follow', {id: profileUser.id}) }}"
+                        data-following="{{ isFollowing ? '1' : '0' }}">
+                    <i class="bi bi-{{ isFollowing ? 'person-check' : 'person-plus' }} me-1"></i>
+                    <span>{{ isFollowing ? 'Suivi' : 'Suivre' }}</span>
+                </button>
+                {% else %}
+                <a href="{{ path('app_profile_edit') }}" class="btn btn-outline-primary px-4 mt-2">
+                    <i class="bi bi-pencil me-1"></i>Modifier mon profil
+                </a>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="row g-4">
+            {# Info Card #}
+            <div class="col-md-5">
+                <div class="card border-0 shadow-sm h-100" style="border-radius:1rem">
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-person-vcard me-2"></i>Informations</h6>
+                        <div class="d-flex flex-column gap-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-envelope text-primary"></i>
+                                <span class="small">{{ profileUser.email }}</span>
+                            </div>
+                            {% if profileUser.phone %}
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-telephone text-primary"></i>
+                                <span class="small">{{ profileUser.phone }}</span>
+                            </div>
+                            {% endif %}
+                            {% if profileUser.companyName %}
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-building text-primary"></i>
+                                <span class="small">{{ profileUser.companyName }}</span>
+                            </div>
+                            {% endif %}
+                            {% if profileUser.address %}
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-geo-alt text-primary"></i>
+                                <span class="small">{{ profileUser.address }}</span>
+                            </div>
+                            {% endif %}
+                            {% if profileUser.linkedinUrl %}
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-linkedin text-primary"></i>
+                                <a href="{{ profileUser.linkedinUrl }}" target="_blank" class="small text-decoration-none">LinkedIn</a>
+                            </div>
+                            {% endif %}
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-calendar text-primary"></i>
+                                <span class="small text-muted">Membre depuis {{ profileUser.createdAt|date('M Y') }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {# Activity Card #}
+            <div class="col-md-7">
+                <div class="card border-0 shadow-sm h-100" style="border-radius:1rem">
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-3"><i class="bi bi-activity me-2"></i>Activité</h6>
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <div class="p-3 rounded-3 text-center" style="background:rgba(67,97,238,.08)">
+                                    <i class="bi bi-chat-dots text-primary" style="font-size:1.5rem"></i>
+                                    <h4 class="fw-bold mb-0 mt-2">{{ stats.posts }}</h4>
+                                    <small class="text-muted">Publications</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-3 rounded-3 text-center" style="background:rgba(114,9,183,.08)">
+                                    <i class="bi bi-chat-left-text text-purple" style="font-size:1.5rem;color:var(--nj-accent)"></i>
+                                    <h4 class="fw-bold mb-0 mt-2">{{ stats.comments }}</h4>
+                                    <small class="text-muted">Commentaires</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-3 rounded-3 text-center" style="background:rgba(58,12,163,.08)">
+                                    <i class="bi bi-people text-secondary" style="font-size:1.5rem;color:var(--nj-secondary)"></i>
+                                    <h4 class="fw-bold mb-0 mt-2">{{ stats.groups }}</h4>
+                                    <small class="text-muted">Groupes</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="p-3 rounded-3 text-center" style="background:rgba(67,97,238,.08)">
+                                    <i class="bi bi-kanban text-primary" style="font-size:1.5rem"></i>
+                                    <h4 class="fw-bold mb-0 mt-2">{{ stats.projets }}</h4>
+                                    <small class="text-muted">Projets</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.getElementById('followBtn');
+    if (!btn) return;
+
+    btn.addEventListener('click', function() {
+        btn.disabled = true;
+        fetch(btn.dataset.url, {
+            method: 'POST',
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+        .then(r => r.json())
+        .then(data => {
+            const icon = btn.querySelector('i');
+            const label = btn.querySelector('span');
+            if (data.action === 'followed') {
+                btn.classList.remove('btn-nj');
+                btn.classList.add('btn-outline-primary');
+                icon.className = 'bi bi-person-check me-1';
+                label.textContent = 'Suivi';
+                btn.dataset.following = '1';
+            } else {
+                btn.classList.remove('btn-outline-primary');
+                btn.classList.add('btn-nj');
+                icon.className = 'bi bi-person-plus me-1';
+                label.textContent = 'Suivre';
+                btn.dataset.following = '0';
+            }
+            document.getElementById('followersCount').textContent = data.followersCount;
+        })
+        .finally(() => btn.disabled = false);
+    });
+});
+</script>
+{% endblock %}

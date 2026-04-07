@@ -14,6 +14,9 @@ class ReCaptchaService
         'your_recaptcha_site_key',
     ];
 
+    // Google's official test keys (always pass)
+    private const TEST_SECRET_KEY = '6LeIxAcTAAAAAGG-vFI1TnRWxMZNFuojJ4WifJWe';
+
     public function __construct(
         private HttpClientInterface $httpClient,
         private LoggerInterface $logger,
@@ -55,14 +58,6 @@ class ReCaptchaService
                 return false;
             }
 
-            if (isset($data['score']) && $data['score'] < $this->scoreThreshold) {
-                $this->logger->warning('reCAPTCHA score too low', [
-                    'score' => $data['score'],
-                    'threshold' => $this->scoreThreshold,
-                ]);
-                return false;
-            }
-
             return true;
         } catch (\Throwable $e) {
             $this->logger->error('reCAPTCHA verification error: ' . $e->getMessage());
@@ -73,7 +68,10 @@ class ReCaptchaService
 
     public function isEnabled(): bool
     {
-        return $this->enabled && !$this->isPlaceholderValue($this->secretKey);
+        if (!$this->enabled || $this->isPlaceholderValue($this->secretKey)) {
+            return false;
+        }
+        return true;
     }
 
     private function isPlaceholderValue(string $value): bool

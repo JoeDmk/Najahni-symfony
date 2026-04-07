@@ -43,8 +43,8 @@ class LoginFormAuthenticator extends AbstractLoginFormAuthenticator
         $email = $request->request->get('_username', '');
         $password = $request->request->get('_password', '');
 
-        // Verify reCAPTCHA
-        $recaptchaToken = $request->request->get('_recaptcha_token', '');
+        // Verify reCAPTCHA v2 checkbox
+        $recaptchaToken = $request->request->get('g-recaptcha-response', '');
         if (!$this->reCaptchaService->verify($recaptchaToken, $request->getClientIp())) {
             throw new CustomUserMessageAuthenticationException('Vérification reCAPTCHA échouée. Veuillez réessayer.');
         }

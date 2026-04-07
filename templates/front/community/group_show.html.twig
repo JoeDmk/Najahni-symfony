@@ -20,7 +20,7 @@
                     </div>
                     <p class="text-muted mb-3">{{ group.description }}</p>
                     <div class="d-flex flex-wrap gap-3 small text-muted">
-                        <span><i class="bi bi-person me-1"></i>Admin : {{ group.groupAdmin.firstname }} {{ group.groupAdmin.lastname }}</span>
+                        <span><i class="bi bi-person me-1"></i>Admin : <a href="{{ path('app_user_profile', {id: group.groupAdmin.id}) }}" class="text-decoration-none">{{ group.groupAdmin.firstname }} {{ group.groupAdmin.lastname }}</a></span>
                         <span><i class="bi bi-people me-1"></i>{{ group.membersCount }} membres</span>
                         <span><i class="bi bi-chat me-1"></i>{{ threads|length }} discussions</span>
                     </div>
@@ -108,7 +108,7 @@
                 <h5 class="fw-bold"><a href="{{ path('app_community_thread_show', {id: thread.id}) }}" class="text-decoration-none text-dark">{{ thread.title }}</a></h5>
                 <p class="text-muted mb-2">{{ thread.content|length > 200 ? thread.content|slice(0, 200) ~ '...' : thread.content }}</p>
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <small class="text-muted">Par {{ thread.user.firstname }} {{ thread.user.lastname }} · {{ thread.createdAt|date('d/m/Y H:i') }}</small>
+                    <small class="text-muted">Par <a href="{{ path('app_user_profile', {id: thread.user.id}) }}" class="text-decoration-none">{{ thread.user.firstname }} {{ thread.user.lastname }}</a> · {{ thread.createdAt|date('d/m/Y H:i') }}</small>
                     <div class="d-flex align-items-center gap-2">
                         <span class="badge bg-primary bg-opacity-10 text-primary"><i class="bi bi-chat me-1"></i>{{ thread.comments|length }}</span>
                         <a href="{{ path('app_community_thread_show', {id: thread.id}) }}" class="btn btn-sm btn-outline-primary">Ouvrir</a>
@@ -127,12 +127,12 @@
         <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
             <h6 class="fw-bold mb-3"><i class="bi bi-people me-2"></i>Membres ({{ group.members|length }})</h6>
             {% for member in group.members %}
-            <div class="d-flex align-items-center mb-2">
+            <a href="{{ path('app_user_profile', {id: member.user.id}) }}" class="d-flex align-items-center mb-2 text-decoration-none">
                 <div class="rounded-circle d-flex align-items-center justify-content-center me-2" style="width:32px;height:32px;background:var(--nj-gradient);color:#fff;font-size:.75rem">
                     {{ member.user.firstname|first|upper }}{{ member.user.lastname|first|upper }}
                 </div>
-                <small>{{ member.user.firstname }} {{ member.user.lastname }}</small>
-            </div>
+                <small class="text-dark">{{ member.user.firstname }} {{ member.user.lastname }}</small>
+            </a>
             {% endfor %}
         </div>
         {% else %}
@@ -151,7 +151,7 @@
             <div class="d-flex flex-column gap-3">
                 {% for pendingRequest in pendingRequests %}
                 <div class="border rounded-4 p-3">
-                    <div class="fw-semibold">{{ pendingRequest.firstname }} {{ pendingRequest.lastname }}</div>
+                    <div class="fw-semibold"><a href="{{ path('app_user_profile', {id: pendingRequest.id}) }}" class="text-decoration-none text-dark">{{ pendingRequest.firstname }} {{ pendingRequest.lastname }}</a></div>
                     <div class="small text-muted mb-3">{{ pendingRequest.email }}</div>
                     <div class="d-flex gap-2">
                         <form method="post" action="{{ path('app_community_group_request_approve', {groupId: group.id, requestId: pendingRequest.id}) }}">

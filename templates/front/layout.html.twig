@@ -22,10 +22,23 @@
                 {% if is_granted('ROLE_ADMIN') %}
                 <li class="nav-item"><a class="nav-link" href="{{ path('admin_dashboard') }}"><i class="bi bi-shield-lock me-1"></i>Admin</a></li>
                 {% endif %}
-                <li class="nav-item">
-                    <a class="nav-link" href="{{ path('app_profile_notifications') }}">
+                <li class="nav-item dropdown" id="notifDropdown">
+                    <a class="nav-link position-relative" href="#" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" id="notifBell">
                         <i class="bi bi-bell me-1"></i>
+                        <span class="badge rounded-pill bg-danger position-absolute top-0 start-100 translate-middle d-none" id="notifBadge" style="font-size:.6rem"></span>
                     </a>
+                    <div class="dropdown-menu dropdown-menu-end p-0 shadow-lg" style="width:360px;max-height:440px;border-radius:1rem;overflow:hidden">
+                        <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom" style="background:var(--nj-gradient)">
+                            <span class="fw-bold text-white small">Notifications</span>
+                            <button class="btn btn-sm btn-link text-white text-decoration-none p-0" id="notifReadAll" style="font-size:.75rem">Tout marquer lu</button>
+                        </div>
+                        <div id="notifList" style="max-height:340px;overflow-y:auto">
+                            <div class="text-center text-muted small py-4">Chargement...</div>
+                        </div>
+                        <div class="border-top text-center py-2">
+                            <a href="{{ path('app_profile_notifications') }}" class="small text-decoration-none" style="color:var(--nj-primary)">Voir toutes les notifications</a>
+                        </div>
+                    </div>
                 </li>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
@@ -84,4 +97,64 @@
         <p class="text-center small mb-0">&copy; {{ "now"|date('Y') }} Najahni — Projet PIDEV 3A Esprit. Tous droits réservés.</p>
     </div>
 </footer>
+
+{% if app.user %}
+<script>
+(function(){
+    const badge = document.getElementById('notifBadge');
+    const list = document.getElementById('notifList');
+    const readAllBtn = document.getElementById('notifReadAll');
+    if (!badge || !list) return;
+
+    function renderNotifs(data) {
+        if (data.unreadCount > 0) {
+            badge.textContent = data.unreadCount > 9 ? '9+' : data.unreadCount;
+            badge.classList.remove('d-none');
+        } else {
+            badge.classList.add('d-none');
+        }
+        if (!data.notifications.length) {
+            list.innerHTML = '<div class="text-center text-muted small py-4"><i class="bi bi-bell-slash" style="font-size:1.5rem"></i><p class="mt-2 mb-0">Aucune notification</p></div>';
+            return;
+        }
+        list.innerHTML = data.notifications.map(n => `
+            <div class="d-flex align-items-start gap-2 px-3 py-2 border-bottom ${!n.isRead ? 'bg-light' : ''}" style="cursor:pointer">
+                <div class="flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle mt-1" style="width:32px;height:32px;background:var(--bs-${n.typeColor})20">
+                    <i class="bi bi-${n.typeIcon}" style="color:var(--bs-${n.typeColor});font-size:.85rem"></i>
+                </div>
+                <div class="flex-grow-1 min-width-0">
+                    <div class="d-flex justify-content-between">
+                        <span class="small fw-semibold text-truncate ${!n.isRead ? '' : 'text-muted'}">${n.title}</span>
+                        <small class="text-muted flex-shrink-0 ms-2" style="font-size:.7rem">${n.createdAt}</small>
+                    </div>
+                    <p class="mb-0 text-muted" style="font-size:.78rem;line-height:1.3">${n.message}</p>
+                </div>
+                ${!n.isRead ? '<span class="badge rounded-pill bg-primary mt-1" style="font-size:.4rem">&bull;</span>' : ''}
+            </div>
+        `).join('');
+    }
+
+    function loadNotifs() {
+        fetch('{{ path("app_api_notifications") }}')
+            .then(r => r.json())
+            .then(renderNotifs)
+            .catch(() => {});
+    }
+
+    // Load on dropdown open
+    document.getElementById('notifBell').addEventListener('click', loadNotifs);
+
+    // Mark all read
+    readAllBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        fetch('{{ path("app_api_notifications_read_all") }}', {method:'POST', headers:{'X-Requested-With':'XMLHttpRequest'}})
+            .then(() => loadNotifs());
+    });
+
+    // Poll every 30s for badge count
+    loadNotifs();
+    setInterval(loadNotifs, 30000);
+})();
+</script>
+{% endif %}
 {% endblock %}

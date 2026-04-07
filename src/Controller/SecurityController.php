@@ -46,7 +46,7 @@ class SecurityController extends AbstractController
 
         if ($request->isMethod('POST')) {
             // Verify reCAPTCHA
-            $recaptchaToken = $request->request->get('_recaptcha_token', '');
+            $recaptchaToken = $request->request->get('g-recaptcha-response', '');
             if (!$reCaptchaService->verify($recaptchaToken, $request->getClientIp())) {
                 $this->addFlash('danger', 'Vérification reCAPTCHA échouée. Veuillez réessayer.');
                 return $this->render('security/register.html.twig', ['user' => new User()]);

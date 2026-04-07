@@ -12,7 +12,7 @@
     <div class="col-md-8">
         <div class="card border-0 shadow-sm" style="border-radius:1rem">
             <div class="card-body p-4">
-                <h5 class="fw-bold mb-4">Envoyer une demande à {{ mentor.firstname }} {{ mentor.lastname }}</h5>
+                <h5 class="fw-bold mb-4">Envoyer une demande à <a href="{{ path('app_user_profile', {id: mentor.id}) }}" class="text-decoration-none">{{ mentor.firstname }} {{ mentor.lastname }}</a></h5>
                 <form method="post">
                     <input type="hidden" name="_token" value="{{ csrf_token('mentorat_request') }}">
                     <div class="mb-3">
@@ -68,7 +68,7 @@
                     {{ mentor.firstname|first|upper }}{{ mentor.lastname|first|upper }}
                 </div>
             </div>
-            <h5 class="fw-bold text-center">{{ mentor.firstname }} {{ mentor.lastname }}</h5>
+            <h5 class="fw-bold text-center"><a href="{{ path('app_user_profile', {id: mentor.id}) }}" class="text-decoration-none text-dark">{{ mentor.firstname }} {{ mentor.lastname }}</a></h5>
             {% if mentor.bio %}<p class="text-muted small">{{ mentor.bio }}</p>{% endif %}
             {% if mentor.companyName %}<p class="small"><i class="bi bi-building me-1"></i>{{ mentor.companyName }}</p>{% endif %}
             {% if mentor.linkedinUrl %}<p class="small"><a href="{{ mentor.linkedinUrl }}" target="_blank"><i class="bi bi-linkedin me-1"></i>LinkedIn</a></p>{% endif %}

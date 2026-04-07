@@ -59,9 +59,9 @@
                 <td>
                     {% if req %}
                         {% if userRole == 'MENTOR' %}
-                            {{ req.entrepreneur.firstname }} {{ req.entrepreneur.lastname }}
+                            <a href="{{ path('app_user_profile', {id: req.entrepreneur.id}) }}" class="text-decoration-none">{{ req.entrepreneur.firstname }} {{ req.entrepreneur.lastname }}</a>
                         {% else %}
-                            {{ req.mentor.firstname }} {{ req.mentor.lastname }}
+                            <a href="{{ path('app_user_profile', {id: req.mentor.id}) }}" class="text-decoration-none">{{ req.mentor.firstname }} {{ req.mentor.lastname }}</a>
                         {% endif %}
                     {% else %}-{% endif %}
                 </td>

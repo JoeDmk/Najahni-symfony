@@ -122,7 +122,7 @@
                 <li class="mb-2"><i class="bi bi-calendar text-muted me-2"></i>Créé le {{ projet.dateCreation|date('d/m/Y') }}</li>
                 {% if projet.dateSoumission %}<li class="mb-2"><i class="bi bi-send text-muted me-2"></i>Soumis le {{ projet.dateSoumission|date('d/m/Y') }}</li>{% endif %}
                 {% if projet.dateEvaluation %}<li class="mb-2"><i class="bi bi-check-circle text-muted me-2"></i>Évalué le {{ projet.dateEvaluation|date('d/m/Y') }}</li>{% endif %}
-                <li><i class="bi bi-person text-muted me-2"></i>{{ projet.user ? projet.user.firstname ~ ' ' ~ projet.user.lastname : 'Non assigné' }}</li>
+                <li><i class="bi bi-person text-muted me-2"></i>{% if projet.user %}<a href="{{ path('app_user_profile', {id: projet.user.id}) }}" class="text-decoration-none">{{ projet.user.firstname }} {{ projet.user.lastname }}</a>{% else %}Non assigné{% endif %}</li>
             </ul>
         </div>
     </div>

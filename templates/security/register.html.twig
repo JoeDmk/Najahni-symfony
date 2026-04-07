@@ -86,7 +86,11 @@
                     </div>
                 </div>
 
-                <input type="hidden" name="_recaptcha_token" id="recaptchaToken">
+                {% if recaptcha_enabled %}
+                <div class="d-flex justify-content-center mb-3">
+                    <div class="g-recaptcha" data-sitekey="{{ recaptcha_site_key }}"></div>
+                </div>
+                {% endif %}
                 <button type="submit" class="btn btn-nj w-100 py-2 mb-3">
                     <i class="bi bi-person-plus me-2"></i>Créer mon compte
                 </button>
@@ -162,25 +166,10 @@ document.addEventListener('DOMContentLoaded', () => {
         bar.className = 'progress-bar ' + (colors[score] || '');
     });
 
-    // reCAPTCHA on form submit
-    const form = document.getElementById('registerForm');
-
-    if (!form || !{{ recaptcha_enabled ? 'true' : 'false' }}) {
-        return;
-    }
-
-    form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        grecaptcha.ready(function() {
-            grecaptcha.execute('{{ recaptcha_site_key }}', {action: 'register'}).then(function(token) {
-                document.getElementById('recaptchaToken').value = token;
-                form.submit();
-            });
-        });
-    });
+    // reCAPTCHA v2 checkbox is handled automatically by the widget
 });
 </script>
 {% if recaptcha_enabled %}
-<script src="https://www.google.com/recaptcha/api.js?render={{ recaptcha_site_key }}"></script>
+<script src="https://www.google.com/recaptcha/api.js" async defer></script>
 {% endif %}
 {% endblock %}

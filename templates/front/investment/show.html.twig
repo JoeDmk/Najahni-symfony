@@ -66,7 +66,7 @@
                     <tbody>
                         {% for offer in offers %}
                         <tr>
-                            <td>{{ offer.investor.firstname }} {{ offer.investor.lastname }}</td>
+                            <td><a href="{{ path('app_user_profile', {id: offer.investor.id}) }}" class="text-decoration-none">{{ offer.investor.firstname }} {{ offer.investor.lastname }}</a></td>
                             <td class="fw-semibold">{{ offer.proposedAmount|number_format(0, ',', ' ') }} DT</td>
                             <td><span class="badge bg-{{ offer.status == 'ACCEPTED' ? 'success' : (offer.status == 'REJECTED' ? 'danger' : 'warning text-dark') }}">{{ offer.status }}</span></td>
                             <td class="text-muted small">{{ offer.createdAt|date('d/m/Y H:i') }}</td>

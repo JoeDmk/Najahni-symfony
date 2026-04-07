@@ -26,7 +26,23 @@
                         <label class="form-label fw-semibold">Email</label>
                         <input type="email" name="email" class="form-control" value="{{ app.user.email }}" required>
                         {% if not app.user.verified %}
-                            <small class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>Non vérifié</small>
+                            <div class="mt-1" id="emailVerifZone">
+                                <small class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>Non vérifié</small>
+                                <button type="button" class="btn btn-sm btn-outline-warning ms-2" id="sendVerifBtn">
+                                    <i class="bi bi-envelope-check me-1"></i>Vérifier maintenant
+                                </button>
+                                <div id="verifCodeForm" class="mt-2 d-none">
+                                    <div class="input-group input-group-sm">
+                                        <input type="text" id="verifCodeInput" class="form-control" placeholder="Code à 4 chiffres" maxlength="4" pattern="\d{4}">
+                                        <button type="button" class="btn btn-success" id="confirmVerifBtn">
+                                            <i class="bi bi-check-lg me-1"></i>Confirmer
+                                        </button>
+                                    </div>
+                                    <small class="text-muted">Vérifiez votre boîte mail.</small>
+                                </div>
+                            </div>
+                        {% else %}
+                            <small class="text-success"><i class="bi bi-check-circle me-1"></i>Vérifié</small>
                         {% endif %}
                     </div>
                     <div class="col-md-6">
@@ -138,5 +154,65 @@ document.getElementById('newPw').addEventListener('input', function() {
     bar.style.width = (score * 25) + '%';
     bar.className = 'progress-bar ' + ['', 'bg-danger', 'bg-warning', 'bg-info', 'bg-success'][score];
 });
+
+// Email verification
+(function(){
+    const sendBtn = document.getElementById('sendVerifBtn');
+    if (!sendBtn) return;
+    const codeForm = document.getElementById('verifCodeForm');
+    const codeInput = document.getElementById('verifCodeInput');
+    const confirmBtn = document.getElementById('confirmVerifBtn');
+    const zone = document.getElementById('emailVerifZone');
+    const url = '{{ path("app_profile_verify_email") }}';
+
+    sendBtn.addEventListener('click', function(){
+        sendBtn.disabled = true;
+        sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Envoi...';
+        fetch(url, {
+            method: 'POST',
+            headers: {'X-Requested-With':'XMLHttpRequest','Content-Type':'application/x-www-form-urlencoded'},
+            body: 'action=send'
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                codeForm.classList.remove('d-none');
+                sendBtn.classList.add('d-none');
+                codeInput.focus();
+            } else {
+                sendBtn.disabled = false;
+                sendBtn.innerHTML = '<i class="bi bi-envelope-check me-1"></i>Vérifier maintenant';
+                alert(data.message);
+            }
+        }).catch(() => {
+            sendBtn.disabled = false;
+            sendBtn.innerHTML = '<i class="bi bi-envelope-check me-1"></i>Vérifier maintenant';
+        });
+    });
+
+    confirmBtn.addEventListener('click', function(){
+        const code = codeInput.value.trim();
+        if (!/^\d{4}$/.test(code)) { codeInput.classList.add('is-invalid'); return; }
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        fetch(url, {
+            method: 'POST',
+            headers: {'X-Requested-With':'XMLHttpRequest','Content-Type':'application/x-www-form-urlencoded'},
+            body: 'action=verify&code=' + encodeURIComponent(code)
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                zone.innerHTML = '<small class="text-success"><i class="bi bi-check-circle me-1"></i>Vérifié</small>';
+            } else {
+                codeInput.classList.add('is-invalid');
+                confirmBtn.disabled = false;
+                confirmBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Confirmer';
+            }
+        }).catch(() => {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Confirmer';
+        });
+    });
+
+    codeInput.addEventListener('input', () => codeInput.classList.remove('is-invalid'));
+    codeInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); confirmBtn.click(); } });
+})();
 </script>
 {% endblock %}

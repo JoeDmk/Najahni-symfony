@@ -43,7 +43,7 @@
             {% for comment in comments %}
             <div class="border-bottom pb-3 mb-3">
                 <div class="d-flex justify-content-between align-items-center mb-1">
-                    <strong class="small">{{ comment.user.firstname }} {{ comment.user.lastname }}</strong>
+                    <strong class="small"><a href="{{ path('app_user_profile', {id: comment.user.id}) }}" class="text-decoration-none text-dark">{{ comment.user.firstname }} {{ comment.user.lastname }}</a></strong>
                     <span class="text-warning small">{% for i in 1..5 %}{{ i <= comment.rating ? '★' : '☆' }}{% endfor %}</span>
                 </div>
                 <p class="small mb-0">{{ comment.contenu }}</p>

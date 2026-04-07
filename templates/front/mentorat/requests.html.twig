@@ -41,7 +41,7 @@
         <div class="card border-0 shadow-sm h-100" style="border-radius:1rem">
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h6 class="fw-bold mb-0">{{ req.mentor.firstname }} {{ req.mentor.lastname }}</h6>
+                    <h6 class="fw-bold mb-0"><a href="{{ path('app_user_profile', {id: req.mentor.id}) }}" class="text-decoration-none text-dark">{{ req.mentor.firstname }} {{ req.mentor.lastname }}</a></h6>
                     {% if req.status == 'AUTO_ACCEPTED' %}
                         <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Auto-accepté</span>
                     {% elseif req.status == 'ACCEPTED' %}
@@ -94,7 +94,7 @@
         <div class="card border-0 shadow-sm h-100" style="border-radius:1rem">
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h6 class="fw-bold mb-0">{{ req.entrepreneur.firstname }} {{ req.entrepreneur.lastname }}</h6>
+                    <h6 class="fw-bold mb-0"><a href="{{ path('app_user_profile', {id: req.entrepreneur.id}) }}" class="text-decoration-none text-dark">{{ req.entrepreneur.firstname }} {{ req.entrepreneur.lastname }}</a></h6>
                     {% if req.status == 'AUTO_ACCEPTED' %}
                         <span class="badge bg-success"><i class="bi bi-check-circle me-1"></i>Auto-accepté</span>
                     {% elseif req.status == 'ACCEPTED' %}
@@ -164,7 +164,7 @@
     <div class="row g-3 mb-4">
         {% for req in sentRequests %}
         <div class="col-md-6"><div class="card border-0 shadow-sm p-3" style="border-radius:1rem">
-            <strong>{{ req.mentor.firstname }} {{ req.mentor.lastname }}</strong> — {{ req.status }} — {{ req.date|date('d/m/Y') }}
+            <strong><a href="{{ path('app_user_profile', {id: req.mentor.id}) }}" class="text-decoration-none text-dark">{{ req.mentor.firstname }} {{ req.mentor.lastname }}</a></strong> — {{ req.status }} — {{ req.date|date('d/m/Y') }}
         </div></div>
         {% endfor %}
     </div>
@@ -174,7 +174,7 @@
     <div class="row g-3">
         {% for req in receivedRequests %}
         <div class="col-md-6"><div class="card border-0 shadow-sm p-3" style="border-radius:1rem">
-            <strong>{{ req.entrepreneur.firstname }} {{ req.entrepreneur.lastname }}</strong> — {{ req.status }} — {{ req.date|date('d/m/Y') }}
+            <strong><a href="{{ path('app_user_profile', {id: req.entrepreneur.id}) }}" class="text-decoration-none text-dark">{{ req.entrepreneur.firstname }} {{ req.entrepreneur.lastname }}</a></strong> — {{ req.status }} — {{ req.date|date('d/m/Y') }}
         </div></div>
         {% endfor %}
     </div>

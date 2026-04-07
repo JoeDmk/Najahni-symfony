@@ -14,6 +14,14 @@ class ProjetRepository extends ServiceEntityRepository
         return $this->findBy(['user' => $user], ['dateCreation' => 'DESC']);
     }
 
+    public function findBySearch(string $search): \Doctrine\ORM\QueryBuilder
+    {
+        return $this->createQueryBuilder('p')
+            ->where('p.titre LIKE :q OR p.description LIKE :q OR p.secteur LIKE :q')
+            ->setParameter('q', '%'.$search.'%')
+            ->orderBy('p.dateCreation', 'DESC');
+    }
+
     public function findByUserWithFilters($user, ?string $search = null, ?string $secteur = null, string $sort = 'dateCreation', string $direction = 'DESC'): array
     {
         $allowedSorts = ['dateCreation', 'titre', 'secteur', 'statutProjet', 'scoreGlobal'];

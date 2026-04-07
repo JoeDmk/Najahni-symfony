@@ -133,6 +133,7 @@ class ProfileController extends AbstractController
     ): Response {
         /** @var User $user */
         $user = $this->getUser();
+        $isAjax = $request->isXmlHttpRequest();
 
         $action = $request->request->get('action');
         if ($action === 'send') {
@@ -143,8 +144,14 @@ class ProfileController extends AbstractController
 
             try {
                 $emailService->sendVerificationCode($user->getEmail(), $code, $user->getFirstname());
+                if ($isAjax) {
+                    return new JsonResponse(['success' => true, 'message' => 'Code envoyé à ' . $user->getEmail()]);
+                }
                 $this->addFlash('success', 'Code de vérification envoyé à ' . $user->getEmail());
             } catch (\Exception $e) {
+                if ($isAjax) {
+                    return new JsonResponse(['success' => false, 'message' => 'Erreur lors de l\'envoi de l\'email.'], 500);
+                }
                 $this->addFlash('danger', 'Erreur lors de l\'envoi de l\'email.');
             }
         } elseif ($action === 'verify') {
@@ -155,8 +162,14 @@ class ProfileController extends AbstractController
                 $user->setVerificationCode(null);
                 $user->setVerificationCodeExpiresAt(null);
                 $em->flush();
+                if ($isAjax) {
+                    return new JsonResponse(['success' => true, 'message' => 'Email vérifié avec succès !']);
+                }
                 $this->addFlash('success', 'Email vérifié avec succès !');
             } else {
+                if ($isAjax) {
+                    return new JsonResponse(['success' => false, 'message' => 'Code incorrect ou expiré.'], 400);
+                }
                 $this->addFlash('danger', 'Code incorrect ou expiré.');
             }
         }
