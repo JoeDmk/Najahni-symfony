@@ -25,6 +25,12 @@ class Notification
     #[ORM\Column(type: Types::TEXT)]
     private ?string $message = null;
 
+    #[ORM\Column(length: 500, nullable: true)]
+    private ?string $actionUrl = null;
+
+    #[ORM\Column(length: 80, nullable: true)]
+    private ?string $actionLabel = null;
+
     #[ORM\Column(length: 20, options: ['default' => 'INFO'])]
     private string $type = 'INFO';
 
@@ -46,6 +52,10 @@ class Notification
     public function setTitle(string $title): static { $this->title = $title; return $this; }
     public function getMessage(): ?string { return $this->message; }
     public function setMessage(string $message): static { $this->message = $message; return $this; }
+    public function getActionUrl(): ?string { return $this->actionUrl; }
+    public function setActionUrl(?string $actionUrl): static { $this->actionUrl = $actionUrl; return $this; }
+    public function getActionLabel(): ?string { return $this->actionLabel; }
+    public function setActionLabel(?string $actionLabel): static { $this->actionLabel = $actionLabel; return $this; }
     public function getType(): string { return $this->type; }
     public function setType(string $type): static { $this->type = $type; return $this; }
     public function isRead(): bool { return $this->read; }
@@ -56,6 +66,8 @@ class Notification
     public function getTypeIcon(): string
     {
         return match ($this->type) {
+            'MESSAGE' => 'chat-left-text-fill',
+            'CONTRACT' => 'file-earmark-text-fill',
             'WARNING' => 'exclamation-triangle-fill',
             'SUCCESS' => 'check-circle-fill',
             'DANGER' => 'x-octagon-fill',
@@ -67,6 +79,8 @@ class Notification
     public function getTypeColor(): string
     {
         return match ($this->type) {
+            'MESSAGE' => 'primary',
+            'CONTRACT' => 'warning',
             'WARNING' => 'warning',
             'SUCCESS' => 'success',
             'DANGER' => 'danger',
