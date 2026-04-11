@@ -1,0 +1,797 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Analyse de risque - {{ opportunity.project ? opportunity.project.titre : 'Opportunite' }} - Najahni{% endblock %}
+
+{% block main %}
+{% include 'front/investment/_wayfinder.html.twig' with {pageLabel: 'Analyse de risque', activeStep: 2} %}
+<style>
+.analysis-panel {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 1rem;
+    padding: 1.25rem;
+}
+
+.analysis-intro {
+    background: #eef6ff;
+    border: 1px solid #d7e9ff;
+    border-radius: .9rem;
+    padding: 1rem 1.1rem;
+    color: #1e3a5f;
+    margin-bottom: 1rem;
+}
+
+.analysis-section {
+    background: #ffffff;
+    border: 1px solid #e9eef5;
+    border-radius: .9rem;
+    padding: 1rem 1.1rem;
+    margin-bottom: .9rem;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+}
+
+.analysis-section h6 {
+    margin-bottom: .75rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.analysis-section p {
+    margin-bottom: .65rem;
+    color: #334155;
+    line-height: 1.7;
+}
+
+.analysis-section ul {
+    margin: 0;
+    padding-left: 1.15rem;
+}
+
+.analysis-section li {
+    margin-bottom: .5rem;
+    color: #334155;
+    line-height: 1.6;
+}
+
+.analysis-error {
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    color: #9a3412;
+    border-radius: .9rem;
+    padding: 1rem 1.1rem;
+}
+
+.analysis-placeholder {
+    border: 1px dashed #cbd5e1;
+    border-radius: .9rem;
+    padding: 1rem 1.1rem;
+    background: #f8fafc;
+    color: #64748b;
+}
+
+/* Animated risk dial */
+.risk-dial-wrap {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    margin: 0 auto;
+}
+
+.risk-dial-wrap svg {
+    transform: rotate(-90deg);
+    width: 160px;
+    height: 160px;
+}
+
+.risk-dial-track {
+    fill: none;
+    stroke: #e2e8f0;
+    stroke-width: 10;
+}
+
+.risk-dial-fill {
+    fill: none;
+    stroke-width: 10;
+    stroke-linecap: round;
+    stroke-dasharray: 408.41;
+    stroke-dashoffset: 408.41;
+    transition: stroke 0.3s ease;
+}
+
+.risk-dial-fill.animate {
+    animation: dialFill 900ms cubic-bezier(.4, 0, .2, 1) forwards;
+}
+
+@keyframes dialFill {
+    to { stroke-dashoffset: var(--dial-target); }
+}
+
+.risk-dial-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.risk-dial-score {
+    font-size: 2.6rem;
+    font-weight: 800;
+    line-height: 1;
+    transition: color 0.3s ease;
+}
+
+.risk-dial-sub {
+    font-size: .85rem;
+    color: #94a3b8;
+}
+
+.risk-verdict {
+    background: linear-gradient(135deg, #f8fafc 0%, #eef6ff 100%);
+    border: 1px solid #dbeafe;
+    border-left: 4px solid #3b82f6;
+    border-radius: .95rem;
+    padding: 1rem 1.1rem;
+}
+
+.risk-verdict-title {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    margin-bottom: .45rem;
+    color: #0f172a;
+    font-weight: 700;
+}
+
+.analysis-skeleton {
+    display: grid;
+    gap: .65rem;
+}
+
+.analysis-skeleton-line {
+    height: 12px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #e2e8f0 25%, #f8fafc 50%, #e2e8f0 75%);
+    background-size: 220% 100%;
+    animation: aiSkeleton 1.25s linear infinite;
+}
+
+.analysis-skeleton-line.short { width: 54%; }
+.analysis-skeleton-line.mid { width: 78%; }
+
+@keyframes aiSkeleton {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+.risk-context-banner { background: #1e293b; border-radius: .5rem; padding: .55rem 1rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+.risk-context-banner .rcb-left { display: flex; align-items: center; gap: .5rem; font-size: .82rem; color: #e2e8f0; }
+.risk-context-banner .rcb-left i { color: #60a5fa; font-size: .9rem; }
+.risk-context-banner .rcb-steps { display: flex; align-items: center; gap: .35rem; font-size: .72rem; color: #94a3b8; }
+.risk-context-banner .rcb-step { padding: .15rem .5rem; border-radius: 10rem; }
+.risk-context-banner .rcb-step.active { background: rgba(59,130,246,.2); color: #93c5fd; font-weight: 600; }
+.risk-context-banner .rcb-arrow { color: #475569; }
+</style>
+
+<div class="risk-context-banner">
+    <div class="rcb-left">
+        <i class="bi bi-info-circle-fill"></i>
+        <span>Vous evaluez ce projet avant de soumettre une offre. Votre reconnaissance du risque sera enregistree lors de l'investissement.</span>
+    </div>
+    <div class="rcb-steps">
+        <span class="rcb-step active">Etape 1 : Analyse de risque</span>
+        <span class="rcb-arrow"><i class="bi bi-chevron-right"></i></span>
+        <span class="rcb-step">Soumission d'offre</span>
+        <span class="rcb-arrow"><i class="bi bi-chevron-right"></i></span>
+        <span class="rcb-step">Negociation</span>
+    </div>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-shield-check me-2"></i>Analyse de risque IA</h2>
+    <a href="{{ path('app_invest_opportunity_show', {id: opportunity.id}) }}" class="btn btn-outline-primary"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+</div>
+
+{# Opportunity summary #}
+<div class="card border-0 shadow-sm mb-4" style="border-radius:1rem">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <div class="small text-muted">Projet</div>
+                <div class="fw-bold">{{ opportunity.project ? opportunity.project.titre : 'N/A' }}</div>
+            </div>
+            <div class="col-md-2">
+                <div class="small text-muted">Secteur</div>
+                <div class="fw-semibold">{{ opportunity.project ? opportunity.project.secteur : 'N/A' }}</div>
+            </div>
+            <div class="col-md-3">
+                <div class="small text-muted">Montant cible</div>
+                <div class="fw-bold">{{ opportunity.targetAmount|number_format(0, ',', ' ') }} DT</div>
+            </div>
+            <div class="col-md-3">
+                <div class="small text-muted">Deadline</div>
+                <div class="fw-semibold">{{ opportunity.deadline ? opportunity.deadline|date('d/m/Y') : 'N/A' }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    {# Risk Score Panel #}
+    <div class="col-md-7">
+        <div class="card border-0 shadow-sm" style="border-radius:1rem">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-semibold mb-0">Score de risque</h5>
+                    <select id="riskCountry" class="form-select" style="width:auto">
+                        <option value="TN" selected>Tunisie</option>
+                        <option value="FR">France</option>
+                        <option value="US">Etats-Unis</option>
+                        <option value="DE">Allemagne</option>
+                        <option value="MA">Maroc</option>
+                    </select>
+                </div>
+
+                <div id="riskSpinner" class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="small text-muted mt-2">Calcul du score de risque en cours...</p>
+                </div>
+
+                <div id="riskResult" class="d-none">
+                    <div class="text-center mb-4">
+                        <div class="risk-dial-wrap" id="scoreDialWrap">
+                            <svg viewBox="0 0 160 160">
+                                <circle class="risk-dial-track" cx="80" cy="80" r="65"></circle>
+                                <circle class="risk-dial-fill" id="scoreDial" cx="80" cy="80" r="65"></circle>
+                            </svg>
+                            <div class="risk-dial-label">
+                                <span class="risk-dial-score" id="scoreValue">0</span>
+                                <span class="risk-dial-sub">/100</span>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <span class="badge fs-6 px-3 py-2" id="scoreBadge">--</span>
+                        </div>
+                    </div>
+
+                    <p class="text-center mb-4" id="scoreRecommendation" style="font-size:1.05rem">--</p>
+
+                    {# Radar Chart #}
+                    <div class="text-center mb-4">
+                        <canvas id="riskRadarCanvas" width="320" height="320" style="max-width:320px;margin:0 auto"></canvas>
+                    </div>
+
+                    <div class="risk-verdict mb-4" id="verdictCard">
+                        <div class="risk-verdict-title">
+                            <i class="bi bi-compass" id="verdictIcon"></i>
+                            <span>Verdict du modele</span>
+                        </div>
+                        <div id="verdictContent" style="font-size:.98rem;line-height:1.7;color:#334155">
+                            <span class="text-muted"><i class="bi bi-hourglass-split me-1"></i>Preparation du verdict...</span>
+                        </div>
+                    </div>
+
+                    <h6 class="fw-semibold mb-3">Decomposition des facteurs</h6>
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between small"><span>Montant (<span id="fAmount">0</span>/100)</span><span class="text-muted">Poids: 30%</span></div>
+                        <div class="progress" style="height:6px"><div class="progress-bar bg-primary" id="barAmount" style="width:0%"></div></div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between small"><span>Duree (<span id="fDuration">0</span>/100)</span><span class="text-muted">Poids: 20%</span></div>
+                        <div class="progress" style="height:6px"><div class="progress-bar bg-info" id="barDuration" style="width:0%"></div></div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between small"><span>Economique (<span id="fEconomic">0</span>/100)</span><span class="text-muted">Poids: 50%</span></div>
+                        <div class="progress" style="height:6px"><div class="progress-bar" id="barEconomic" style="width:0%"></div></div>
+                    </div>
+
+                    <hr>
+                    <h6 class="fw-semibold mb-2">Donnees economiques utilisees</h6>
+                    <div class="row g-2 small">
+                        <div class="col-6"><span class="text-muted">Pays:</span> <span id="ecoCountry">--</span></div>
+                        <div class="col-6"><span class="text-muted">EUR/USD:</span> <span id="ecoEurUsd">--</span></div>
+                        <div class="col-6"><span class="text-muted">PIB:</span> <span id="ecoGdp">--</span> Mrd $</div>
+                        <div class="col-6"><span class="text-muted">Inflation:</span> <span id="ecoInfl">--</span>%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# AI Chat Analysis #}
+    <div class="col-md-5">
+        {# Three.js Globe #}
+        <div class="card border-0 shadow-sm mb-3" style="border-radius:1rem;background:#0f172a">
+            <div class="card-body text-center p-3">
+                <canvas id="riskGlobeCanvas" width="300" height="300" style="max-width:300px;border-radius:.75rem"></canvas>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm d-none" id="aiAnalysisCard" style="border-radius:1rem">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-semibold mb-0">AI Analysis</h5>
+                    <span class="badge text-bg-light border">Optionnel</span>
+                </div>
+                <div id="aiSpinner" class="analysis-skeleton py-2">
+                    <div class="analysis-skeleton-line"></div>
+                    <div class="analysis-skeleton-line mid"></div>
+                    <div class="analysis-skeleton-line"></div>
+                    <div class="analysis-skeleton-line short"></div>
+                </div>
+                <div id="aiResult" class="analysis-panel d-none"></div>
+            </div>
+        </div>
+
+        {# Chatbot #}
+        <div class="card border-0 shadow-sm mt-3" style="border-radius:1rem">
+            <div class="card-body">
+                <h5 class="fw-semibold mb-3"><i class="bi bi-chat-dots me-2"></i>Chatbot NAJAHNI</h5>
+                <div id="chatMessages" style="height:250px;overflow-y:auto;border:1px solid #e9ecef;border-radius:.75rem;padding:.75rem;margin-bottom:.75rem;background:#fafafa">
+                    <div class="text-muted small text-center">Posez vos questions sur cette opportunite.</div>
+                </div>
+                <div class="input-group">
+                    <input type="text" id="chatInput" class="form-control" placeholder="Votre question..." maxlength="2000">
+                    <button type="button" id="chatSendBtn" class="btn btn-nj"><i class="bi bi-send"></i></button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const oppId = {{ opportunity.id }};
+    const riskCountry = document.getElementById('riskCountry');
+    const aiResult = document.getElementById('aiResult');
+    const aiAnalysisCard = document.getElementById('aiAnalysisCard');
+    const aiSpinner = document.getElementById('aiSpinner');
+    var riskRadarChart = null;
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function formatInlineMarkup(text) {
+        let safe = escapeHtml(String(text || ''));
+        safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        safe = safe.replace(/\n/g, '<br>');
+        return safe;
+    }
+
+    function isAiError(text) {
+        return /IA temporairement indisponible|IA indisponible|Authentification Hugging Face invalide|Le chatbot IA n'est pas configure|Quota IA atteint|Requete IA invalide/i.test(text);
+    }
+
+    function renderAnalysisBlock(lines) {
+        const html = [];
+        let inList = false;
+
+        lines.forEach((line) => {
+            if (/^(\*|-|\d+\.)\s+/.test(line)) {
+                if (!inList) {
+                    html.push('<ul>');
+                    inList = true;
+                }
+                html.push('<li>' + formatInlineMarkup(line.replace(/^(\*|-|\d+\.)\s+/, '')) + '</li>');
+                return;
+            }
+
+            if (inList) {
+                html.push('</ul>');
+                inList = false;
+            }
+
+            html.push('<p>' + formatInlineMarkup(line) + '</p>');
+        });
+
+        if (inList) {
+            html.push('</ul>');
+        }
+
+        return html.join('');
+    }
+
+    function renderAiAnalysis(text) {
+        const normalized = String(text || '').replace(/\r/g, '').trim();
+        if (!normalized) {
+            return '<div class="analysis-error">Aucune reponse exploitable n\'a ete retournee par le service IA.</div>';
+        }
+
+        if (isAiError(normalized)) {
+            return '<div class="analysis-error">' + escapeHtml(normalized) + '</div>';
+        }
+
+        const blocks = normalized.split(/\n{2,}/).map(block => block.trim()).filter(Boolean);
+        if (!blocks.length) {
+            return '<div class="analysis-error">Aucune reponse exploitable n\'a ete retournee par le service IA.</div>';
+        }
+
+        const html = [];
+
+        blocks.forEach((block, index) => {
+            const lines = block.split('\n').map(line => line.trim()).filter(Boolean);
+            if (!lines.length) {
+                return;
+            }
+
+            let title = null;
+            if (/^\*\*.*\*\*$/.test(lines[0])) {
+                title = lines.shift().replace(/^\*\*|\*\*$/g, '');
+            } else if (/^[A-ZÀ-ÿ].*:$/.test(lines[0])) {
+                title = lines.shift().replace(/:$/, '');
+            }
+
+            if (index === 0 && !title) {
+                html.push('<div class="analysis-intro">' + formatInlineMarkup(lines.join(' ')) + '</div>');
+                return;
+            }
+
+            html.push('<section class="analysis-section">');
+            if (title) {
+                html.push('<h6>' + formatInlineMarkup(title) + '</h6>');
+            }
+            html.push(renderAnalysisBlock(lines));
+            html.push('</section>');
+        });
+
+        return html.join('');
+    }
+
+    function loadRisk() {
+        document.getElementById('riskSpinner').classList.remove('d-none');
+        document.getElementById('riskResult').classList.add('d-none');
+
+        fetch('{{ path("app_invest_risk_compute", {id: opportunity.id}) }}?country=' + riskCountry.value)
+            .then(r => r.json())
+            .then(data => {
+                // Animated dial
+                const score = Math.max(0, Math.min(100, parseInt(data.score) || 0));
+                const dial = document.getElementById('scoreDial');
+                const scoreEl = document.getElementById('scoreValue');
+                const circumference = 2 * Math.PI * 65; // ~408.41
+                const targetOffset = circumference - (circumference * score / 100);
+
+                // Color by score: green (low risk) → orange → red (high risk)
+                function dialColor(s) {
+                    if (s <= 35) return '#22c55e';
+                    if (s <= 65) return '#f59e0b';
+                    return '#ef4444';
+                }
+                const color = data.color || dialColor(score);
+                dial.style.stroke = color;
+                dial.style.setProperty('--dial-target', targetOffset);
+
+                // Reset then trigger animation
+                dial.classList.remove('animate');
+                dial.style.strokeDashoffset = circumference;
+                void dial.offsetWidth; // force reflow
+                dial.classList.add('animate');
+
+                // Count-up number
+                scoreEl.style.color = color;
+                var countStart = performance.now();
+                var countDuration = 900;
+                function countUp(now) {
+                    var elapsed = now - countStart;
+                    var progress = Math.min(elapsed / countDuration, 1);
+                    // ease-out quad
+                    var eased = 1 - (1 - progress) * (1 - progress);
+                    scoreEl.textContent = Math.round(eased * score);
+                    if (progress < 1) requestAnimationFrame(countUp);
+                }
+                requestAnimationFrame(countUp);
+
+                const badge = document.getElementById('scoreBadge');
+                badge.textContent = data.level;
+                badge.style.background = color;
+                badge.style.color = '#fff';
+                document.getElementById('scoreRecommendation').textContent = data.recommendation;
+
+                if (data.factors) {
+                    document.getElementById('fAmount').textContent = data.factors.amount;
+                    document.getElementById('fDuration').textContent = data.factors.duration;
+                    document.getElementById('fEconomic').textContent = data.factors.economic;
+                    document.getElementById('barAmount').style.width = data.factors.amount + '%';
+                    document.getElementById('barDuration').style.width = data.factors.duration + '%';
+                    const barEco = document.getElementById('barEconomic');
+                    barEco.style.width = data.factors.economic + '%';
+                    barEco.style.background = data.color;
+
+                    // Radar chart
+                    var radarCtx = document.getElementById('riskRadarCanvas').getContext('2d');
+                    if (riskRadarChart) { riskRadarChart.destroy(); riskRadarChart = null; }
+
+                    var fillColor, borderColor;
+                    if (score <= 35) { fillColor = 'rgba(34,197,94,.18)'; borderColor = 'rgba(34,197,94,.8)'; }
+                    else if (score <= 65) { fillColor = 'rgba(245,158,11,.18)'; borderColor = 'rgba(245,158,11,.8)'; }
+                    else { fillColor = 'rgba(239,68,68,.18)'; borderColor = 'rgba(239,68,68,.8)'; }
+
+                    var inflationFactor = data.factors.inflation !== undefined ? data.factors.inflation : Math.min(100, Math.round((data.economicData && data.economicData.inflation ? parseFloat(data.economicData.inflation) : 5) * 10));
+                    var exchangeFactor = data.factors.exchange !== undefined ? data.factors.exchange : Math.min(100, Math.round(Math.abs((data.economicData && data.economicData.eurUsd ? parseFloat(data.economicData.eurUsd) : 1.08) - 1.08) * 200));
+
+                    riskRadarChart = new Chart(radarCtx, {
+                        type: 'radar',
+                        data: {
+                            labels: ['Montant', 'Duree', 'Environnement', 'Inflation', 'Change'],
+                            datasets: [{
+                                data: [data.factors.amount, data.factors.duration, data.factors.economic, inflationFactor, exchangeFactor],
+                                backgroundColor: fillColor,
+                                borderColor: borderColor,
+                                borderWidth: 2,
+                                pointBackgroundColor: borderColor,
+                                pointBorderColor: '#fff',
+                                pointRadius: 4,
+                                pointHoverRadius: 6
+                            }]
+                        },
+                        options: {
+                            responsive: false,
+                            animation: { duration: 1000, easing: 'easeOutQuart' },
+                            plugins: { legend: { display: false } },
+                            scales: {
+                                r: {
+                                    min: 0, max: 100,
+                                    ticks: { display: false, stepSize: 25 },
+                                    grid: { color: 'rgba(255,255,255,.15)' },
+                                    angleLines: { color: 'rgba(255,255,255,.1)' },
+                                    pointLabels: { color: '#64748b', font: { size: 11, weight: '600' } },
+                                    backgroundColor: '#0f172a'
+                                }
+                            }
+                        }
+                    });
+                }
+                if (data.economicData) {
+                    document.getElementById('ecoCountry').textContent = data.economicData.country;
+                    document.getElementById('ecoEurUsd').textContent = data.economicData.eurUsd;
+                    document.getElementById('ecoGdp').textContent = data.economicData.gdp;
+                    document.getElementById('ecoInfl').textContent = data.economicData.inflation;
+                }
+
+                document.getElementById('riskSpinner').classList.add('d-none');
+                document.getElementById('riskResult').classList.remove('d-none');
+
+                // Update Three.js globe
+                if (typeof window._updateGlobe === 'function') {
+                    window._updateGlobe(score, riskCountry.value);
+                }
+
+                // Load the plain-language verdict after score is ready
+                loadVerdict();
+            })
+            .catch(() => {
+                document.getElementById('riskSpinner').innerHTML = '<p class="text-danger">Erreur lors du calcul.</p>';
+            });
+    }
+
+    function loadVerdict() {
+        var verdictContent = document.getElementById('verdictContent');
+        var verdictCard = document.getElementById('verdictCard');
+        var verdictIcon = document.getElementById('verdictIcon');
+        verdictContent.innerHTML = '<span class="text-muted"><i class="bi bi-hourglass-split me-1"></i>Le modele prepare son verdict...</span>';
+        verdictCard.style.borderLeftColor = '#64748b';
+        aiResult.classList.add('d-none');
+        aiSpinner.classList.remove('d-none');
+        aiAnalysisCard.classList.add('d-none');
+
+        fetch('{{ path("app_invest_risk_verdict", {id: opportunity.id}) }}?country=' + riskCountry.value)
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var text = data.verdict || '';
+                if (!text) {
+                    verdictContent.innerHTML = '<span class="text-muted">Verdict indisponible.</span>';
+                    return;
+                }
+                verdictContent.innerHTML = '<em>' + escapeHtml(text) + '</em>';
+
+                var badge = document.getElementById('scoreBadge');
+                if (badge) {
+                    verdictCard.style.borderLeftColor = badge.style.background || '#64748b';
+                    verdictIcon.style.color = badge.style.background || '#64748b';
+                }
+
+                if (data.aiAnalysis && !isAiError(data.aiAnalysis)) {
+                    aiResult.innerHTML = renderAiAnalysis(data.aiAnalysis);
+                    aiSpinner.classList.add('d-none');
+                    aiResult.classList.remove('d-none');
+                    aiAnalysisCard.classList.remove('d-none');
+                } else {
+                    aiSpinner.classList.add('d-none');
+                    aiAnalysisCard.classList.add('d-none');
+                }
+            })
+            .catch(function() {
+                verdictContent.innerHTML = '<span class="text-muted">Impossible de charger le verdict.</span>';
+                aiSpinner.classList.add('d-none');
+                aiAnalysisCard.classList.add('d-none');
+            });
+    }
+
+    riskCountry.addEventListener('change', loadRisk);
+    loadRisk();
+
+    // Chatbot
+    const chatMessages = document.getElementById('chatMessages');
+    const chatInput = document.getElementById('chatInput');
+    const chatSendBtn = document.getElementById('chatSendBtn');
+
+    function appendChat(role, text) {
+        const div = document.createElement('div');
+        div.className = 'mb-2 ' + (role === 'user' ? 'text-end' : '');
+        const bubble = document.createElement('div');
+        bubble.className = 'd-inline-block px-3 py-2 rounded-3 ' + (role === 'user' ? 'bg-primary text-white' : 'bg-white border');
+        bubble.style.maxWidth = '85%';
+        bubble.style.textAlign = 'left';
+        bubble.style.whiteSpace = 'pre-wrap';
+        bubble.innerHTML = formatInlineMarkup(text);
+        div.appendChild(bubble);
+        chatMessages.appendChild(div);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function sendChat() {
+        const msg = chatInput.value.trim();
+        if (!msg) return;
+        appendChat('user', msg);
+        chatInput.value = '';
+        chatSendBtn.disabled = true;
+
+        const body = new URLSearchParams();
+        body.append('message', msg);
+
+        fetch('{{ path("app_invest_chatbot") }}', {method:'POST', body: body})
+            .then(r => r.json())
+            .then(data => {
+                appendChat('assistant', data.response || data.error || 'Pas de reponse.');
+                chatSendBtn.disabled = false;
+            })
+            .catch(() => {
+                appendChat('assistant', 'Erreur de connexion.');
+                chatSendBtn.disabled = false;
+            });
+    }
+
+    chatSendBtn.addEventListener('click', sendChat);
+    chatInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') sendChat();
+    });
+});
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function() {
+    var canvas = document.getElementById('riskGlobeCanvas');
+    if (!canvas || typeof THREE === 'undefined') return;
+
+    var countryCoords = {
+        TN: { lat: 33.8, lng: 9.5 },
+        FR: { lat: 46.6, lng: 2.3 },
+        US: { lat: 37.1, lng: -95.7 },
+        DE: { lat: 51.2, lng: 10.4 },
+        MA: { lat: 31.8, lng: -7.1 }
+    };
+
+    var scene = new THREE.Scene();
+    var camera = new THREE.PerspectiveCamera(45, 1, 0.1, 1000);
+    camera.position.z = 3.2;
+    var renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
+    renderer.setSize(300, 300);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    // Wireframe globe
+    var sphereGeo = new THREE.SphereGeometry(1, 32, 32);
+    var wireMat = new THREE.MeshBasicMaterial({ color: 0x22c55e, wireframe: true, transparent: true, opacity: 0.3 });
+    var globe = new THREE.Mesh(sphereGeo, wireMat);
+    scene.add(globe);
+
+    // Solid inner sphere for depth
+    var innerGeo = new THREE.SphereGeometry(0.98, 32, 32);
+    var innerMat = new THREE.MeshBasicMaterial({ color: 0x0f172a });
+    var innerSphere = new THREE.Mesh(innerGeo, innerMat);
+    scene.add(innerSphere);
+
+    // Highlight dot
+    var dotGeo = new THREE.SphereGeometry(0.04, 12, 12);
+    var dotMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24 });
+    var dot = new THREE.Mesh(dotGeo, dotMat);
+    scene.add(dot);
+
+    // Glow ring around dot
+    var ringGeo = new THREE.RingGeometry(0.05, 0.09, 24);
+    var ringMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24, transparent: true, opacity: 0.5, side: THREE.DoubleSide });
+    var ring = new THREE.Mesh(ringGeo, ringMat);
+    scene.add(ring);
+
+    function latLngToVec3(lat, lng, r) {
+        var phi = (90 - lat) * Math.PI / 180;
+        var theta = (lng + 180) * Math.PI / 180;
+        return new THREE.Vector3(
+            -(r * Math.sin(phi) * Math.cos(theta)),
+            r * Math.cos(phi),
+            r * Math.sin(phi) * Math.sin(theta)
+        );
+    }
+
+    function setDotPosition(lat, lng) {
+        var pos = latLngToVec3(lat, lng, 1.06);
+        dot.position.copy(pos);
+        ring.position.copy(pos);
+        ring.lookAt(0, 0, 0);
+    }
+
+    // Start at Tunisia
+    setDotPosition(33.8, 9.5);
+
+    var currentColor = new THREE.Color(0x22c55e);
+    var targetColor = new THREE.Color(0x22c55e);
+
+    window._updateGlobe = function(score, countryCode) {
+        // Color based on score
+        if (score <= 35) targetColor.set(0x22c55e);
+        else if (score <= 65) targetColor.set(0xf59e0b);
+        else targetColor.set(0xef4444);
+
+        // Move dot
+        var coords = countryCoords[countryCode] || countryCoords.TN;
+        setDotPosition(coords.lat, coords.lng);
+    };
+
+    var pulseDir = 1;
+    var pulseScale = 1;
+
+    function animate() {
+        requestAnimationFrame(animate);
+        globe.rotation.y += 0.003;
+        innerSphere.rotation.y = globe.rotation.y;
+
+        // Smooth color transition
+        currentColor.lerp(targetColor, 0.02);
+        wireMat.color.copy(currentColor);
+
+        // Pulse the dot
+        pulseScale += 0.005 * pulseDir;
+        if (pulseScale > 1.3) pulseDir = -1;
+        if (pulseScale < 0.8) pulseDir = 1;
+        dot.scale.setScalar(pulseScale);
+        ringMat.opacity = 0.15 + 0.35 * ((pulseScale - 0.8) / 0.5);
+
+        renderer.render(scene, camera);
+    }
+    animate();
+})();
+</script>
+
+{# Decision Funnel #}
+<div class="row g-4 mt-4 mb-3">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100" style="border-radius:1rem;border-left:4px solid #22c55e">
+            <div class="card-body d-flex flex-column p-4">
+                <h5 class="fw-bold mb-2" style="color:#15803d"><i class="bi bi-check-circle me-2"></i>Je suis a l'aise avec ce risque</h5>
+                <p class="text-muted mb-3" style="font-size:.9rem;line-height:1.6">Vous avez examine le profil de risque. Soumettez votre offre en toute connaissance des conditions.</p>
+                <a href="{{ path('app_invest_opportunity_show', {id: opportunity.id}) }}?risk_reviewed=1" class="btn btn-success mt-auto">
+                    <i class="bi bi-arrow-right me-1"></i>Proceder a l'investissement
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm h-100" style="border-radius:1rem;border-left:4px solid #cbd5e1">
+            <div class="card-body d-flex flex-column p-4">
+                <h5 class="fw-bold mb-2" style="color:#475569"><i class="bi bi-arrow-repeat me-2"></i>Ce risque est trop eleve pour moi</h5>
+                <p class="text-muted mb-3" style="font-size:.9rem;line-height:1.6">Consultez des opportunites adaptees a votre tolerance au risque et a votre profil d'investisseur.</p>
+                <a href="{{ path('app_invest_matching') }}" class="btn btn-outline-secondary mt-auto">
+                    <i class="bi bi-search me-1"></i>Trouver une meilleure correspondance
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+<p class="text-muted text-center small mb-4" style="font-size:.76rem">L'evaluation de risque est une estimation basee sur des indicateurs economiques. Exercez toujours votre propre jugement.</p>
+
+{% endblock %}

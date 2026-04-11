@@ -28,3 +28,11 @@ services:
             $secretKey: '%env(RECAPTCHA3_SECRET)%'
             $scoreThreshold: 0.5
             $enabled: true
+
+    App\Service\Investment\InvestmentChatbotService:
+        arguments:
+            $hfToken: '%env(HF_TOKEN)%'
+
+    App\Service\Investment\StripePaymentService:
+        arguments:
+            $stripeSecretKey: '%env(STRIPE_SECRET_KEY)%'

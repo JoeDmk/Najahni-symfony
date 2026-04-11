@@ -1,0 +1,453 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Portfolio d'investissement - Najahni{% endblock %}
+
+{% block main %}
+{% include 'front/investment/_wayfinder.html.twig' with {pageLabel: 'Portfolio', activeStep: 5} %}
+<style>
+.portfolio-card {
+    border: 0;
+    border-radius: 1.1rem;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+}
+
+.portfolio-stat {
+    border: 0;
+    border-radius: 1rem;
+    padding: 1rem 1.1rem;
+    background: linear-gradient(135deg, rgba(34,197,94,.09), rgba(59,130,246,.10));
+}
+
+.portfolio-meta {
+    border-radius: .9rem;
+    padding: .9rem 1rem;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+}
+
+.portfolio-returns {
+    border-radius: .9rem;
+    padding: .9rem 1rem;
+    background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+    border: 1px solid #86efac;
+}
+
+.portfolio-time {
+    border-radius: .9rem;
+    padding: .9rem 1rem;
+    background: #fefce8;
+    border: 1px solid #fde68a;
+}
+
+.ms-tracker {
+    display: flex;
+    gap: 4px;
+    margin-bottom: .5rem;
+}
+
+.ms-tracker-block {
+    flex: 1;
+    height: 8px;
+    border-radius: 4px;
+    background: #e2e8f0;
+}
+
+.ms-tracker-block.released {
+    background: linear-gradient(90deg, #22c55e, #16a34a);
+}
+
+.ms-tracker-block.confirmed {
+    background: #3b82f6;
+}
+
+.ms-tracker-block.completed {
+    background: #f59e0b;
+}
+
+/* ── Funding Timeline ─────────────────── */
+.fund-timeline { position: relative; display: flex; justify-content: space-between; padding: 0; margin: 1.2rem 0 1.5rem; }
+.fund-timeline::before { content: ''; position: absolute; top: 13px; left: 14px; right: 14px; height: 2px; background: #e2e8f0; z-index: 0; }
+.ft-event { position: relative; display: flex; flex-direction: column; align-items: center; z-index: 1; flex: 1; max-width: 120px; min-width: 0; }
+.ft-dot { width: 28px; height: 28px; border-radius: 50%; background: #fff; border: 2px solid #cbd5e1; display: flex; align-items: center; justify-content: center; font-size: .7rem; color: #94a3b8; margin-bottom: .35rem; transition: all .3s; }
+.ft-dot.done { background: #3b82f6; border-color: #2563eb; color: #fff; }
+.ft-dot.future { background: #f8fafc; border: 2px dashed #cbd5e1; }
+.ft-label { font-size: .67rem; color: #475569; text-align: center; line-height: 1.15; font-weight: 500; }
+.ft-date { font-size: .6rem; color: #94a3b8; margin-top: 1px; }
+
+/* ── Milestone Vertical Tracker ───────── */
+.ms-vertical { position: relative; padding-left: 2rem; margin: .6rem 0; }
+.ms-vertical::before { content: ''; position: absolute; left: 9px; top: 4px; bottom: 4px; width: 2px; background: #e2e8f0; border-radius: 1px; }
+.ms-v-item { position: relative; padding-bottom: .85rem; }
+.ms-v-item:last-child { padding-bottom: 0; }
+.ms-v-dot { position: absolute; left: -2rem; top: 2px; width: 20px; height: 20px; border-radius: 50%; border: 2px solid #cbd5e1; background: #fff; z-index: 1; }
+.ms-v-dot.released { background: #22c55e; border-color: #16a34a; }
+.ms-v-dot.pending { animation: msDotPulse 1.8s ease-in-out infinite; }
+@keyframes msDotPulse { 0%,100%{ box-shadow: 0 0 0 0 rgba(59,130,246,.35); } 50%{ box-shadow: 0 0 0 7px rgba(59,130,246,0); } }
+.ms-v-label { font-weight: 600; font-size: .82rem; color: #1e293b; }
+.ms-v-details { font-size: .72rem; color: #64748b; }
+.ms-v-pill { display: inline-block; font-size: .65rem; font-weight: 600; padding: .15rem .55rem; border-radius: 10rem; }
+.ms-v-pill.released { background: #dcfce7; color: #15803d; }
+.ms-v-pill.pending { background: #f1f5f9; color: #64748b; }
+
+/* ── Equity Projection Card ───────────── */
+.equity-card { border-radius: .9rem; border: 1px solid #e2e8f0; background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%); }
+.equity-card .eq-col { padding: 1rem 1.2rem; }
+.equity-card .eq-divider { width: 1px; background: #e2e8f0; }
+</style>
+
+{% set totalInvested = 0 %}
+{% set totalProjectedValue = 0 %}
+{% for item in portfolioData %}
+    {% set totalInvested = totalInvested + item.offer.proposedAmount %}
+    {% if item.projectedReturn %}
+        {% set totalProjectedValue = totalProjectedValue + item.projectedReturn %}
+    {% endif %}
+{% endfor %}
+
+{# ── Portfolio greeting ── #}
+<style>
+.portfolio-greeting { background: linear-gradient(135deg, #f0f9ff 0%, #f8fafc 100%); border-left: 4px solid #3b82f6; border-radius: 8px; padding: 18px 24px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.portfolio-greeting .pg-text { flex: 1; }
+.portfolio-greeting .pg-primary { font-size: 1.15rem; font-weight: 600; color: #1e293b; margin: 0 0 4px; }
+.portfolio-greeting .pg-secondary { font-size: .85rem; color: #64748b; margin: 0; }
+.portfolio-greeting .pg-secondary a { color: #3b82f6; text-decoration: none; font-weight: 500; }
+.portfolio-greeting .pg-secondary a:hover { text-decoration: underline; }
+@media(max-width:480px){ .portfolio-greeting { flex-direction: column; align-items: flex-start; } }
+</style>
+
+<div class="portfolio-greeting">
+    <div class="pg-text">
+        {% if portfolioSummary.count > 0 %}
+            <p class="pg-primary">Vous avez investi dans {{ portfolioSummary.count }} projet{{ portfolioSummary.count > 1 ? 's' : '' }}, engageant {{ portfolioSummary.totalAmount|number_format(0, ',', ' ') }} DT au total.</p>
+            {% if portfolioSummary.pendingMilestoneProject %}
+                <p class="pg-secondary">Un jalon attend votre validation sur <a href="{{ path('app_invest_contract_show', {offerId: portfolioSummary.pendingMilestoneOfferId}) }}">{{ portfolioSummary.pendingMilestoneProject }}</a>.</p>
+            {% elseif portfolioSummary.recentProject %}
+                <p class="pg-secondary">Dernier investissement : {{ portfolioSummary.recentProject }}{% if portfolioSummary.recentDaysAgo is not null %}, il y a {{ portfolioSummary.recentDaysAgo }} jour{{ portfolioSummary.recentDaysAgo != 1 ? 's' : '' }}{% endif %}.</p>
+            {% endif %}
+        {% else %}
+            <p class="pg-primary">Votre portfolio est vide pour le moment.</p>
+            <p class="pg-secondary"><a href="{{ path('app_invest_opportunities') }}">Decouvrez les opportunites</a> et placez votre premier investissement.</p>
+        {% endif %}
+    </div>
+    <div class="d-flex gap-2 flex-shrink-0">
+        <a href="{{ path('app_invest_my_offers') }}" class="btn btn-outline-primary btn-sm">Mes Offres</a>
+        <a href="{{ path('app_invest_opportunities') }}" class="btn btn-outline-secondary btn-sm">Opportunites</a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="portfolio-stat h-100">
+            <div class="small text-muted">Investissements</div>
+            <div class="display-6 fw-bold">{{ portfolioData|length }}</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="portfolio-stat h-100">
+            <div class="small text-muted">Montant total investi</div>
+            <div class="display-6 fw-bold">{{ totalInvested|number_format(0, ',', ' ') }} <span class="fs-6">DT</span></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="portfolio-stat h-100">
+            <div class="small text-muted">Valeur projetee totale</div>
+            <div class="display-6 fw-bold {{ totalProjectedValue > 0 ? 'text-success' : '' }}">
+                {% if totalProjectedValue > 0 %}
+                    {{ totalProjectedValue|number_format(0, ',', ' ') }} <span class="fs-6">DT</span>
+                {% else %}
+                    &mdash;
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="portfolio-stat h-100">
+            <div class="small text-muted">Transactions confirmees</div>
+            <div class="display-6 fw-bold">{{ portfolioData|filter(d => d.offer.paymentIntentId)|length }}</div>
+        </div>
+    </div>
+</div>
+
+{% if portfolioData|length > 0 %}
+
+{# ── Investment Timeline Chart ── #}
+<div class="card border-0 shadow-sm mb-4" style="border-radius:1rem" id="timelineChartCard">
+    <div class="card-body p-4">
+        <h5 class="fw-bold mb-3">Your Investment Timeline</h5>
+        <canvas id="portfolioTimelineCanvas" style="width:100%;max-height:{{ 60 + portfolioData|length * 50 }}px"></canvas>
+    </div>
+</div>
+
+{# Timeline data for JS #}
+<script id="portfolioTimelineData" type="application/json">
+[
+{% for item in portfolioData %}
+    {
+        "project": {{ (item.offer.opportunity.project ? item.offer.opportunity.project.titre : 'Investissement')|json_encode|raw }},
+        "offerDate": {{ item.offer.createdAt ? item.offer.createdAt|date('Y-m-d')|json_encode|raw : 'null' }},
+        "acceptedDate": {{ (item.offer.status in ['ACCEPTED'] or item.offer.paid) and item.offer.createdAt ? item.offer.createdAt|date('Y-m-d')|json_encode|raw : 'null' }},
+        "signedDate": {% if item.offer.contract and item.offer.contract.investorSignedAt %}{{ item.offer.contract.investorSignedAt|date('Y-m-d')|json_encode|raw }}{% else %}null{% endif %},
+        "paidDate": {{ item.offer.paidAt ? item.offer.paidAt|date('Y-m-d')|json_encode|raw : 'null' }},
+        "milestones": [
+            {% for m in item.milestones %}
+            { "label": {{ m.label|json_encode|raw }}, "status": {{ m.status|json_encode|raw }}, "releasedAt": {% if m.releasedAt is defined and m.releasedAt %}{{ m.releasedAt|date('Y-m-d')|json_encode|raw }}{% else %}null{% endif %} }{{ not loop.last ? ',' : '' }}
+            {% endfor %}
+        ]
+    }{{ not loop.last ? ',' : '' }}
+{% endfor %}
+]
+</script>
+
+<div class="row g-4">
+    {% for item in portfolioData %}
+    {% set offer = item.offer %}
+    <div class="col-lg-6">
+        <div class="portfolio-card h-100 p-4">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <div class="small text-muted mb-1">Projet finance</div>
+                    <h4 class="fw-bold mb-1">{{ offer.opportunity.project ? offer.opportunity.project.titre : 'N/A' }}</h4>
+                    <div class="text-muted small">{{ offer.opportunity.project and offer.opportunity.project.secteur ? offer.opportunity.project.secteur : 'Secteur non precise' }}</div>
+                </div>
+                <span class="badge bg-success fs-6">Paye</span>
+            </div>
+
+            <div class="mb-3">
+                <div class="small text-muted">Montant investi</div>
+                <div class="display-6 fw-bold text-success">{{ offer.proposedAmount|number_format(0, ',', ' ') }} <span class="fs-6">DT</span></div>
+            </div>
+
+            {# Projected returns & time elapsed #}
+            <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                    <div class="portfolio-returns h-100">
+                        <div class="small text-muted mb-1">Valeur projetee de la part</div>
+                        {% if item.projectedReturn %}
+                            <div class="fw-bold fs-5">{{ item.projectedReturn|number_format(0, ',', ' ') }} DT</div>
+                            <div class="small text-muted">pour {{ item.equity|number_format(2) }}% du capital</div>
+                        {% else %}
+                            <div class="fw-bold text-muted">&mdash;</div>
+                            <div class="small text-muted">Participation non definie</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="portfolio-time h-100">
+                        <div class="small text-muted mb-1">Temps ecoule</div>
+                        <div class="fw-bold fs-5">{{ item.daysElapsed }} jour{{ item.daysElapsed != 1 ? 's' : '' }}</div>
+                        <div class="small text-muted">depuis le {{ offer.paidAt ? offer.paidAt|date('d/m/Y') : '?' }}</div>
+                    </div>
+                </div>
+            </div>
+
+            {# ── Funding Timeline ──────────────────── #}
+            {% if item.timeline|length > 1 %}
+            <div class="mb-3">
+                <div class="small fw-semibold mb-2">Chronologie du financement</div>
+                <div class="fund-timeline">
+                    {% for ev in item.timeline %}
+                    <div class="ft-event">
+                        <div class="ft-dot {{ ev.future is defined and ev.future ? 'future' : 'done' }}">
+                            <i class="bi bi-{{ ev.icon }}"></i>
+                        </div>
+                        <div class="ft-label">{{ ev.label }}</div>
+                        {% if ev.date %}
+                            <div class="ft-date">{{ ev.date|date('d/m/Y') }}</div>
+                        {% else %}
+                            <div class="ft-date">A venir</div>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {# ── Milestone Vertical Tracker ─────────── #}
+            {% if item.milestones|length > 0 %}
+                <div class="mb-3">
+                    <div class="small fw-semibold mb-2">Jalons de financement ({{ item.milestoneReleasedPct|number_format(0) }}% libere)</div>
+                    <div class="ms-vertical">
+                        {% for m in item.milestones %}
+                        <div class="ms-v-item">
+                            <div class="ms-v-dot {{ m.status == 'RELEASED' ? 'released' : (m.status == 'PENDING' ? 'pending' : '') }}"></div>
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="ms-v-label">{{ m.label }}</div>
+                                    <div class="ms-v-details">{{ m.percentage|number_format(0) }}% &middot; {{ m.amount|number_format(0, ',', ' ') }} DT</div>
+                                </div>
+                                <span class="ms-v-pill {{ m.status == 'RELEASED' ? 'released' : 'pending' }}">{{ m.status == 'RELEASED' ? 'Libere' : (m.status == 'CONFIRMED' ? 'Confirme' : (m.status == 'COMPLETED' ? 'Termine' : 'En attente')) }}</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% endif %}
+
+            <div class="portfolio-meta mb-3">
+                <div class="row g-2 small">
+                    <div class="col-6"><span class="text-muted">Transaction:</span> <strong>{{ offer.paymentIntentId ?? 'N/A' }}</strong></div>
+                    <div class="col-6"><span class="text-muted">Date de paiement:</span> <strong>{{ offer.paidAt ? offer.paidAt|date('d/m/Y H:i') : 'N/A' }}</strong></div>
+                    <div class="col-6"><span class="text-muted">Objectif:</span> <strong>{{ offer.opportunity.targetAmount|number_format(0, ',', ' ') }} DT</strong></div>
+                    <div class="col-6"><span class="text-muted">Statut offre:</span> <strong>{{ offer.status }}</strong></div>
+                </div>
+            </div>
+
+            {# ── Equity Projection Card ──────────── #}
+            {% if item.equity > 0 and item.targetAmount > 0 %}
+            <div class="equity-card d-flex mb-3">
+                <div class="eq-col flex-fill">
+                    <div class="small text-muted mb-1">Votre part aujourd'hui</div>
+                    <div class="fw-bold fs-5">{{ offer.proposedAmount|number_format(0, ',', ' ') }} DT</div>
+                    <div class="small text-muted">{{ item.equity|number_format(2) }}% du capital</div>
+                </div>
+                <div class="eq-divider"></div>
+                <div class="eq-col flex-fill">
+                    <div class="small text-muted mb-1">Valeur projetee a la cloture</div>
+                    <div class="fw-bold fs-5 text-primary">{{ (item.targetAmount * item.equity / 100)|number_format(0, ',', ' ') }} DT</div>
+                    <div class="small text-muted">si l'objectif de {{ item.targetAmount|number_format(0, ',', ' ') }} DT est atteint</div>
+                </div>
+            </div>
+            <div class="small text-muted fst-italic mb-3" style="font-size:.65rem">Estimation arithmetique, non garantie. Basee sur le pourcentage de capital negocie.</div>
+            {% endif %}
+
+            <p class="text-muted mb-3">{{ offer.opportunity.description ? offer.opportunity.description|slice(0, 160) ~ (offer.opportunity.description|length > 160 ? '...' : '') : 'Aucune description disponible.' }}</p>
+
+            <div class="d-flex gap-2">
+                <a href="{{ path('app_invest_opportunity_show', {id: offer.opportunity.id}) }}" class="btn btn-outline-primary flex-fill">Voir l'opportunite</a>
+                <a href="{{ path('app_invest_contract_show', {id: offer.id}) }}" class="btn btn-outline-success flex-fill">Voir le contrat</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="text-center py-5">
+    <div class="text-center"><i class="bi bi-wallet2" style="font-size:4rem;color:var(--nj-primary)"></i></div>
+    <h4 class="fw-bold mt-3">Votre portfolio est vide</h4>
+    <p class="text-muted">Une fois un paiement confirme, l'investissement apparaitra ici automatiquement.</p>
+    <a href="{{ path('app_invest_opportunities') }}" class="btn btn-nj">Explorer les opportunites</a>
+</div>
+{% endif %}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+(function() {
+    var dataEl = document.getElementById('portfolioTimelineData');
+    var canvasEl = document.getElementById('portfolioTimelineCanvas');
+    if (!dataEl || !canvasEl) return;
+
+    var items;
+    try { items = JSON.parse(dataEl.textContent); } catch(e) { return; }
+    if (!items.length) { document.getElementById('timelineChartCard').style.display = 'none'; return; }
+
+    var today = new Date();
+    var todayStr = today.toISOString().split('T')[0];
+
+    // Find the global date range
+    var allDates = [];
+    items.forEach(function(item) {
+        if (item.offerDate) allDates.push(item.offerDate);
+        if (item.paidDate) allDates.push(item.paidDate);
+        allDates.push(todayStr);
+    });
+    allDates.sort();
+    var minDate = new Date(allDates[0]);
+    var maxDate = new Date(allDates[allDates.length - 1]);
+    var totalDays = Math.max(1, (maxDate - minDate) / 86400000);
+
+    function daysBetween(a, b) {
+        if (!a || !b) return 0;
+        return Math.max(0, (new Date(b) - new Date(a)) / 86400000);
+    }
+
+    function dayOffset(d) {
+        if (!d) return 0;
+        return Math.max(0, (new Date(d) - minDate) / 86400000);
+    }
+
+    var labels = items.map(function(it) { return it.project; });
+
+    // Build segments: offset (hidden), grey, blue, green, teal milestones, dashed future
+    var offsetData = []; // hidden spacer
+    var greyData = [];   // offer → acceptance
+    var blueData = [];   // acceptance → signed
+    var greenData = [];  // signed → paid
+    var tealData = [];   // released milestones
+    var dashedData = []; // unreleased milestones projection
+
+    items.forEach(function(item) {
+        var offerDay = dayOffset(item.offerDate);
+        offsetData.push(offerDay);
+
+        var acceptDay = item.acceptedDate ? daysBetween(item.offerDate, item.acceptedDate) : 0;
+        if (acceptDay < 1 && item.acceptedDate) acceptDay = 1;
+        greyData.push(acceptDay);
+
+        var signedDay = item.signedDate ? daysBetween(item.acceptedDate || item.offerDate, item.signedDate) : 0;
+        if (signedDay < 1 && item.signedDate) signedDay = 1;
+        blueData.push(signedDay);
+
+        var paidDay = item.paidDate ? daysBetween(item.signedDate || item.acceptedDate || item.offerDate, item.paidDate) : 0;
+        if (paidDay < 1 && item.paidDate) paidDay = 1;
+        greenData.push(paidDay);
+
+        var releasedDays = 0;
+        var unreleasedDays = 0;
+        if (item.milestones && item.milestones.length) {
+            item.milestones.forEach(function(m) {
+                if (m.status === 'RELEASED') releasedDays += 3;
+                else unreleasedDays += 3;
+            });
+        }
+        tealData.push(releasedDays);
+        dashedData.push(unreleasedDays);
+    });
+
+    var phaseNames = ['', 'Soumission → Acceptation', 'Acceptation → Signature', 'Signature → Paiement', 'Jalons liberes', 'Jalons a venir'];
+
+    var ctx = canvasEl.getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                { label: '', data: offsetData, backgroundColor: 'transparent', borderWidth: 0, barPercentage: 0.5 },
+                { label: phaseNames[1], data: greyData, backgroundColor: '#94a3b8', borderRadius: 2, barPercentage: 0.5 },
+                { label: phaseNames[2], data: blueData, backgroundColor: '#3b82f6', borderRadius: 2, barPercentage: 0.5 },
+                { label: phaseNames[3], data: greenData, backgroundColor: '#22c55e', borderRadius: 2, barPercentage: 0.5 },
+                { label: phaseNames[4], data: tealData, backgroundColor: '#14b8a6', borderRadius: 2, barPercentage: 0.5 },
+                { label: phaseNames[5], data: dashedData, backgroundColor: 'rgba(148,163,184,.25)', borderColor: '#94a3b8', borderWidth: 1, borderDash: [4, 3], borderRadius: 2, barPercentage: 0.5 }
+            ]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            animation: { duration: 1200, easing: 'easeOutQuart' },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(ctx) {
+                            if (ctx.datasetIndex === 0) return '';
+                            return phaseNames[ctx.datasetIndex] + ': ' + Math.round(ctx.raw) + ' jour' + (ctx.raw > 1 ? 's' : '');
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    title: { display: true, text: 'Jours', font: { size: 11 } },
+                    grid: { color: 'rgba(0,0,0,.06)' }
+                },
+                y: {
+                    stacked: true,
+                    grid: { display: false }
+                }
+            }
+        }
+    });
+})();
+</script>
+{% endblock %}

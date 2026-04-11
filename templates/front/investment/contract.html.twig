@@ -1,0 +1,1198 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Contrat d'investissement - Najahni{% endblock %}
+
+{% block main %}
+{% include 'front/investment/_wayfinder.html.twig' with {pageLabel: 'Contrat', activeStep: 3} %}
+{% set canPayNow = contract.fullySigned and not offer.paid %}
+{% set hasMilestones = milestones is defined and milestones|length > 0 %}
+
+{# Particle network background #}
+<canvas id="particleNetworkCanvas" style="position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.12"></canvas>
+
+<style>
+.contract-shell {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(320px, .8fr);
+    gap: 1.5rem;
+    align-items: start;
+    position: relative;
+    z-index: 1;
+}
+
+.contract-card {
+    border: 0;
+    border-radius: 1.2rem;
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+}
+
+.contract-hero {
+    background: linear-gradient(135deg, #0f172a, #1d4ed8 58%, #38bdf8);
+    color: #fff;
+    padding: 1.5rem;
+}
+
+.contract-stat {
+    border-radius: 1rem;
+    background: rgba(255,255,255,.12);
+    padding: .9rem 1rem;
+    border: 1px solid rgba(255,255,255,.15);
+}
+
+.signature-chip {
+    border-radius: 999px;
+    padding: .45rem .85rem;
+    font-size: .82rem;
+    font-weight: 700;
+}
+
+.signature-panel {
+    border-radius: 1rem;
+    border: 1px solid #dbeafe;
+    background: linear-gradient(180deg, #ffffff, #eff6ff);
+    padding: 1rem;
+}
+
+.terms-box {
+    white-space: pre-wrap;
+    border-radius: 1rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 1rem;
+}
+
+.chat-shell {
+    display: flex;
+    flex-direction: column;
+    position: sticky;
+    top: 1.5rem;
+    max-height: calc(100vh - 2rem);
+}
+
+.chat-header {
+    padding: 1rem 1rem .85rem;
+}
+
+.chat-list {
+    flex: 1;
+    min-height: 260px;
+    overflow-y: auto;
+    padding: 1rem;
+    background: linear-gradient(180deg, #f8fafc, #ffffff);
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.chat-bubble {
+    max-width: 88%;
+    border-radius: 1rem;
+    padding: .9rem 1rem;
+    margin-bottom: .9rem;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+}
+
+.chat-bubble.mine {
+    margin-left: auto;
+    background: linear-gradient(135deg, #1d4ed8, #2563eb);
+    color: #fff;
+}
+
+.chat-bubble.theirs {
+    background: #fff;
+    border: 1px solid #dbeafe;
+}
+
+.chat-bubble.system {
+    max-width: 100%;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    color: #9a3412;
+}
+
+.chat-form {
+    padding: 1rem;
+    background: #fff;
+}
+
+.digest-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .5rem .75rem;
+    border-radius: .8rem;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1d4ed8;
+    font-family: Consolas, monospace;
+    font-size: .84rem;
+}
+
+.pdf-panel {
+    border-radius: 1rem;
+    border: 1px solid #c7d2fe;
+    background: linear-gradient(180deg, #eef2ff, #ffffff);
+    padding: 1rem;
+}
+
+.pdf-preview {
+    width: 100%;
+    height: 720px;
+    border: 1px solid #dbeafe;
+    border-radius: 1rem;
+    background: #fff;
+}
+
+@media (max-width: 991.98px) {
+    .contract-shell {
+        grid-template-columns: 1fr;
+    }
+
+    .chat-shell {
+        position: static;
+        max-height: none;
+    }
+}
+
+/* ── Lifecycle stepper ── */
+.lc-stepper {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 0;
+    padding: 1.25rem 1rem .85rem;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #f8fafc, #eff6ff);
+    border: 1px solid #dbeafe;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+}
+
+.lc-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    position: relative;
+    z-index: 1;
+}
+
+/* Connector line between steps */
+.lc-step + .lc-step::before {
+    content: '';
+    position: absolute;
+    top: 18px;
+    right: 50%;
+    width: 100%;
+    height: 3px;
+    background: #e2e8f0;
+    z-index: -1;
+}
+
+.lc-step.done + .lc-step::before,
+.lc-step.done + .lc-step.done::before,
+.lc-step.done + .lc-step.active::before {
+    background: #1d4ed8;
+}
+
+/* Circle indicator */
+.lc-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: .85rem;
+    font-weight: 700;
+    border: 2.5px solid #cbd5e1;
+    background: #fff;
+    color: #94a3b8;
+    transition: all .25s;
+    flex-shrink: 0;
+}
+
+.lc-step.done .lc-circle {
+    border-color: #22c55e;
+    background: #22c55e;
+    color: #fff;
+}
+
+.lc-step.active .lc-circle {
+    border-color: #1d4ed8;
+    background: #1d4ed8;
+    color: #fff;
+    animation: lcPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes lcPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(29, 78, 216, .45); }
+    50%      { box-shadow: 0 0 0 10px rgba(29, 78, 216, 0); }
+}
+
+/* Label */
+.lc-label {
+    margin-top: .45rem;
+    font-size: .78rem;
+    color: #94a3b8;
+    text-align: center;
+    line-height: 1.25;
+    max-width: 100px;
+}
+
+.lc-step.done .lc-label {
+    color: #334155;
+}
+
+.lc-step.active .lc-label {
+    color: #1d4ed8;
+    font-weight: 700;
+}
+
+/* Mobile: only active step */
+.lc-mobile-hint {
+    display: none;
+    text-align: center;
+    padding: .85rem 1rem;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #f8fafc, #eff6ff);
+    border: 1px solid #dbeafe;
+    margin-bottom: 1.5rem;
+    font-size: .9rem;
+    color: #334155;
+}
+
+.lc-mobile-hint .lc-circle {
+    display: inline-flex;
+    width: 30px;
+    height: 30px;
+    font-size: .78rem;
+    vertical-align: middle;
+    margin-right: .4rem;
+    border-color: #1d4ed8;
+    background: #1d4ed8;
+    color: #fff;
+    animation: lcPulse 1.5s ease-in-out infinite;
+}
+
+@media (max-width: 639px) {
+    .lc-stepper { display: none; }
+    .lc-mobile-hint { display: block; }
+}
+
+/* Milestone tracker */
+.milestone-card {
+    border-radius: 1rem;
+    border: 1px solid #e2e8f0;
+    padding: 1rem 1.1rem;
+    background: #fff;
+    transition: border-color .2s;
+}
+
+.milestone-card.released {
+    border-color: #86efac;
+    background: linear-gradient(180deg, #f0fdf4, #fff);
+}
+
+.milestone-card.confirmed {
+    border-color: #93c5fd;
+    background: linear-gradient(180deg, #eff6ff, #fff);
+}
+
+.milestone-card.completed {
+    border-color: #fbbf24;
+    background: linear-gradient(180deg, #fffbeb, #fff);
+}
+
+.milestone-progress-bar {
+    height: 6px;
+    border-radius: 3px;
+    background: #e2e8f0;
+    overflow: hidden;
+}
+
+.milestone-progress-fill {
+    height: 100%;
+    border-radius: 3px;
+    background: linear-gradient(90deg, #22c55e, #16a34a);
+    transition: width .4s ease;
+}
+
+/* AI Suggest panels */
+.ai-suggest-panel {
+    margin-top: .5rem;
+    padding: .75rem 1rem;
+    border-radius: .75rem;
+    background: linear-gradient(135deg, #eff6ff, #f0fdf4);
+    border: 1px solid #bfdbfe;
+    font-size: .88rem;
+    animation: aiSuggestFadeIn .3s ease;
+}
+
+.ai-suggest-panel .ai-suggest-disclaimer {
+    font-size: .75rem;
+    color: #6b7280;
+    margin-bottom: .5rem;
+    font-style: italic;
+}
+
+.ai-suggest-panel .ai-suggest-body {
+    white-space: pre-wrap;
+    color: #1e293b;
+    line-height: 1.55;
+}
+
+.ai-suggest-btn:hover {
+    color: #3b82f6 !important;
+}
+
+.ai-suggest-loading {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid #bfdbfe;
+    border-top-color: #3b82f6;
+    border-radius: 50%;
+    animation: aiSpinAnim .6s linear infinite;
+}
+
+@keyframes aiSuggestFadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes aiSpinAnim {
+    to { transform: rotate(360deg); }
+}
+
+.deal-temp-hot {
+    animation: dealTempPulse 2s ease-in-out infinite;
+}
+
+@keyframes dealTempPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4); }
+    50% { box-shadow: 0 0 8px 3px rgba(245, 158, 11, 0.2); }
+}
+/* ── Fixed Status Bar ── */
+.contract-status-bar { position: fixed; top: 56px; left: 0; right: 0; height: 40px; background: #0f172a; z-index: 1050; display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; border-bottom: 1px solid #1e293b; transform: translateY(-40px); animation: csBarSlide 300ms ease forwards; }
+@keyframes csBarSlide { to { transform: translateY(0); } }
+.contract-status-bar .csb-left, .contract-status-bar .csb-center, .contract-status-bar .csb-right { font-size: .78rem; color: #cbd5e1; white-space: nowrap; }
+.contract-status-bar .csb-left .csb-badge { display: inline-block; padding: .15rem .55rem; border-radius: 10rem; font-weight: 600; font-size: .72rem; margin-left: .4rem; }
+.contract-status-bar .csb-center { color: #94a3b8; }
+.contract-status-bar .csb-right a { font-size: .75rem; color: #93c5fd; text-decoration: none; font-weight: 600; }
+.contract-status-bar .csb-right a:hover { text-decoration: underline; }
+.contract-content-push { margin-top: 40px; }
+</style>
+
+{# ── Fixed persistent status bar ── #}
+{% set csBarStatus = 'Negociation active' %}
+{% set csBarBadgeClass = 'background:#2563eb;color:#fff' %}
+{% if offer.paid %}
+    {% set csBarStatus = 'Finance' %}
+    {% set csBarBadgeClass = 'background:#22c55e;color:#fff' %}
+{% elseif contract.fullySigned %}
+    {% set csBarStatus = 'Pret pour paiement' %}
+    {% set csBarBadgeClass = 'background:#f59e0b;color:#0f172a' %}
+{% elseif hasCurrentUserSigned %}
+    {% set csBarStatus = 'En attente de cosignature' %}
+    {% set csBarBadgeClass = 'background:#3b82f6;color:#fff' %}
+{% endif %}
+
+<div class="contract-status-bar">
+    <div class="csb-left">Statut : <span class="csb-badge" style="{{ csBarBadgeClass }}">{{ csBarStatus }}</span></div>
+    <div class="csb-center">
+        {% if lastMessageAt %}
+            Derniere activite : {{ lastMessageAt|date('d/m/Y H:i') }}
+        {% else %}
+            Aucun message — commencez la negociation
+        {% endif %}
+    </div>
+    <div class="csb-right">
+        {% if not contract.fullySigned %}
+            <a href="#signatureSection">Signer le contrat &rarr;</a>
+        {% elseif contract.fullySigned and not offer.paid %}
+            <a href="{{ path('app_invest_my_offers') }}">Passer au paiement &rarr;</a>
+        {% elseif offer.paid %}
+            <a href="#pdfSection">Voir le document &rarr;</a>
+        {% endif %}
+    </div>
+</div>
+
+<div class="contract-content-push"></div>
+
+<div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-4" style="position:relative;z-index:1">
+    <div>
+        <a href="{{ path('app_invest_opportunity_show', {id: offer.opportunity.id}) }}" class="text-decoration-none text-muted"><i class="bi bi-arrow-left me-1"></i>Retour a l'opportunite</a>
+        <h2 class="fw-bold mt-2 mb-1">Contrat d'investissement</h2>
+        <div class="text-muted">Negociation en temps reel entre {{ contract.investor.fullName }} et {{ contract.entrepreneur.fullName }}.</div>
+        <div class="small mt-2 {{ isInvestorParty ? 'text-primary' : 'text-success' }}">
+            Vous intervenez ici en tant que {{ isInvestorParty ? 'investisseur' : 'entrepreneur' }}. Les deux parties peuvent negocier les termes, envoyer des messages et signer.
+        </div>
+        {% if offer.riskAcknowledged %}
+        <div class="d-inline-flex align-items-center gap-2 mt-2 px-3 py-1 rounded-pill" style="background:#dcfce7;color:#15803d;font-size:.82rem;font-weight:600">
+            <i class="bi bi-shield-check"></i>L'investisseur a consulte l'evaluation de risque avant de soumettre son offre
+        </div>
+        {% endif %}
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        {% if canPayNow %}
+            <a href="{{ path('app_invest_my_offers') }}" class="btn btn-nj">Revenir au paiement</a>
+        {% endif %}
+        {% if offer.paid and is_granted('ROLE_INVESTISSEUR') %}
+            <a href="{{ path('app_invest_portfolio') }}" class="btn btn-outline-success">Voir le portfolio</a>
+        {% endif %}
+    </div>
+</div>
+
+{% for message in app.flashes('success') %}
+    <div class="alert alert-success alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endfor %}
+{% for message in app.flashes('danger') %}
+    <div class="alert alert-danger alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endfor %}
+
+{# ── Lifecycle stepper ── #}
+{% set step1done = offer.status == 'ACCEPTED' or offer.paid %}
+{% set step2done = contract.title is not empty and contract.terms is not empty %}
+{% set step3done = contract.fullySigned %}
+{% set step4done = contract.fullySigned and not offer.paid %}
+{% set step5done = offer.paid %}
+
+{# Walk forward to find the active step (first incomplete) #}
+{% if not step1done %}
+    {% set activeStep = 1 %}
+{% elseif not step2done %}
+    {% set activeStep = 2 %}
+{% elseif not step3done %}
+    {% set activeStep = 3 %}
+{% elseif not step5done %}
+    {% set activeStep = 4 %}
+{% else %}
+    {% set activeStep = 5 %}
+{% endif %}
+
+{% set stepLabels = {1: 'Offre acceptee', 2: 'Termes rediges', 3: 'Double signature', 4: 'Paiement en cours', 5: 'Finance'} %}
+{% set stepDone  = {1: step1done, 2: step2done, 3: step3done, 4: step5done, 5: step5done} %}
+
+<div class="lc-stepper" id="dealStatusBanner">
+    {% for i in 1..5 %}
+        {% if i < activeStep %}
+            {% set cls = 'done' %}
+        {% elseif i == activeStep %}
+            {% set cls = 'active' %}
+        {% else %}
+            {% set cls = '' %}
+        {% endif %}
+        <div class="lc-step {{ cls }}">
+            <span class="lc-circle">
+                {% if i < activeStep %}
+                    <i class="bi bi-check-lg"></i>
+                {% else %}
+                    {{ i }}
+                {% endif %}
+            </span>
+            <span class="lc-label">{{ stepLabels[i] }}</span>
+        </div>
+    {% endfor %}
+</div>
+<div class="lc-mobile-hint">
+    <span class="lc-circle">{{ activeStep }}</span>
+    <strong>{{ stepLabels[activeStep] }}</strong>
+    <span class="text-muted ms-1">&mdash; Etape {{ activeStep }} sur 5</span>
+</div>
+
+<div class="contract-shell">
+    <div class="d-flex flex-column gap-4">
+        <div class="card contract-card">
+            <div class="contract-hero">
+                <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                    <div>
+                        <div class="small text-uppercase opacity-75 mb-2">Projet</div>
+                        <h3 class="fw-bold mb-1">{{ offer.opportunity.project ? offer.opportunity.project.titre : 'Projet' }}</h3>
+                        <div class="opacity-75">Offre acceptee de {{ offer.proposedAmount|number_format(0, ',', ' ') }} DT</div>
+                    </div>
+                    <span class="signature-chip {{ contract.fullySigned ? 'bg-success text-white' : 'bg-light text-dark' }}" id="signatureStatus">
+                        {{ contract.fullySigned ? 'Signe par les deux parties' : 'Signature en attente' }}
+                    </span>
+                </div>
+
+                {# Deal Temperature #}
+                {% if dealTemperatureLabel is defined %}
+                <div class="d-flex align-items-center gap-2 mt-3">
+                    {% if dealTemperatureLabel == 'hot' %}
+                        <span class="d-inline-flex align-items-center gap-1 px-3 py-1 rounded-pill deal-temp-hot" style="background:#fef3c7;color:#92400e;font-size:.82rem;font-weight:600">
+                            <i class="bi bi-fire"></i>Hot ({{ dealTemperature }})
+                        </span>
+                    {% elseif dealTemperatureLabel == 'active' %}
+                        <span class="d-inline-flex align-items-center gap-1 px-3 py-1 rounded-pill" style="background:#dcfce7;color:#15803d;font-size:.82rem;font-weight:600">
+                            <i class="bi bi-activity"></i>Actif ({{ dealTemperature }})
+                        </span>
+                    {% else %}
+                        <span class="d-inline-flex align-items-center gap-1 px-3 py-1 rounded-pill" style="background:#e0f2fe;color:#0369a1;font-size:.82rem;font-weight:600">
+                            <i class="bi bi-snow"></i>Froid ({{ dealTemperature }})
+                        </span>
+                    {% endif %}
+                    <span class="small" style="color:#64748b">
+                        {% if lastMessageAt %}
+                            {% set hoursDiff = ((date().timestamp - lastMessageAt.timestamp) / 3600)|round(0, 'floor') %}
+                            {% if hoursDiff < 1 %}
+                                Negociation active — dernier message a l'instant
+                            {% elseif hoursDiff < 24 %}
+                                Negociation active — dernier message il y a {{ hoursDiff }} heure{{ hoursDiff > 1 ? 's' : '' }}
+                            {% elseif hoursDiff < 168 %}
+                                {% set daysDiff = (hoursDiff / 24)|round(0, 'floor') %}
+                                Ce deal est calme depuis {{ daysDiff }} jour{{ daysDiff > 1 ? 's' : '' }}
+                            {% else %}
+                                Ce deal est silencieux depuis plus d'une semaine
+                            {% endif %}
+                        {% else %}
+                            Aucun message echange pour le moment
+                        {% endif %}
+                    </span>
+                </div>
+                {% endif %}
+                <div class="row g-3 mt-1">
+                    <div class="col-md-4">
+                        <div class="contract-stat">
+                            <div class="small opacity-75">Statut</div>
+                            <div class="fw-bold" id="contractStatusLabel">{{ contract.status }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="contract-stat">
+                            <div class="small opacity-75">Participation</div>
+                            <div class="fw-bold">{{ contract.equityPercentage ? contract.equityPercentage|number_format(2, ',', ' ') ~ ' %' : 'A definir' }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="contract-stat">
+                            <div class="small opacity-75">Paiement</div>
+                            <div class="fw-bold" id="paymentGateStatus">{{ canPayNow ? 'Disponible' : (offer.paid ? 'Effectue' : 'Bloque') }}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <h5 class="fw-bold mb-0">Version actuelle du contrat</h5>
+                    <span class="digest-badge" id="digestPreview"><i class="bi bi-shield-check"></i>{{ contract.termsDigest|slice(0, 20) }}...</span>
+                </div>
+                <div class="small text-muted mb-4">Chaque signature enregistre une empreinte SHA-256 du contrat, du signataire, de la date et du contexte de signature. Toute modification des termes reinitialise les signatures.</div>
+
+                <form method="post" action="{{ path('app_invest_contract_update_terms', {id: offer.id}) }}" class="mb-4">
+                    <input type="hidden" name="_token" value="{{ csrf_token('contract_terms_' ~ offer.id) }}">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <label class="form-label fw-semibold">Titre du contrat</label>
+                            <input type="text" name="title" class="form-control" value="{{ contract.title }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <label class="form-label fw-semibold mb-0">Participation au capital (%)</label>
+                                <button type="button" class="btn btn-sm p-0 border-0 text-muted ai-suggest-btn" data-field="equity" title="Suggestion IA" style="font-size:.95rem;line-height:1"><i class="bi bi-stars"></i></button>
+                            </div>
+                            <input type="number" step="0.01" min="0" max="100" name="equity_percentage" class="form-control" value="{{ contract.equityPercentage }}" placeholder="Ex: 8.5">
+                            <div class="ai-suggest-panel d-none" id="aiSuggestEquity"></div>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label fw-semibold">Contreparties / avantages</label>
+                            <input type="text" name="consideration" class="form-control" value="{{ contract.consideration }}" placeholder="Ex: acces anticipe, distribution exclusive, licence...">
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <label class="form-label fw-semibold mb-0">Etapes et obligations</label>
+                                <button type="button" class="btn btn-sm p-0 border-0 text-muted ai-suggest-btn" data-field="milestones" title="Suggestion IA" style="font-size:.95rem;line-height:1"><i class="bi bi-stars"></i></button>
+                            </div>
+                            <textarea name="milestones" rows="3" class="form-control" placeholder="Decrivez les livrables, etapes de versement ou conditions de release...">{{ contract.milestones }}</textarea>
+                            <div class="ai-suggest-panel d-none" id="aiSuggestMilestones"></div>
+                        </div>
+                        <div class="col-12">
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <label class="form-label fw-semibold mb-0">Termes detailles</label>
+                                <button type="button" class="btn btn-sm p-0 border-0 text-muted ai-suggest-btn" data-field="terms" title="Suggestion IA" style="font-size:.95rem;line-height:1"><i class="bi bi-stars"></i></button>
+                            </div>
+                            <textarea name="terms" rows="10" class="form-control" required>{{ contract.terms }}</textarea>
+                            <div class="ai-suggest-panel d-none" id="aiSuggestTerms"></div>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end mt-3">
+                        <button type="submit" class="btn btn-outline-primary">Enregistrer les termes</button>
+                    </div>
+                </form>
+
+                <div class="row g-3 mb-4" id="signatureSection">
+                    <div class="col-md-6">
+                        <div class="signature-panel h-100">
+                            <div class="small text-muted mb-1">Investisseur</div>
+                            <div class="fw-bold mb-2">{{ contract.investor.fullName }}</div>
+                            <div id="investorSignatureState" class="small {{ contract.investorSignedAt ? 'text-success fw-semibold' : 'text-muted' }}">
+                                {{ contract.investorSignedAt ? 'Signe le ' ~ contract.investorSignedAt|date('d/m/Y H:i') : 'Signature en attente' }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="signature-panel h-100">
+                            <div class="small text-muted mb-1">Entrepreneur</div>
+                            <div class="fw-bold mb-2">{{ contract.entrepreneur.fullName }}</div>
+                            <div id="entrepreneurSignatureState" class="small {{ contract.entrepreneurSignedAt ? 'text-success fw-semibold' : 'text-muted' }}">
+                                {{ contract.entrepreneurSignedAt ? 'Signe le ' ~ contract.entrepreneurSignedAt|date('d/m/Y H:i') : 'Signature en attente' }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="post" action="{{ path('app_invest_contract_sign', {id: offer.id}) }}" class="row g-3 align-items-end">
+                    <input type="hidden" name="_token" value="{{ csrf_token('contract_sign_' ~ offer.id) }}">
+                    <div class="col-lg-8">
+                        <label class="form-label fw-semibold">Nom du signataire</label>
+                        <input type="text" name="signature_name" class="form-control" id="contractSignatureName" value="{{ currentUser.fullName }}" placeholder="Votre nom complet" required>
+                    </div>
+                    <div class="col-lg-4 d-grid">
+                        <button type="submit" class="btn {{ hasCurrentUserSigned ? 'btn-outline-secondary' : 'btn-nj' }}" id="contractSignBtn" {{ contract.fullySigned ? 'disabled' : '' }}>
+                            {{ hasCurrentUserSigned ? 'Signature deja enregistree' : 'Signer numeriquement' }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        {# ── Funding milestones section ── #}
+        <div class="card contract-card">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                    <h5 class="fw-bold mb-0">Jalons de financement</h5>
+                    {% if hasMilestones %}
+                        {% set releasedPct = 0 %}
+                        {% for m in milestones %}
+                            {% if m.status == 'RELEASED' %}
+                                {% set releasedPct = releasedPct + m.percentage %}
+                            {% endif %}
+                        {% endfor %}
+                        <span class="badge bg-primary fs-6">{{ releasedPct|number_format(0) }}% libere</span>
+                    {% endif %}
+                </div>
+
+                {% if hasMilestones %}
+                    {# Progress bar #}
+                    <div class="milestone-progress-bar mb-3">
+                        <div class="milestone-progress-fill" style="width: {{ releasedPct|default(0) }}%"></div>
+                    </div>
+
+                    <div class="d-flex flex-column gap-3 mb-3">
+                        {% for m in milestones %}
+                            <div class="milestone-card {{ m.status|lower }}">
+                                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                    <div>
+                                        <div class="fw-bold">{{ m.label }}</div>
+                                        <div class="small text-muted">{{ m.percentage|number_format(0) }}% &mdash; {{ m.amount|number_format(0, ',', ' ') }} DT</div>
+                                    </div>
+                                    <span class="badge {{ m.status == 'RELEASED' ? 'bg-success' : (m.status == 'CONFIRMED' ? 'bg-primary' : (m.status == 'COMPLETED' ? 'bg-warning text-dark' : 'bg-secondary')) }}">
+                                        {{ m.status == 'RELEASED' ? 'Libere' : (m.status == 'CONFIRMED' ? 'Confirme' : (m.status == 'COMPLETED' ? 'Termine' : 'En attente')) }}
+                                    </span>
+                                </div>
+
+                                {# Actions based on role and status #}
+                                {% if m.status == 'PENDING' and isEntrepreneurParty and contract.fullySigned %}
+                                    <form method="post" action="{{ path('app_invest_milestone_complete', {id: offer.id, milestoneId: m.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('milestone_action_' ~ m.id) }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-warning">Marquer comme termine</button>
+                                    </form>
+                                {% elseif m.status == 'COMPLETED' and isInvestorParty %}
+                                    <form method="post" action="{{ path('app_invest_milestone_confirm', {id: offer.id, milestoneId: m.id}) }}">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('milestone_action_' ~ m.id) }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-primary">Confirmer la livraison</button>
+                                    </form>
+                                {% elseif m.status == 'CONFIRMED' and isInvestorParty %}
+                                    <form method="post" action="{{ path('app_invest_milestone_release', {id: offer.id, milestoneId: m.id}) }}" onsubmit="return confirm('Liberer {{ m.amount|number_format(0, ',', ' ') }} DT pour ce jalon ?');">
+                                        <input type="hidden" name="_token" value="{{ csrf_token('milestone_action_' ~ m.id) }}">
+                                        <button type="submit" class="btn btn-sm btn-success">Liberer {{ m.amount|number_format(0, ',', ' ') }} DT</button>
+                                    </form>
+                                {% elseif m.status == 'RELEASED' %}
+                                    <div class="small text-success">
+                                        <i class="bi bi-check-circle-fill me-1"></i>Paiement libere {{ m.releasedAt ? 'le ' ~ m.releasedAt|date('d/m/Y H:i') : '' }}
+                                    </div>
+                                {% elseif m.status == 'COMPLETED' and isEntrepreneurParty %}
+                                    <div class="small text-warning">En attente de confirmation de l'investisseur</div>
+                                {% elseif m.status == 'PENDING' and isInvestorParty %}
+                                    <div class="small text-muted">L'entrepreneur doit d'abord marquer ce jalon comme termine.</div>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    {# Define milestones form — only investor can set up milestones, and only if not yet paid #}
+                    {% if isInvestorParty and not offer.paid %}
+                        <div class="small text-muted mb-3">Definissez entre 2 et 4 jalons de paiement. Chaque jalon represente une etape de livraison avec un pourcentage du montant total ({{ offer.proposedAmount|number_format(0, ',', ' ') }} DT). Le total doit faire 100%.</div>
+                        <form method="post" action="{{ path('app_invest_contract_save_milestones', {id: offer.id}) }}" id="milestoneForm">
+                            <input type="hidden" name="_token" value="{{ csrf_token('milestones_' ~ offer.id) }}">
+                            <div id="milestoneRows">
+                                <div class="row g-2 mb-2 milestone-row">
+                                    <div class="col-7">
+                                        <input type="text" name="milestone_label[]" class="form-control form-control-sm" placeholder="Ex: Livraison prototype" required minlength="3">
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" name="milestone_percentage[]" class="form-control form-control-sm milestone-pct" min="5" max="80" step="1" placeholder="%" required>
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-2 d-flex align-items-center">
+                                        <button type="button" class="btn btn-sm btn-outline-danger remove-milestone-row d-none"><i class="bi bi-x-lg"></i></button>
+                                    </div>
+                                </div>
+                                <div class="row g-2 mb-2 milestone-row">
+                                    <div class="col-7">
+                                        <input type="text" name="milestone_label[]" class="form-control form-control-sm" placeholder="Ex: Lancement commercial" required minlength="3">
+                                    </div>
+                                    <div class="col-3">
+                                        <div class="input-group input-group-sm">
+                                            <input type="number" name="milestone_percentage[]" class="form-control form-control-sm milestone-pct" min="5" max="80" step="1" placeholder="%" required>
+                                            <span class="input-group-text">%</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-2 d-flex align-items-center">
+                                        <button type="button" class="btn btn-sm btn-outline-danger remove-milestone-row d-none"><i class="bi bi-x-lg"></i></button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mt-2 mb-3">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="addMilestoneRow">+ Ajouter un jalon</button>
+                                <div class="small fw-semibold" id="milestoneTotalLabel">Total : 0%</div>
+                            </div>
+                            <button type="submit" class="btn btn-nj w-100">Enregistrer les jalons</button>
+                        </form>
+                    {% else %}
+                        <div class="text-muted small">Aucun jalon de financement defini. {% if isInvestorParty %}Vous pouvez en definir avant le paiement.{% else %}L'investisseur peut definir des jalons de paiement.{% endif %}</div>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card contract-card">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0">Lecture rapide</h5>
+                    <span class="small text-muted">Derniere mise a jour {{ contract.updatedAt|date('d/m/Y H:i') }}</span>
+                </div>
+                <div class="terms-box">{{ contract.terms }}</div>
+            </div>
+        </div>
+
+        {% if contract.fullySigned and pdfPreviewUrl %}
+        <div class="card contract-card">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+                    <div>
+                        <h5 class="fw-bold mb-1">Document PDF du contrat</h5>
+                        <div class="text-muted small">Le PDF officiel est maintenant disponible avec les termes, le montant, l'empreinte SHA-256 et les deux signatures.</div>
+                    </div>
+                    <div class="d-flex gap-2 flex-wrap">
+                        <a href="{{ pdfPreviewUrl }}" target="_blank" rel="noopener" class="btn btn-outline-primary">Ouvrir le PDF</a>
+                        <a href="{{ pdfDownloadUrl }}" class="btn btn-outline-success">Telecharger</a>
+                        <a href="{{ printViewUrl }}" target="_blank" rel="noopener" class="btn btn-nj">Imprimer</a>
+                    </div>
+                </div>
+                <div class="pdf-panel mb-3" id="pdfSection">
+                    <div class="small text-muted">Disponible des la seconde signature. Le bouton "Imprimer" ouvre une vue propre qui lance la boite d'impression du navigateur.</div>
+                </div>
+                <object data="{{ pdfPreviewUrl }}" type="application/pdf" class="pdf-preview">
+                    <div class="alert alert-info mb-0">Le navigateur ne peut pas afficher l'aperçu PDF ici. Utilisez les boutons ci-dessus pour ouvrir, telecharger ou imprimer le contrat.</div>
+                </object>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card contract-card chat-shell">
+        <div class="card-body border-bottom chat-header">
+            <div class="d-flex justify-content-between align-items-start gap-3">
+                <div>
+                    <div class="small text-uppercase text-muted mb-1">Negociation</div>
+                    <h5 class="fw-bold mb-1">Messagerie en temps reel</h5>
+                    <div class="text-muted small">Les nouveaux messages sont pousses par polling rapide et remontent aussi dans les notifications.</div>
+                </div>
+                <div class="text-end small text-muted">
+                    <div>Interlocuteur</div>
+                    <div class="fw-semibold text-dark">{{ otherParty ? otherParty.fullName : 'Partie' }}</div>
+                </div>
+            </div>
+        </div>
+        <div class="chat-list" id="contractChatList">
+            {% for message in messages %}
+                <div class="chat-bubble {{ message.systemMessage ? 'system' : (message.sender.id == currentUser.id ? 'mine' : 'theirs') }}" data-message-id="{{ message.id }}">
+                    <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
+                        <span class="fw-semibold small">{{ message.sender.fullName }}</span>
+                        <span class="small opacity-75">{{ message.createdAt|date('d/m/Y H:i') }}</span>
+                    </div>
+                    <div style="white-space:pre-wrap">{{ message.body }}</div>
+                </div>
+            {% else %}
+                <div class="text-muted small" id="chatEmptyState">Aucun message pour le moment. Utilisez ce fil pour negocier les conditions du contrat.</div>
+            {% endfor %}
+        </div>
+        <form class="chat-form" id="contractMessageForm">
+            <input type="hidden" name="_token" value="{{ csrf_token('contract_message_' ~ offer.id) }}" id="contractMessageToken">
+            <label class="form-label fw-semibold">Nouveau message</label>
+            <textarea class="form-control mb-3" id="contractMessageInput" rows="4" maxlength="2000" placeholder="Ex: Je propose 6% du capital avec acces pre-release et un premier versement a la signature..."></textarea>
+            <div id="contractMessageError" class="small text-danger mb-2 d-none"></div>
+            <div class="d-flex justify-content-between align-items-center gap-3">
+                <div class="small text-muted">Actualisation automatique toutes les 4 secondes.</div>
+                <button type="submit" class="btn btn-nj" id="contractMessageSubmit">Envoyer</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+(function() {
+    var chatList = document.getElementById('contractChatList');
+    var chatForm = document.getElementById('contractMessageForm');
+    var chatInput = document.getElementById('contractMessageInput');
+    var chatError = document.getElementById('contractMessageError');
+    var chatSubmit = document.getElementById('contractMessageSubmit');
+    var digestPreview = document.getElementById('digestPreview');
+    var signatureStatus = document.getElementById('signatureStatus');
+    var investorSignatureState = document.getElementById('investorSignatureState');
+    var entrepreneurSignatureState = document.getElementById('entrepreneurSignatureState');
+    var paymentGateStatus = document.getElementById('paymentGateStatus');
+    var contractStatusLabel = document.getElementById('contractStatusLabel');
+    var contractSignBtn = document.getElementById('contractSignBtn');
+    var contractSignatureName = document.getElementById('contractSignatureName');
+    var messageUrl = '{{ path('app_invest_contract_messages', {id: offer.id}) }}';
+    var sendUrl = '{{ path('app_invest_contract_send_message', {id: offer.id}) }}';
+    var lastMessageNode = chatList.querySelector('[data-message-id]:last-of-type');
+    var lastMessageId = lastMessageNode ? Number(lastMessageNode.getAttribute('data-message-id')) : 0;
+
+    function escapeHtml(text) {
+        return String(text == null ? '' : text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function scrollToBottom() {
+        chatList.scrollTop = chatList.scrollHeight;
+    }
+
+    function renderMessage(message) {
+        var bubbleClass = message.system ? 'system' : (message.mine ? 'mine' : 'theirs');
+        return '<div class="chat-bubble ' + bubbleClass + '" data-message-id="' + message.id + '">'
+            + '<div class="d-flex justify-content-between align-items-center gap-2 mb-2">'
+            + '<span class="fw-semibold small">' + escapeHtml(message.senderName) + '</span>'
+            + '<span class="small opacity-75">' + escapeHtml(message.createdAt) + '</span>'
+            + '</div>'
+            + '<div style="white-space:pre-wrap">' + escapeHtml(message.body) + '</div>'
+            + '</div>';
+    }
+
+    function applyContractState(contract) {
+        if (!contract) {
+            return;
+        }
+
+        contractStatusLabel.textContent = contract.status;
+        digestPreview.innerHTML = '<i class="bi bi-shield-check"></i>' + escapeHtml((contract.digest || '').slice(0, 20)) + '...';
+        signatureStatus.textContent = contract.fullySigned ? 'Signe par les deux parties' : 'Signature en attente';
+        signatureStatus.className = 'signature-chip ' + (contract.fullySigned ? 'bg-success text-white' : 'bg-light text-dark');
+        investorSignatureState.textContent = contract.investorSigned ? 'Signe le ' + contract.investorSigned : 'Signature en attente';
+        investorSignatureState.className = 'small ' + (contract.investorSigned ? 'text-success fw-semibold' : 'text-muted');
+        entrepreneurSignatureState.textContent = contract.entrepreneurSigned ? 'Signe le ' + contract.entrepreneurSigned : 'Signature en attente';
+        entrepreneurSignatureState.className = 'small ' + (contract.entrepreneurSigned ? 'text-success fw-semibold' : 'text-muted');
+        paymentGateStatus.textContent = {{ offer.paid ? "'Effectue'" : "(contract.fullySigned ? 'Disponible' : 'Bloque')" }};
+
+        if (contractSignBtn) {
+            contractSignBtn.disabled = !!contract.fullySigned;
+            contractSignBtn.textContent = contract.signedByMe ? 'Signature deja enregistree' : 'Signer numeriquement';
+            contractSignBtn.className = 'btn ' + (contract.signedByMe ? 'btn-outline-secondary' : 'btn-nj');
+        }
+
+        if (contractSignatureName) {
+            contractSignatureName.readOnly = !!contract.fullySigned;
+        }
+    }
+
+    function appendMessages(messages) {
+        if (!messages || !messages.length) {
+            return;
+        }
+
+        var emptyState = document.getElementById('chatEmptyState');
+        if (emptyState) {
+            emptyState.remove();
+        }
+
+        messages.forEach(function(message) {
+            if (message.id > lastMessageId) {
+                lastMessageId = message.id;
+            }
+            chatList.insertAdjacentHTML('beforeend', renderMessage(message));
+        });
+        scrollToBottom();
+    }
+
+    function pollMessages() {
+        fetch(messageUrl + '?afterId=' + encodeURIComponent(lastMessageId), {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            appendMessages(data.messages || []);
+            applyContractState(data.contract || null);
+        })
+        .catch(function() {});
+    }
+
+    chatForm.addEventListener('submit', function(event) {
+        event.preventDefault();
+        var text = chatInput.value.trim();
+        if (!text) {
+            chatError.textContent = 'Le message ne peut pas etre vide.';
+            chatError.classList.remove('d-none');
+            return;
+        }
+
+        chatError.classList.add('d-none');
+        chatSubmit.disabled = true;
+
+        var body = new URLSearchParams();
+        body.append('_token', document.getElementById('contractMessageToken').value);
+        body.append('message', text);
+
+        fetch(sendUrl, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: body
+        })
+        .then(function(response) { return response.json(); })
+        .then(function(data) {
+            if (!data.success) {
+                chatError.textContent = data.error || 'Envoi impossible pour le moment.';
+                chatError.classList.remove('d-none');
+                chatSubmit.disabled = false;
+                return;
+            }
+
+            appendMessages([data.message]);
+            applyContractState(data.contract || null);
+            chatInput.value = '';
+            chatSubmit.disabled = false;
+        })
+        .catch(function() {
+            chatError.textContent = 'Erreur reseau pendant l\'envoi du message.';
+            chatError.classList.remove('d-none');
+            chatSubmit.disabled = false;
+        });
+    });
+
+    scrollToBottom();
+    setInterval(pollMessages, 4000);
+})();
+
+// Milestone form logic
+(function() {
+    var form = document.getElementById('milestoneForm');
+    if (!form) return;
+
+    var container = document.getElementById('milestoneRows');
+    var addBtn = document.getElementById('addMilestoneRow');
+    var totalLabel = document.getElementById('milestoneTotalLabel');
+
+    function updateTotal() {
+        var pcts = container.querySelectorAll('.milestone-pct');
+        var total = 0;
+        pcts.forEach(function(el) { total += parseFloat(el.value) || 0; });
+        totalLabel.textContent = 'Total : ' + total + '%';
+        totalLabel.className = 'small fw-semibold ' + (Math.abs(total - 100) < 0.01 ? 'text-success' : (total > 100 ? 'text-danger' : ''));
+    }
+
+    function updateRemoveButtons() {
+        var rows = container.querySelectorAll('.milestone-row');
+        rows.forEach(function(row) {
+            var btn = row.querySelector('.remove-milestone-row');
+            if (btn) btn.classList.toggle('d-none', rows.length <= 2);
+        });
+    }
+
+    addBtn.addEventListener('click', function() {
+        var rows = container.querySelectorAll('.milestone-row');
+        if (rows.length >= 4) return;
+        var clone = rows[0].cloneNode(true);
+        clone.querySelectorAll('input').forEach(function(inp) { inp.value = ''; });
+        container.appendChild(clone);
+        updateRemoveButtons();
+        if (rows.length + 1 >= 4) addBtn.disabled = true;
+    });
+
+    container.addEventListener('click', function(e) {
+        if (e.target.closest('.remove-milestone-row')) {
+            var rows = container.querySelectorAll('.milestone-row');
+            if (rows.length <= 2) return;
+            e.target.closest('.milestone-row').remove();
+            updateRemoveButtons();
+            updateTotal();
+            addBtn.disabled = false;
+        }
+    });
+
+    container.addEventListener('input', function(e) {
+        if (e.target.classList.contains('milestone-pct')) updateTotal();
+    });
+
+    updateRemoveButtons();
+    updateTotal();
+})();
+
+// AI Suggest logic
+(function() {
+    var suggestUrl = '{{ path('app_invest_contract_ai_suggest', {id: offer.id}) }}';
+    var csrfToken = '{{ csrf_token('contract_ai_suggest_' ~ offer.id) }}';
+
+    document.querySelectorAll('.ai-suggest-btn').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            var field = btn.getAttribute('data-field');
+            var panelId = 'aiSuggest' + field.charAt(0).toUpperCase() + field.slice(1);
+            var panel = document.getElementById(panelId);
+            if (!panel) return;
+
+            // Toggle off if already visible
+            if (!panel.classList.contains('d-none')) {
+                panel.classList.add('d-none');
+                panel.innerHTML = '';
+                return;
+            }
+
+            // Show loading state
+            panel.classList.remove('d-none');
+            panel.innerHTML = '<span class="ai-suggest-loading"></span> <span class="small text-muted">Chargement de la suggestion...</span>';
+
+            var body = new URLSearchParams();
+            body.append('field', field);
+
+            fetch(suggestUrl, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                body: body
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                var suggestion = data.suggestion || 'Aucune suggestion disponible.';
+                panel.innerHTML = '<div class="ai-suggest-disclaimer"><i class="bi bi-stars me-1"></i>Suggestion IA — a titre indicatif uniquement</div>'
+                    + '<div class="ai-suggest-body">' + escapeHtml(suggestion) + '</div>'
+                    + '<div class="text-end mt-2"><button type="button" class="btn btn-sm btn-outline-secondary ai-suggest-dismiss" style="font-size:.78rem">Fermer</button></div>';
+
+                panel.querySelector('.ai-suggest-dismiss').addEventListener('click', function() {
+                    panel.classList.add('d-none');
+                    panel.innerHTML = '';
+                });
+            })
+            .catch(function() {
+                panel.innerHTML = '<div class="ai-suggest-disclaimer"><i class="bi bi-stars me-1"></i>Suggestion IA — a titre indicatif uniquement</div>'
+                    + '<div class="ai-suggest-body">Suggestion non disponible pour le moment.</div>'
+                    + '<div class="text-end mt-2"><button type="button" class="btn btn-sm btn-outline-secondary ai-suggest-dismiss" style="font-size:.78rem">Fermer</button></div>';
+
+                panel.querySelector('.ai-suggest-dismiss').addEventListener('click', function() {
+                    panel.classList.add('d-none');
+                    panel.innerHTML = '';
+                });
+            });
+        });
+    });
+
+    function escapeHtml(text) {
+        return String(text == null ? '' : text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+})();
+
+// Particle Network
+(function() {
+    var canvas = document.getElementById('particleNetworkCanvas');
+    if (!canvas) return;
+    var ctx = canvas.getContext('2d');
+    var particles = [];
+    var PARTICLE_COUNT = 60;
+    var CONNECT_DIST = 120;
+    var burstUntil = 0;
+
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    for (var i = 0; i < PARTICLE_COUNT; i++) {
+        particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            vx: (Math.random() - 0.5) * 0.6,
+            vy: (Math.random() - 0.5) * 0.6,
+            r: 2 + Math.random() * 2,
+            baseVx: 0, baseVy: 0
+        });
+        particles[i].baseVx = particles[i].vx;
+        particles[i].baseVy = particles[i].vy;
+    }
+
+    function tick() {
+        requestAnimationFrame(tick);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        var now = Date.now();
+        var bursting = now < burstUntil;
+
+        for (var i = 0; i < particles.length; i++) {
+            var p = particles[i];
+            if (bursting) {
+                p.vx = p.baseVx * 4;
+                p.vy = p.baseVy * 4;
+            } else {
+                p.vx += (p.baseVx - p.vx) * 0.05;
+                p.vy += (p.baseVy - p.vy) * 0.05;
+            }
+            p.x += p.vx;
+            p.y += p.vy;
+            if (p.x < 0 || p.x > canvas.width) { p.vx *= -1; p.baseVx *= -1; p.x = Math.max(0, Math.min(canvas.width, p.x)); }
+            if (p.y < 0 || p.y > canvas.height) { p.vy *= -1; p.baseVy *= -1; p.y = Math.max(0, Math.min(canvas.height, p.y)); }
+
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(59,130,246,.7)';
+            ctx.fill();
+
+            for (var j = i + 1; j < particles.length; j++) {
+                var q = particles[j];
+                var dx = p.x - q.x;
+                var dy = p.y - q.y;
+                var dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < CONNECT_DIST) {
+                    ctx.beginPath();
+                    ctx.moveTo(p.x, p.y);
+                    ctx.lineTo(q.x, q.y);
+                    ctx.strokeStyle = 'rgba(59,130,246,' + (0.4 * (1 - dist / CONNECT_DIST)).toFixed(3) + ')';
+                    ctx.lineWidth = 0.8;
+                    ctx.stroke();
+                }
+            }
+        }
+    }
+    tick();
+
+    // Watch for signing success flash to trigger burst
+    var observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(m) {
+            m.addedNodes.forEach(function(node) {
+                if (node.nodeType === 1 && node.classList && node.classList.contains('alert-success')) {
+                    burstUntil = Date.now() + 800;
+                }
+            });
+        });
+    });
+    observer.observe(document.querySelector('[class*="block"]') || document.body, { childList: true, subtree: true });
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,31 @@
+{# Investment lifecycle wayfinder — include with: pageLabel, activeStep (1-5) #}
+{% set wfSteps = [
+    {num: 1, label: 'Parcourir', icon: 'bi-search'},
+    {num: 2, label: 'Offrir', icon: 'bi-hand-index'},
+    {num: 3, label: 'Negocier', icon: 'bi-chat-dots'},
+    {num: 4, label: 'Payer', icon: 'bi-credit-card'},
+    {num: 5, label: 'Portfolio', icon: 'bi-briefcase'},
+] %}
+<style>
+.wf-bar{display:flex;align-items:center;justify-content:space-between;background:#f8fafc;border:1px solid #e2e8f0;border-radius:.5rem;padding:.45rem 1.2rem;margin-bottom:.85rem;min-height:40px;gap:1rem}
+.wf-page{font-size:.82rem;font-weight:600;color:#1e293b;white-space:nowrap}
+.wf-steps{display:flex;align-items:center;gap:0}
+.wf-step{display:flex;align-items:center;gap:.3rem;font-size:.72rem;color:#94a3b8;white-space:nowrap;padding:.2rem .45rem;border-radius:10rem;transition:all .2s}
+.wf-step.wf-active{color:#3b82f6;font-weight:600;background:rgba(59,130,246,.08)}
+.wf-step.wf-done{color:#64748b}
+.wf-step i{font-size:.7rem}
+.wf-connector{width:18px;height:1px;background:#cbd5e1;flex-shrink:0}
+.wf-step.wf-active+.wf-connector{background:#3b82f6}
+@media(max-width:576px){.wf-steps{display:none}}
+</style>
+<div class="wf-bar">
+    <span class="wf-page">{{ pageLabel }}</span>
+    <div class="wf-steps">
+        {% for step in wfSteps %}
+            <span class="wf-step{% if step.num == activeStep %} wf-active{% elseif step.num < activeStep %} wf-done{% endif %}">
+                <i class="bi {{ step.icon }}"></i>{{ step.label }}
+            </span>
+            {% if not loop.last %}<span class="wf-connector"></span>{% endif %}
+        {% endfor %}
+    </div>
+</div>
