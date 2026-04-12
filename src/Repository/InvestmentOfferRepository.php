@@ -50,6 +50,37 @@ class InvestmentOfferRepository extends ServiceEntityRepository
         return $this->findBy(['opportunity' => $opp], ['id' => 'DESC']);
     }
 
+    public function findPendingForEntrepreneur(User $entrepreneur): array
+    {
+        return $this->createQueryBuilder('o')
+            ->innerJoin('o.opportunity', 'opp')
+            ->innerJoin('opp.project', 'project')
+            ->addSelect('opp', 'project')
+            ->innerJoin('o.investor', 'investor')
+            ->addSelect('investor')
+            ->where('project.user = :entrepreneur')
+            ->andWhere('o.status = :status')
+            ->setParameter('entrepreneur', $entrepreneur)
+            ->setParameter('status', InvestmentOffer::STATUS_PENDING)
+            ->orderBy('o.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
+    }
+
+    public function countPendingForEntrepreneur(User $entrepreneur): int
+    {
+        return (int) $this->createQueryBuilder('o')
+            ->select('COUNT(o.id)')
+            ->innerJoin('o.opportunity', 'opp')
+            ->innerJoin('opp.project', 'project')
+            ->where('project.user = :entrepreneur')
+            ->andWhere('o.status = :status')
+            ->setParameter('entrepreneur', $entrepreneur)
+            ->setParameter('status', InvestmentOffer::STATUS_PENDING)
+            ->getQuery()
+            ->getSingleScalarResult();
+    }
+
     /**
      * DQL: Check if an investor already has an offer for a given opportunity.
      */

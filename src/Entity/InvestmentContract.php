@@ -65,6 +65,9 @@ class InvestmentContract
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $investorSignedAt = null;
 
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $investorSignatureImage = null;
+
     #[ORM\Column(length: 150, nullable: true)]
     private ?string $entrepreneurSignatureName = null;
 
@@ -73,6 +76,9 @@ class InvestmentContract
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $entrepreneurSignedAt = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $entrepreneurSignatureImage = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $lastMessageAt = null;
@@ -141,12 +147,16 @@ class InvestmentContract
     public function setInvestorSignatureHash(?string $investorSignatureHash): static { $this->investorSignatureHash = $investorSignatureHash; return $this; }
     public function getInvestorSignedAt(): ?\DateTimeInterface { return $this->investorSignedAt; }
     public function setInvestorSignedAt(?\DateTimeInterface $investorSignedAt): static { $this->investorSignedAt = $investorSignedAt; return $this; }
+    public function getInvestorSignatureImage(): ?string { return $this->investorSignatureImage; }
+    public function setInvestorSignatureImage(?string $investorSignatureImage): static { $this->investorSignatureImage = $investorSignatureImage; return $this; }
     public function getEntrepreneurSignatureName(): ?string { return $this->entrepreneurSignatureName; }
     public function setEntrepreneurSignatureName(?string $entrepreneurSignatureName): static { $this->entrepreneurSignatureName = $entrepreneurSignatureName; return $this; }
     public function getEntrepreneurSignatureHash(): ?string { return $this->entrepreneurSignatureHash; }
     public function setEntrepreneurSignatureHash(?string $entrepreneurSignatureHash): static { $this->entrepreneurSignatureHash = $entrepreneurSignatureHash; return $this; }
     public function getEntrepreneurSignedAt(): ?\DateTimeInterface { return $this->entrepreneurSignedAt; }
     public function setEntrepreneurSignedAt(?\DateTimeInterface $entrepreneurSignedAt): static { $this->entrepreneurSignedAt = $entrepreneurSignedAt; return $this; }
+    public function getEntrepreneurSignatureImage(): ?string { return $this->entrepreneurSignatureImage; }
+    public function setEntrepreneurSignatureImage(?string $entrepreneurSignatureImage): static { $this->entrepreneurSignatureImage = $entrepreneurSignatureImage; return $this; }
     public function getLastMessageAt(): ?\DateTimeInterface { return $this->lastMessageAt; }
     public function setLastMessageAt(?\DateTimeInterface $lastMessageAt): static { $this->lastMessageAt = $lastMessageAt; return $this; }
     public function getCreatedAt(): ?\DateTimeInterface { return $this->createdAt; }
@@ -190,9 +200,11 @@ class InvestmentContract
         $this->investorSignatureName = null;
         $this->investorSignatureHash = null;
         $this->investorSignedAt = null;
+        $this->investorSignatureImage = null;
         $this->entrepreneurSignatureName = null;
         $this->entrepreneurSignatureHash = null;
         $this->entrepreneurSignedAt = null;
+        $this->entrepreneurSignatureImage = null;
         $this->status = self::STATUS_NEGOTIATING;
 
         return $this;

@@ -77,10 +77,11 @@
                                 {% if offer.status == 'ACCEPTED' and offer.paid %}
                                     <div class="small text-success fw-semibold mt-1">Paiement confirme</div>
                                 {% elseif offer.status == 'ACCEPTED' %}
-                                    <div class="small text-muted mt-1">Paiement en attente</div>
-                                    {% if offer.contract %}
-                                        <div class="small mt-1 {{ offer.contract.fullySigned ? 'text-success fw-semibold' : 'text-warning' }}">
-                                            Contrat {{ offer.contract.fullySigned ? 'signe' : 'a finaliser' }}
+                                    {% if offer.contract and offer.contract.fullySigned %}
+                                        <div class="small text-success fw-semibold mt-1">Contrat signe -- paiement disponible</div>
+                                    {% else %}
+                                        <div class="small text-warning mt-1">
+                                            <a href="{{ path('app_invest_contract_show', {id: offer.id}) }}" class="text-warning text-decoration-underline">Negociation en cours -- signature requise avant paiement</a>
                                         </div>
                                     {% endif %}
                                 {% endif %}
@@ -91,10 +92,12 @@
                                 {% if offer.status == 'PENDING' %}
                                 <form method="post" action="{{ path('app_invest_offer_accept_front', {id: offer.id}) }}" class="d-inline">
                                     <input type="hidden" name="_token" value="{{ csrf_token('offer_action_' ~ offer.id) }}">
+                                    <input type="hidden" name="_redirect_route" value="app_invest_entrepreneur_inbox">
                                     <button class="btn btn-sm btn-outline-success" title="Accepter l'offre"><i class="bi bi-check-lg"></i></button>
                                 </form>
                                 <form method="post" action="{{ path('app_invest_offer_reject_front', {id: offer.id}) }}" class="d-inline">
                                     <input type="hidden" name="_token" value="{{ csrf_token('offer_action_' ~ offer.id) }}">
+                                    <input type="hidden" name="_redirect_route" value="app_invest_entrepreneur_inbox">
                                     <button class="btn btn-sm btn-outline-danger" title="Refuser l'offre"><i class="bi bi-x-lg"></i></button>
                                 </form>
                                 {% elseif offer.status == 'ACCEPTED' and not offer.paid %}
@@ -136,6 +139,8 @@
                         <div class="mt-2 small {{ myOffer.contract and myOffer.contract.fullySigned ? 'text-success fw-semibold' : 'text-warning' }}">
                             {% if myOffer.contract and myOffer.contract.fullySigned %}
                                 Le contrat est signe numeriquement par les deux parties.
+                            {% elseif myOffer.contract %}
+                                Negociation en cours -- <a href="{{ path('app_invest_contract_show', {id: myOffer.id}) }}" class="text-warning text-decoration-underline">signature requise avant paiement</a>.
                             {% else %}
                                 Le paiement sera active apres signature SHA-256 du contrat par l'investisseur et l'entrepreneur.
                             {% endif %}
@@ -162,94 +167,6 @@
                     <button type="submit" class="btn btn-nj w-100 btn-lg"><i class="bi bi-send me-2"></i>Soumettre l'offre</button>
                 </form>
 
-                {# Risk acknowledgment modal #}
-                <div class="modal fade" id="riskGateModal" tabindex="-1" aria-hidden="true">
-                  <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content border-0 shadow" style="border-radius:1rem;overflow:hidden">
-                      <div class="modal-header border-0 {{ riskLevel == 'high' ? 'bg-danger text-white' : 'bg-warning' }}" id="riskModalHeader" style="padding:1.2rem 1.5rem">
-                        <h5 class="modal-title fw-bold mb-0">
-                          <i class="bi bi-shield-exclamation me-2"></i>
-                          {{ riskLevel == 'high' ? 'Risque eleve detecte' : 'Risque modere detecte' }}
-                        </h5>
-                        <button type="button" class="btn-close {{ riskLevel == 'high' ? 'btn-close-white' : '' }}" data-bs-dismiss="modal" aria-label="Fermer"></button>
-                      </div>
-                      <div class="modal-body" style="padding:1.5rem">
-                        <p class="mb-3" id="riskModalMessage">
-                          {{ riskLevel == 'high'
-                            ? 'Ce projet presente un niveau de risque eleve selon les conditions economiques actuelles. Prenez le temps de consulter l\'analyse complete avant de vous engager.'
-                            : 'Ce projet porte un risque modere selon les conditions economiques actuelles.'
-                          }}
-                        </p>
-                        {% if riskFactors|length > 0 %}
-                        <div class="mb-3">
-                          <div class="small fw-semibold text-muted mb-2">Facteurs de risque :</div>
-                          <ul class="mb-0 ps-3">
-                            {% for factor in riskFactors %}
-                              <li class="mb-1">{{ factor }}</li>
-                            {% endfor %}
-                          </ul>
-                        </div>
-                        {% endif %}
-                        <div class="small text-muted">Score de risque : {{ riskScore }}/100</div>
-                      </div>
-                      <div class="modal-footer border-0 d-flex gap-2" style="padding:1rem 1.5rem">
-                        <a href="{{ path('app_invest_risk_analysis', {id: opportunity.id}) }}" class="btn btn-outline-primary flex-fill">Consulter l'analyse complete</a>
-                        <button type="button" class="btn {{ riskLevel == 'high' ? 'btn-danger' : 'btn-warning' }} flex-fill" id="riskProceedBtn">Poursuivre malgre tout</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <script>
-                (function() {
-                    var form = document.getElementById('offerForm');
-                    var riskLevel = '{{ riskLevel }}';
-                    var riskAcknowledgedField = document.getElementById('riskAcknowledgedField');
-                    var riskGateModal = null;
-                    var riskAccepted = false;
-
-                    // Auto-acknowledge if investor comes from full risk analysis page
-                    if (new URLSearchParams(window.location.search).get('risk_reviewed') === '1') {
-                        riskAccepted = true;
-                        riskAcknowledgedField.value = '1';
-                    }
-
-                    form.addEventListener('submit', function(e) {
-                        var amount = document.getElementById('offerAmount');
-                        var val = parseFloat(amount.value);
-                        var max = parseFloat(amount.getAttribute('max')) || Infinity;
-                        var errEl = document.getElementById('offerAmountError');
-                        amount.classList.remove('is-invalid');
-                        if (isNaN(val) || val <= 0) {
-                            e.preventDefault(); amount.classList.add('is-invalid');
-                            errEl.textContent = 'Le montant doit être un nombre positif.';
-                            return;
-                        }
-                        if (val > max) {
-                            e.preventDefault(); amount.classList.add('is-invalid');
-                            errEl.textContent = 'Le montant ne peut pas dépasser ' + max.toLocaleString('fr') + ' DT.';
-                            return;
-                        }
-
-                        // Risk gate: if medium or high and not already acknowledged
-                        if ((riskLevel === 'medium' || riskLevel === 'high') && !riskAccepted) {
-                            e.preventDefault();
-                            if (!riskGateModal) {
-                                riskGateModal = new bootstrap.Modal(document.getElementById('riskGateModal'));
-                            }
-                            riskGateModal.show();
-                            return;
-                        }
-                    });
-
-                    document.getElementById('riskProceedBtn').addEventListener('click', function() {
-                        riskAccepted = true;
-                        riskAcknowledgedField.value = '1';
-                        if (riskGateModal) riskGateModal.hide();
-                        form.requestSubmit();
-                    });
-                })();
-                </script>
             {% endif %}
         </div>
         {% endif %}
@@ -268,4 +185,102 @@
         {% endif %}
     </div>
 </div>
+
+{% if opportunity.status == 'OPEN' and is_granted('ROLE_INVESTISSEUR') and not myOffer %}
+        {# Keep the risk modal at page level so Bootstrap renders it outside the hoverable card. #}
+        <div class="modal fade" id="riskGateModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow" style="border-radius:1rem;overflow:hidden">
+                    <div class="modal-header border-0 {{ riskLevel == 'high' ? 'bg-danger text-white' : 'bg-warning' }}" id="riskModalHeader" style="padding:1.2rem 1.5rem">
+                        <h5 class="modal-title fw-bold mb-0">
+                            <i class="bi bi-shield-exclamation me-2"></i>
+                            {{ riskLevel == 'high' ? 'Risque eleve detecte' : 'Risque modere detecte' }}
+                        </h5>
+                        <button type="button" class="btn-close {{ riskLevel == 'high' ? 'btn-close-white' : '' }}" data-bs-dismiss="modal" aria-label="Fermer"></button>
+                    </div>
+                    <div class="modal-body" style="padding:1.5rem">
+                        <p class="mb-3" id="riskModalMessage">
+                            {{ riskLevel == 'high'
+                                ? 'Ce projet presente un niveau de risque eleve selon les conditions economiques actuelles. Prenez le temps de consulter l\'analyse complete avant de vous engager.'
+                                : 'Ce projet porte un risque modere selon les conditions economiques actuelles.'
+                            }}
+                        </p>
+                        {% if riskFactors|length > 0 %}
+                        <div class="mb-3">
+                            <div class="small fw-semibold text-muted mb-2">Facteurs de risque :</div>
+                            <ul class="mb-0 ps-3">
+                                {% for factor in riskFactors %}
+                                    <li class="mb-1">{{ factor }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                        <div class="small text-muted">Score de risque : {{ riskScore }}/100</div>
+                    </div>
+                    <div class="modal-footer border-0 d-flex gap-2" style="padding:1rem 1.5rem">
+                        <a href="{{ path('app_invest_risk_analysis', {id: opportunity.id}) }}" class="btn btn-outline-primary flex-fill">Consulter l'analyse complete</a>
+                        <button type="button" class="btn {{ riskLevel == 'high' ? 'btn-danger' : 'btn-warning' }} flex-fill" id="riskProceedBtn">Poursuivre malgre tout</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+        (function() {
+                var form = document.getElementById('offerForm');
+                var amount = document.getElementById('offerAmount');
+                var errEl = document.getElementById('offerAmountError');
+                var riskAcknowledgedField = document.getElementById('riskAcknowledgedField');
+                var proceedBtn = document.getElementById('riskProceedBtn');
+                var modalElement = document.getElementById('riskGateModal');
+                var riskLevel = '{{ riskLevel }}';
+                var riskAccepted = false;
+                var riskGateModal;
+
+                if (!form || !amount || !riskAcknowledgedField || !proceedBtn || !modalElement) {
+                        return;
+                }
+
+                riskGateModal = bootstrap.Modal.getOrCreateInstance(modalElement);
+
+                if (new URLSearchParams(window.location.search).get('risk_reviewed') === '1') {
+                        riskAccepted = true;
+                        riskAcknowledgedField.value = '1';
+                }
+
+                form.addEventListener('submit', function(e) {
+                        var val = parseFloat(amount.value);
+                        var max = parseFloat(amount.getAttribute('max')) || Infinity;
+
+                        amount.classList.remove('is-invalid');
+
+                        if (isNaN(val) || val <= 0) {
+                                e.preventDefault();
+                                amount.classList.add('is-invalid');
+                                errEl.textContent = 'Le montant doit etre un nombre positif.';
+                                return;
+                        }
+
+                        if (val > max) {
+                                e.preventDefault();
+                                amount.classList.add('is-invalid');
+                                errEl.textContent = 'Le montant ne peut pas depasser ' + max.toLocaleString('fr') + ' DT.';
+                                return;
+                        }
+
+                        if ({{ riskScore }} > 60 && !riskAccepted) {
+                                e.preventDefault();
+                                riskGateModal.show();
+                        }
+                });
+
+                proceedBtn.addEventListener('click', function() {
+                        riskAccepted = true;
+                        riskAcknowledgedField.value = '1';
+                        riskGateModal.hide();
+                        form.requestSubmit();
+                });
+        })();
+        </script>
+{% endif %}
 {% endblock %}

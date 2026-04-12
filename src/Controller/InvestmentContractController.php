@@ -233,11 +233,18 @@ class InvestmentContractController extends AbstractController
             return $this->redirectToRoute('app_invest_contract_show', ['id' => $offer->getId()]);
         }
 
+        $signatureImage = trim((string) $request->request->get('signature_image', ''));
+        if ($signatureImage === '' || !str_starts_with($signatureImage, 'data:image/png;base64,')) {
+            $this->addFlash('danger', 'Veuillez dessiner votre signature avant de confirmer.');
+            return $this->redirectToRoute('app_invest_contract_show', ['id' => $offer->getId()]);
+        }
+
         try {
             $signatureHash = $signatureService->sign(
                 $contract,
                 $user,
                 $signatureName,
+                $signatureImage,
                 $request->getClientIp(),
                 $request->headers->get('User-Agent')
             );

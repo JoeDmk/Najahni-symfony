@@ -287,16 +287,24 @@
                 {% if offer.status == 'ACCEPTED' %}
                 <a href="{{ path('app_invest_contract_show', {id: offer.id}) }}" class="btn btn-outline-secondary flex-fill">{{ offer.contract and offer.contract.fullySigned ? 'Voir le contrat' : 'Negocier le contrat' }}</a>
                 {% endif %}
-                {% if offer.status == 'ACCEPTED' and not offer.paid and offer.contract and offer.contract.fullySigned %}
-                <button
-                    type="button"
-                    class="btn btn-nj flex-fill js-open-payment"
-                    data-offer-id="{{ offer.id }}"
-                    data-project-title="{{ offer.opportunity.project ? offer.opportunity.project.titre|e('html_attr') : 'N/A' }}"
-                    data-amount="{{ offer.proposedAmount|number_format(0, ',', ' ') }}"
-                    data-pay-url="{{ path('app_invest_offer_pay', {id: offer.id}) }}"
-                    data-token="{{ csrf_token('pay_offer_' ~ offer.id) }}"
-                >Payer via Stripe</button>
+                {% if offer.status == 'ACCEPTED' and not offer.paid %}
+                    {% if offer.contract and offer.contract.fullySigned %}
+                    <button
+                        type="button"
+                        class="btn btn-nj flex-fill js-open-payment"
+                        data-offer-id="{{ offer.id }}"
+                        data-project-title="{{ offer.opportunity.project ? offer.opportunity.project.titre|e('html_attr') : 'N/A' }}"
+                        data-amount="{{ offer.proposedAmount|number_format(0, ',', ' ') }}"
+                        data-pay-url="{{ path('app_invest_offer_pay', {id: offer.id}) }}"
+                        data-token="{{ csrf_token('pay_offer_' ~ offer.id) }}"
+                    >Payer via Stripe</button>
+                    {% elseif offer.contract %}
+                    <button type="button" class="btn btn-secondary flex-fill" disabled>
+                        <i class="bi bi-lock me-1"></i>En attente des signatures
+                    </button>
+                    {% else %}
+                    <span class="btn btn-light flex-fill text-muted" disabled>Contrat non cree</span>
+                    {% endif %}
                 {% endif %}
             </div>
         </div>
@@ -458,6 +466,13 @@
                 + ' data-pay-url="' + escapeHtml(o.payUrl) + '"'
                 + ' data-token="' + escapeHtml(o.payToken || '') + '"'
                 + '>Payer via Stripe</button>';
+        } else if (o.status === 'ACCEPTED' && !o.paid) {
+            if (o.contractExists && !o.contractSigned) {
+                payBtn = '<button type="button" class="btn btn-secondary flex-fill" disabled>'
+                    + '<i class="bi bi-lock me-1"></i>En attente des signatures</button>';
+            } else if (!o.contractExists) {
+                payBtn = '<span class="btn btn-light flex-fill text-muted" disabled>Contrat non cree</span>';
+            }
         }
 
             var contractBtn = '';
@@ -611,6 +626,10 @@
         .then(function(r) { return r.json(); })
         .then(function(data) {
             if (!data.success) {
+                if (data.redirectTo) {
+                    window.location.href = data.redirectTo;
+                    return;
+                }
                 setPaymentFeedback('error', data.error || 'Le paiement Stripe a echoue.');
                 paymentSubmitBtn.disabled = false;
                 return;

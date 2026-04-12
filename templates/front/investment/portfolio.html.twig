@@ -121,7 +121,7 @@
         {% if portfolioSummary.count > 0 %}
             <p class="pg-primary">Vous avez investi dans {{ portfolioSummary.count }} projet{{ portfolioSummary.count > 1 ? 's' : '' }}, engageant {{ portfolioSummary.totalAmount|number_format(0, ',', ' ') }} DT au total.</p>
             {% if portfolioSummary.pendingMilestoneProject %}
-                <p class="pg-secondary">Un jalon attend votre validation sur <a href="{{ path('app_invest_contract_show', {offerId: portfolioSummary.pendingMilestoneOfferId}) }}">{{ portfolioSummary.pendingMilestoneProject }}</a>.</p>
+                <p class="pg-secondary">Un jalon attend votre validation sur <a href="{{ path('app_invest_contract_show', {id: portfolioSummary.pendingMilestoneOfferId}) }}">{{ portfolioSummary.pendingMilestoneProject }}</a>.</p>
             {% elseif portfolioSummary.recentProject %}
                 <p class="pg-secondary">Dernier investissement : {{ portfolioSummary.recentProject }}{% if portfolioSummary.recentDaysAgo is not null %}, il y a {{ portfolioSummary.recentDaysAgo }} jour{{ portfolioSummary.recentDaysAgo != 1 ? 's' : '' }}{% endif %}.</p>
             {% endif %}

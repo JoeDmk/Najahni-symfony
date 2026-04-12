@@ -31,6 +31,7 @@ class ContractSignatureService
         InvestmentContract $contract,
         User $user,
         string $signatureName,
+        string $signatureImage,
         ?string $ipAddress,
         ?string $userAgent,
     ): string {
@@ -50,10 +51,18 @@ class ContractSignatureService
             $signedAt->format(DATE_ATOM),
             trim((string) $ipAddress),
             trim(substr((string) $userAgent, 0, 255)),
+            hash('sha256', $signatureImage),
         ]);
 
         $signatureHash = hash('sha256', $evidence);
         $contract->markSignedBy($user, trim($signatureName), $signatureHash, $signedAt);
+
+        // Store the drawn signature image
+        if ($contract->getInvestor()?->getId() === $user->getId()) {
+            $contract->setInvestorSignatureImage($signatureImage);
+        } else {
+            $contract->setEntrepreneurSignatureImage($signatureImage);
+        }
 
         return $signatureHash;
     }

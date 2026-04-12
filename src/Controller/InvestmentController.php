@@ -55,8 +55,13 @@ class InvestmentController extends AbstractController
         // ── Welcome moment data ──
         $welcomeData = null;
         $user = $this->getUser();
+        $entrepreneurInboxCount = 0;
         if ($user) {
             $welcomeData = [];
+
+            if ($this->isGranted('ROLE_ENTREPRENEUR')) {
+                $entrepreneurInboxCount = $offerRepo->countPendingForEntrepreneur($user);
+            }
 
             // 1. New opportunities since last offer
             $lastOffer = $offerRepo->createQueryBuilder('o')
@@ -142,6 +147,7 @@ class InvestmentController extends AbstractController
             'pitchLines' => $pitchLines,
             'welcomeData' => $welcomeData,
             'activityFeed' => $activityFeed,
+            'entrepreneurInboxCount' => $entrepreneurInboxCount,
         ]);
     }
 
@@ -226,7 +232,7 @@ class InvestmentController extends AbstractController
         $em->flush();
 
         $this->addFlash('success', 'Offre acceptee. L\'investisseur peut maintenant proceder au paiement.');
-        return $this->redirectToRoute('app_invest_opportunity_show', ['id' => $opportunity->getId()]);
+        return $this->redirectAfterOfferAction($request, $offer);
     }
 
     #[Route('/offers/{id}/reject', name: 'app_invest_offer_reject_front', requirements: ['id' => '\d+'], methods: ['POST'])]
@@ -264,7 +270,24 @@ class InvestmentController extends AbstractController
         $em->flush();
 
         $this->addFlash('success', 'Offre refusee.');
-        return $this->redirectToRoute('app_invest_opportunity_show', ['id' => $opportunity->getId()]);
+        return $this->redirectAfterOfferAction($request, $offer);
+    }
+
+    #[Route('/entrepreneur/inbox', name: 'app_invest_entrepreneur_inbox')]
+    #[IsGranted('ROLE_ENTREPRENEUR')]
+    public function entrepreneurInbox(InvestmentOfferRepository $offerRepo): Response
+    {
+        $user = $this->getUser();
+        if (!$user instanceof \App\Entity\User) {
+            throw $this->createAccessDeniedException('Authentification requise.');
+        }
+
+        $offers = $offerRepo->findPendingForEntrepreneur($user);
+
+        return $this->render('front/investment/entrepreneur_inbox.html.twig', [
+            'offers' => $offers,
+            'pendingCount' => count($offers),
+        ]);
     }
 
     #[Route('/opportunities/{id}/offer', name: 'app_invest_offer', methods: ['POST'])]
@@ -834,6 +857,58 @@ class InvestmentController extends AbstractController
         ]);
     }
 
+    private function redirectAfterOfferAction(Request $request, InvestmentOffer $offer): Response
+    {
+        $redirectRoute = $request->request->get('_redirect_route');
+        if ($redirectRoute === 'app_invest_entrepreneur_inbox') {
+            return $this->redirectToRoute('app_invest_entrepreneur_inbox');
+        }
+
+        return $this->redirectToRoute('app_invest_opportunity_show', ['id' => $offer->getOpportunity()->getId()]);
+    }
+
+    #[Route('/my-contracts', name: 'app_invest_my_contracts')]
+    public function myContracts(InvestmentContractRepository $contractRepo): Response
+    {
+        $user = $this->getUser();
+        if (!$user instanceof \App\Entity\User) {
+            throw $this->createAccessDeniedException('Authentification requise.');
+        }
+
+        $contracts = $contractRepo->findRecentForUser($user, 50);
+
+        $summary = [
+            'total' => count($contracts),
+            'awaitingMySignature' => 0,
+            'awaitingOtherSignature' => 0,
+            'fullySigned' => 0,
+            'funded' => 0,
+        ];
+
+        foreach ($contracts as $contract) {
+            if ($contract->getStatus() === \App\Entity\InvestmentContract::STATUS_FUNDED) {
+                $summary['funded']++;
+            }
+
+            if ($contract->isFullySigned()) {
+                $summary['fullySigned']++;
+                continue;
+            }
+
+            if ($contract->hasSigned($user)) {
+                $summary['awaitingOtherSignature']++;
+            } else {
+                $summary['awaitingMySignature']++;
+            }
+        }
+
+        return $this->render('front/investment/my_contracts.html.twig', [
+            'contracts' => $contracts,
+            'summary' => $summary,
+            'currentUser' => $user,
+        ]);
+    }
+
     #[Route('/portfolio', name: 'app_invest_portfolio')]
     #[IsGranted('ROLE_INVESTISSEUR')]
     public function portfolio(InvestmentOfferRepository $repo, InvestmentContractRepository $contractRepo): Response
@@ -1011,16 +1086,27 @@ class InvestmentController extends AbstractController
             ]);
         }
 
-        if (!$offer->isContractReadyForPayment()) {
+        // ── Hard signature gate — authoritative rule ──
+        $contractRepo = $em->getRepository(\App\Entity\InvestmentContract::class);
+        $contract = $contractRepo->findOneBy(['offer' => $offer]);
+        $contractUrl = $this->generateUrl('app_invest_contract_show', ['id' => $offer->getId()]);
+
+        if (!$contract) {
             return $this->json([
-                'error' => 'Le paiement est bloque tant que le contrat n\'a pas ete signe numeriquement par les deux parties.',
+                'error' => 'Le paiement est impossible — aucun contrat n\'a ete cree pour cette offre.',
+                'redirectTo' => $contractUrl,
+            ], 400);
+        }
+
+        if (!$contract->isFullySigned()) {
+            return $this->json([
+                'error' => 'Le paiement est impossible — les deux parties doivent signer le contrat avant de proceder au paiement.',
+                'redirectTo' => $contractUrl,
             ], 400);
         }
 
         // Block lump-sum payment when milestones are defined
-        $contractRepo = $em->getRepository(\App\Entity\InvestmentContract::class);
-        $contract = $contractRepo->findOneBy(['offer' => $offer]);
-        if ($contract && $contract->hasFundingMilestones()) {
+        if ($contract->hasFundingMilestones()) {
             return $this->json([
                 'error' => 'Ce contrat utilise un paiement par jalons. Rendez-vous sur la page du contrat pour liberer les paiements etape par etape.',
                 'redirectTo' => $this->generateUrl('app_invest_contract_show', ['id' => $offer->getId()]),

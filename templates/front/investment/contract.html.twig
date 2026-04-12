@@ -6,6 +6,8 @@
 {% include 'front/investment/_wayfinder.html.twig' with {pageLabel: 'Contrat', activeStep: 3} %}
 {% set canPayNow = contract.fullySigned and not offer.paid %}
 {% set hasMilestones = milestones is defined and milestones|length > 0 %}
+{% set contractsIndexUrl = path('app_invest_my_contracts') %}
+{% set postSignatureUrl = isInvestorParty ? path('app_invest_my_offers') : contractsIndexUrl %}
 
 {# Particle network background #}
 <canvas id="particleNetworkCanvas" style="position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;opacity:.12"></canvas>
@@ -373,7 +375,9 @@
     50% { box-shadow: 0 0 8px 3px rgba(245, 158, 11, 0.2); }
 }
 /* ── Fixed Status Bar ── */
-.contract-status-bar { position: fixed; top: 56px; left: 0; right: 0; height: 40px; background: #0f172a; z-index: 1050; display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; border-bottom: 1px solid #1e293b; transform: translateY(-40px); animation: csBarSlide 300ms ease forwards; }
+.navbar-nj { z-index: 1085; }
+.navbar-nj .dropdown-menu { z-index: 1086; }
+.contract-status-bar { position: fixed; top: 56px; left: 0; right: 0; height: 40px; background: #0f172a; z-index: 1030; display: flex; align-items: center; justify-content: space-between; padding: 0 1.5rem; border-bottom: 1px solid #1e293b; transform: translateY(-40px); animation: csBarSlide 300ms ease forwards; }
 @keyframes csBarSlide { to { transform: translateY(0); } }
 .contract-status-bar .csb-left, .contract-status-bar .csb-center, .contract-status-bar .csb-right { font-size: .78rem; color: #cbd5e1; white-space: nowrap; }
 .contract-status-bar .csb-left .csb-badge { display: inline-block; padding: .15rem .55rem; border-radius: 10rem; font-weight: 600; font-size: .72rem; margin-left: .4rem; }
@@ -426,6 +430,290 @@
     0%, 60%, 100% { opacity: .3; }
     30% { opacity: 1; }
 }
+
+.advisor-messages {
+    height: 260px;
+    overflow-y: auto;
+    padding: .9rem;
+    background: linear-gradient(180deg, #fafcff 0%, #f3f8ff 100%);
+    border-top: 1px solid #dbeafe;
+    scroll-behavior: smooth;
+}
+
+.advisor-empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100%;
+    padding: 1rem;
+}
+
+.advisor-empty-card {
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    background: rgba(255, 255, 255, .92);
+    border: 1px solid #dbeafe;
+    border-radius: 1rem;
+    padding: 1rem 1.1rem;
+    box-shadow: 0 12px 28px rgba(37, 99, 235, .08);
+}
+
+.advisor-empty-card i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 1.1rem;
+    margin-bottom: .65rem;
+}
+
+.advisor-empty-card h6 {
+    margin-bottom: .35rem;
+    font-weight: 700;
+    color: #1e3a8a;
+}
+
+.advisor-empty-card p {
+    margin: 0;
+    color: #64748b;
+    font-size: .82rem;
+    line-height: 1.5;
+}
+
+.advisor-composer {
+    padding: .8rem .9rem .9rem;
+    border-top: 1px solid #dbeafe;
+    background: rgba(255, 255, 255, .88);
+}
+
+.advisor-composer textarea {
+    min-height: 72px;
+    resize: vertical;
+    border-radius: .9rem;
+    border-color: #bfdbfe;
+    background: #fff;
+    font-size: .9rem;
+}
+
+.advisor-composer-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem;
+    margin-top: .55rem;
+}
+
+.advisor-composer-hint {
+    color: #64748b;
+    font-size: .76rem;
+}
+
+.advisor-send-btn {
+    min-width: 130px;
+    border-radius: .8rem;
+    font-weight: 600;
+}
+
+/* ── Signature Canvas Modal ── */
+.sig-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(15, 23, 42, .65);
+    backdrop-filter: blur(6px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s ease;
+}
+.sig-overlay.active {
+    opacity: 1;
+    pointer-events: auto;
+}
+.sig-modal {
+    background: #fff;
+    border-radius: 1.25rem;
+    box-shadow: 0 32px 64px rgba(15, 23, 42, .18);
+    width: 660px;
+    max-width: 96vw;
+    overflow: hidden;
+    transform: translateY(20px) scale(.97);
+    transition: transform .3s ease;
+}
+.sig-overlay.active .sig-modal {
+    transform: translateY(0) scale(1);
+}
+.sig-modal-header {
+    padding: 1.25rem 1.5rem;
+    background: linear-gradient(135deg, #0f172a, #1d4ed8);
+    color: #fff;
+}
+.sig-modal-header h4 {
+    margin: 0 0 .25rem;
+    font-weight: 700;
+    font-size: 1.15rem;
+}
+.sig-modal-header p {
+    margin: 0;
+    opacity: .8;
+    font-size: .88rem;
+}
+.sig-canvas-wrap {
+    padding: 1.25rem 1.5rem .75rem;
+    display: flex;
+    justify-content: center;
+}
+.sig-canvas-wrap canvas {
+    border: 1.5px solid #d1d5db;
+    border-radius: .75rem;
+    background: #fff;
+    cursor: crosshair;
+    touch-action: none;
+    max-width: 100%;
+}
+.sig-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0 1.5rem .75rem;
+    flex-wrap: wrap;
+}
+.sig-toolbar label {
+    font-size: .82rem;
+    color: #475569;
+    font-weight: 600;
+}
+.sig-toolbar input[type="color"] {
+    width: 32px;
+    height: 32px;
+    border: 2px solid #d1d5db;
+    border-radius: .5rem;
+    padding: 0;
+    cursor: pointer;
+}
+.sig-toolbar select {
+    font-size: .82rem;
+    padding: .3rem .6rem;
+    border-radius: .5rem;
+    border: 1.5px solid #d1d5db;
+}
+.sig-toolbar .sig-clear-btn {
+    margin-left: auto;
+    font-size: .82rem;
+    color: #dc2626;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: .5rem;
+    padding: .3rem .75rem;
+    cursor: pointer;
+    font-weight: 600;
+    transition: background .15s;
+}
+.sig-toolbar .sig-clear-btn:hover {
+    background: #fee2e2;
+}
+.sig-disclaimer {
+    padding: .5rem 1.5rem;
+    font-size: .78rem;
+    color: #64748b;
+    font-style: italic;
+}
+.sig-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: .75rem;
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #e5e7eb;
+}
+.sig-footer .sig-cancel-btn {
+    padding: .55rem 1.5rem;
+    border-radius: .7rem;
+    border: 1.5px solid #d1d5db;
+    background: #fff;
+    color: #475569;
+    font-weight: 600;
+    font-size: .9rem;
+    cursor: pointer;
+    transition: background .15s;
+}
+.sig-footer .sig-cancel-btn:hover {
+    background: #f8fafc;
+}
+.sig-footer .sig-confirm-btn {
+    padding: .55rem 1.5rem;
+    border-radius: .7rem;
+    border: none;
+    background: linear-gradient(135deg, #1d4ed8, #2563eb);
+    color: #fff;
+    font-weight: 700;
+    font-size: .9rem;
+    cursor: pointer;
+    transition: transform .1s, box-shadow .15s;
+}
+.sig-footer .sig-confirm-btn:hover {
+    box-shadow: 0 4px 16px rgba(37, 99, 235, .35);
+}
+.sig-error {
+    color: #dc2626;
+    font-size: .82rem;
+    font-weight: 600;
+    padding: 0 1.5rem;
+    display: none;
+}
+.sig-error.show {
+    display: block;
+}
+@keyframes sigShake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-8px); }
+    40%, 80% { transform: translateX(8px); }
+}
+.sig-shake {
+    animation: sigShake .4s ease;
+}
+
+/* ── Signature display (Feature 3) ── */
+.sig-drawn-img {
+    max-width: 200px;
+    max-height: 80px;
+    border-bottom: 1px solid #ccc;
+    display: block;
+    margin-bottom: .35rem;
+}
+.sig-signer-name {
+    font-family: 'Caveat', cursive;
+    font-size: 1.1rem;
+    color: #1e293b;
+}
+.sig-timestamp {
+    font-size: .75rem;
+    color: #94a3b8;
+}
+.sig-hash {
+    font-family: Consolas, monospace;
+    font-size: .7rem;
+    color: #94a3b8;
+    word-break: break-all;
+}
+
+/* ── Signature reveal animation (Feature 4) ── */
+@keyframes signatureReveal {
+    from { clip-path: inset(0 100% 0 0); }
+    to { clip-path: inset(0 0% 0 0); }
+}
+.sig-reveal {
+    animation: signatureReveal 1200ms ease-out both;
+}
+.sig-reveal-delay {
+    animation: signatureReveal 1200ms ease-out 400ms both;
+}
 </style>
 
 {# ── Fixed persistent status bar ── #}
@@ -455,7 +743,7 @@
         {% if not contract.fullySigned %}
             <a href="#signatureSection">Signer le contrat &rarr;</a>
         {% elseif contract.fullySigned and not offer.paid %}
-            <a href="{{ path('app_invest_my_offers') }}">Passer au paiement &rarr;</a>
+            <a href="{{ postSignatureUrl }}">{{ isInvestorParty ? 'Passer au paiement' : 'Retour aux contrats' }} &rarr;</a>
         {% elseif offer.paid %}
             <a href="#pdfSection">Voir le document &rarr;</a>
         {% endif %}
@@ -480,10 +768,13 @@
     </div>
     <div class="d-flex gap-2 flex-wrap">
         {% if canPayNow %}
-            <a href="{{ path('app_invest_my_offers') }}" class="btn btn-nj">Revenir au paiement</a>
+            <a href="{{ postSignatureUrl }}" class="btn btn-nj">{{ isInvestorParty ? 'Revenir au paiement' : 'Retour aux contrats' }}</a>
         {% endif %}
         {% if offer.paid and is_granted('ROLE_INVESTISSEUR') %}
             <a href="{{ path('app_invest_portfolio') }}" class="btn btn-outline-success">Voir le portfolio</a>
+        {% endif %}
+        {% if not canPayNow %}
+            <a href="{{ contractsIndexUrl }}" class="btn btn-outline-secondary">Mes contrats</a>
         {% endif %}
     </div>
 </div>
@@ -536,6 +827,9 @@
                 {% endif %}
             </span>
             <span class="lc-label">{{ stepLabels[i] }}</span>
+            {% if i == 4 %}
+                <span class="lc-sublabel" style="display:block;font-size:.65rem;color:#64748b;font-weight:400;margin-top:1px">Apres signature des deux parties</span>
+            {% endif %}
         </div>
     {% endfor %}
 </div>
@@ -615,6 +909,35 @@
                         </div>
                     </div>
                 </div>
+
+                {# ── Payment availability gate ── #}
+                {% if not offer.paid %}
+                <div class="mt-3" id="paymentGateNotice">
+                    {% if contract.fullySigned %}
+                        <div class="d-flex align-items-center gap-2 px-3 py-2 rounded" style="background:#dcfce7;border:1px solid #86efac">
+                            <i class="bi bi-check-circle-fill" style="color:#16a34a;font-size:1.1rem"></i>
+                            <span style="color:#15803d;font-weight:600;font-size:.88rem">Contrat signe par les deux parties -- le paiement est maintenant disponible.</span>
+                        </div>
+                        {% if isInvestorParty %}
+                        <div class="mt-2">
+                            <a href="{{ postSignatureUrl }}" class="btn btn-nj btn-sm">Proceder au paiement</a>
+                        </div>
+                        {% endif %}
+                    {% elseif contract.investorSignedAt or contract.entrepreneurSignedAt %}
+                        {% set missingSigner = contract.investorSignedAt ? contract.entrepreneur.fullName ~ ' (entrepreneur)' : contract.investor.fullName ~ ' (investisseur)' %}
+                        <div class="d-flex align-items-center gap-2 px-3 py-2 rounded" style="background:#fef3c7;border:1px solid #fcd34d">
+                            <i class="bi bi-hourglass-split" style="color:#d97706;font-size:1.1rem"></i>
+                            <span style="color:#92400e;font-weight:600;font-size:.88rem">En attente de la signature de {{ missingSigner }}</span>
+                        </div>
+                    {% else %}
+                        <div class="d-flex align-items-center gap-2 px-3 py-2 rounded" style="background:#e0f2fe;border:1px solid #7dd3fc">
+                            <i class="bi bi-pen" style="color:#0369a1;font-size:1.1rem"></i>
+                            <span style="color:#0c4a6e;font-size:.88rem">Signez le contrat pour debloquer le paiement. <a href="#signatureSection" style="color:#0369a1;font-weight:600;text-decoration:underline">Aller a la signature</a></span>
+                        </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+
             </div>
             <div class="card-body p-4">
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
@@ -669,30 +992,49 @@
                         <div class="signature-panel h-100">
                             <div class="small text-muted mb-1">Investisseur</div>
                             <div class="fw-bold mb-2">{{ contract.investor.fullName }}</div>
-                            <div id="investorSignatureState" class="small {{ contract.investorSignedAt ? 'text-success fw-semibold' : 'text-muted' }}">
-                                {{ contract.investorSignedAt ? 'Signe le ' ~ contract.investorSignedAt|date('d/m/Y H:i') : 'Signature en attente' }}
-                            </div>
+                            {% if contract.investorSignatureImage %}
+                                <img src="{{ contract.investorSignatureImage }}" alt="Signature investisseur" class="sig-drawn-img sig-reveal" id="investorSigImg">
+                                <div class="sig-signer-name">{{ contract.investorSignatureName }}</div>
+                                <div class="sig-timestamp">Signe le {{ contract.investorSignedAt|date('d/m/Y H:i') }}</div>
+                                <div class="sig-hash">{{ contract.investorSignatureHash|slice(0, 24) }}...</div>
+                            {% elseif contract.investorSignedAt %}
+                                <div id="investorSignatureState" class="small text-success fw-semibold">
+                                    Signe le {{ contract.investorSignedAt|date('d/m/Y H:i') }}
+                                </div>
+                            {% else %}
+                                <div id="investorSignatureState" class="small text-muted">Signature en attente</div>
+                            {% endif %}
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="signature-panel h-100">
                             <div class="small text-muted mb-1">Entrepreneur</div>
                             <div class="fw-bold mb-2">{{ contract.entrepreneur.fullName }}</div>
-                            <div id="entrepreneurSignatureState" class="small {{ contract.entrepreneurSignedAt ? 'text-success fw-semibold' : 'text-muted' }}">
-                                {{ contract.entrepreneurSignedAt ? 'Signe le ' ~ contract.entrepreneurSignedAt|date('d/m/Y H:i') : 'Signature en attente' }}
-                            </div>
+                            {% if contract.entrepreneurSignatureImage %}
+                                <img src="{{ contract.entrepreneurSignatureImage }}" alt="Signature entrepreneur" class="sig-drawn-img {{ contract.investorSignatureImage ? 'sig-reveal-delay' : 'sig-reveal' }}" id="entrepreneurSigImg">
+                                <div class="sig-signer-name">{{ contract.entrepreneurSignatureName }}</div>
+                                <div class="sig-timestamp">Signe le {{ contract.entrepreneurSignedAt|date('d/m/Y H:i') }}</div>
+                                <div class="sig-hash">{{ contract.entrepreneurSignatureHash|slice(0, 24) }}...</div>
+                            {% elseif contract.entrepreneurSignedAt %}
+                                <div id="entrepreneurSignatureState" class="small text-success fw-semibold">
+                                    Signe le {{ contract.entrepreneurSignedAt|date('d/m/Y H:i') }}
+                                </div>
+                            {% else %}
+                                <div id="entrepreneurSignatureState" class="small text-muted">Signature en attente</div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
 
-                <form method="post" action="{{ path('app_invest_contract_sign', {id: offer.id}) }}" class="row g-3 align-items-end">
+                <form method="post" action="{{ path('app_invest_contract_sign', {id: offer.id}) }}" class="row g-3 align-items-end" id="signatureForm">
                     <input type="hidden" name="_token" value="{{ csrf_token('contract_sign_' ~ offer.id) }}">
+                    <input type="hidden" name="signature_image" id="signatureImageInput" value="">
                     <div class="col-lg-8">
                         <label class="form-label fw-semibold">Nom du signataire</label>
                         <input type="text" name="signature_name" class="form-control" id="contractSignatureName" value="{{ currentUser.fullName }}" placeholder="Votre nom complet" required>
                     </div>
                     <div class="col-lg-4 d-grid">
-                        <button type="submit" class="btn {{ hasCurrentUserSigned ? 'btn-outline-secondary' : 'btn-nj' }}" id="contractSignBtn" {{ contract.fullySigned ? 'disabled' : '' }}>
+                        <button type="button" class="btn {{ hasCurrentUserSigned ? 'btn-outline-secondary' : 'btn-nj' }}" id="contractSignBtn" {{ contract.fullySigned ? 'disabled' : '' }}>
                             {{ hasCurrentUserSigned ? 'Signature deja enregistree' : 'Signer numeriquement' }}
                         </button>
                     </div>
@@ -897,8 +1239,14 @@
                 <i class="bi bi-chevron-down small" id="dealAdvisorChevron" style="transition:transform .2s"></i>
             </div>
             <div id="dealAdvisorBody" class="d-none">
-                <div id="advisorMessages" style="height:220px;overflow-y:auto;padding:.75rem;background:#fafcff;border-top:1px solid #dbeafe">
-                    <div class="text-muted small text-center" id="advisorPlaceholder">Votre conseiller prive. Les reponses ne sont pas partagees avec l'autre partie.</div>
+                <div id="advisorMessages" class="advisor-messages">
+                    <div class="advisor-empty-state" id="advisorPlaceholder">
+                        <div class="advisor-empty-card">
+                            <i class="bi bi-chat-square-text"></i>
+                            <h6>Discutez avec votre Deal Advisor</h6>
+                            <p>Posez une question sur l'equity, les milestones, les termes du contrat ou le rythme de la negociation. Cette conversation reste privee.</p>
+                        </div>
+                    </div>
                 </div>
                 <div id="advisorSuggestedPrompts" class="d-flex flex-wrap gap-2 px-3 pt-2" style="transition:opacity .2s ease">
                     <button type="button" class="btn advisor-chip" data-prompt="What equity percentage is typical for this investment size?">What equity percentage is typical for this investment size?</button>
@@ -906,13 +1254,50 @@
                     <button type="button" class="btn advisor-chip" data-prompt="What terms should I include in this contract?">What terms should I include in this contract?</button>
                     <button type="button" class="btn advisor-chip" data-prompt="Is this deal progressing at a normal pace?">Is this deal progressing at a normal pace?</button>
                 </div>
-                <div class="p-3">
-                    <div class="input-group">
-                        <input type="text" id="advisorInput" class="form-control form-control-sm" placeholder="Demandez conseil..." maxlength="2000">
-                        <button type="button" id="advisorSendBtn" class="btn btn-sm btn-primary"><i class="bi bi-send"></i></button>
+                <div class="advisor-composer">
+                    <label for="advisorInput" class="form-label small fw-semibold text-primary mb-2">Votre message prive</label>
+                    <textarea id="advisorInput" class="form-control form-control-sm" placeholder="Ex: Est-ce que 8% d'equity pour 120 000 DT reste coherent avec ce projet ?" maxlength="2000"></textarea>
+                    <div class="advisor-composer-actions">
+                        <div class="advisor-composer-hint">Entrer pour envoyer. Shift + Entrer pour une nouvelle ligne.</div>
+                        <button type="button" id="advisorSendBtn" class="btn btn-sm btn-primary advisor-send-btn"><i class="bi bi-send me-1"></i>Envoyer</button>
                     </div>
                 </div>
             </div>
+        </div>
+    </div>
+</div>
+
+{# ── Google Fonts Caveat for handwriting signature display ── #}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&display=swap" rel="stylesheet">
+
+{# ── Signature Canvas Modal ── #}
+<div class="sig-overlay" id="sigOverlay">
+    <div class="sig-modal" id="sigModal">
+        <div class="sig-modal-header">
+            <h4>Signez votre contrat</h4>
+            <p>Dessinez votre signature ci-dessous</p>
+        </div>
+        <div class="sig-canvas-wrap">
+            <canvas id="sigCanvas" width="600" height="220"></canvas>
+        </div>
+        <div class="sig-toolbar">
+            <label>Couleur</label>
+            <input type="color" id="sigColor" value="#1a1a2e">
+            <label>Epaisseur</label>
+            <select id="sigStroke">
+                <option value="1.5">Fine</option>
+                <option value="2.5" selected>Moyenne</option>
+                <option value="4">Epaisse</option>
+            </select>
+            <button type="button" class="sig-clear-btn" id="sigClear"><i class="bi bi-eraser me-1"></i>Effacer</button>
+        </div>
+        <div class="sig-disclaimer">En signant, vous confirmez avoir lu et accepte les termes du contrat.</div>
+        <div class="sig-error" id="sigError">Veuillez dessiner votre signature</div>
+        <div class="sig-footer">
+            <button type="button" class="sig-cancel-btn" id="sigCancelBtn">Annuler</button>
+            <button type="button" class="sig-confirm-btn" id="sigConfirmBtn">Confirmer la signature</button>
         </div>
     </div>
 </div>
@@ -1283,13 +1668,35 @@
     var advisorHistory = [];
     var advisorFirstSent = false;
     var advisorOpen = false;
+    var advisorSeeded = false;
 
     if (!toggle || !body) return;
+
+    function ensureAdvisorOpen() {
+        advisorOpen = true;
+        body.classList.remove('d-none');
+        chevron.style.transform = 'rotate(180deg)';
+        setTimeout(function() {
+            input.focus();
+        }, 50);
+    }
+
+    function seedAdvisorIntro() {
+        if (advisorSeeded) return;
+        advisorSeeded = true;
+        appendAssistant('Je peux vous aider a analyser ce deal, proposer une structure de milestones, ou revoir les points sensibles du contrat.');
+    }
 
     toggle.addEventListener('click', function() {
         advisorOpen = !advisorOpen;
         body.classList.toggle('d-none', !advisorOpen);
         chevron.style.transform = advisorOpen ? 'rotate(180deg)' : '';
+        if (advisorOpen) {
+            seedAdvisorIntro();
+            setTimeout(function() {
+                input.focus();
+            }, 50);
+        }
     });
 
     function parseMd(text) {
@@ -1348,6 +1755,8 @@
     }
 
     function appendAssistant(text) {
+        var placeholder = document.getElementById('advisorPlaceholder');
+        if (placeholder) placeholder.remove();
         var div = document.createElement('div');
         div.className = 'mb-2';
         var bubble = document.createElement('div');
@@ -1381,6 +1790,7 @@
     function sendAdvisor(msg) {
         var userMsg = msg || input.value.trim();
         if (!userMsg) return;
+        ensureAdvisorOpen();
         input.value = '';
 
         if (!advisorFirstSent) {
@@ -1421,19 +1831,209 @@
 
     sendBtn.addEventListener('click', function() { sendAdvisor(); });
     input.addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') sendAdvisor();
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendAdvisor();
+        }
     });
 
     chips.querySelectorAll('.advisor-chip').forEach(function(chip) {
         chip.addEventListener('click', function() {
-            if (!advisorOpen) {
-                advisorOpen = true;
-                body.classList.remove('d-none');
-                chevron.style.transform = 'rotate(180deg)';
-            }
+            ensureAdvisorOpen();
+            seedAdvisorIntro();
             sendAdvisor(chip.getAttribute('data-prompt'));
         });
     });
+
+    input.addEventListener('focus', function() {
+        ensureAdvisorOpen();
+        seedAdvisorIntro();
+    });
+})();
+
+// ── Signature Canvas Modal ──
+(function() {
+    var overlay = document.getElementById('sigOverlay');
+    var modal = document.getElementById('sigModal');
+    var canvas = document.getElementById('sigCanvas');
+    var ctx = canvas.getContext('2d');
+    var colorPicker = document.getElementById('sigColor');
+    var strokeSelect = document.getElementById('sigStroke');
+    var clearBtn = document.getElementById('sigClear');
+    var cancelBtn = document.getElementById('sigCancelBtn');
+    var confirmBtn = document.getElementById('sigConfirmBtn');
+    var sigError = document.getElementById('sigError');
+    var signBtn = document.getElementById('contractSignBtn');
+    var signForm = document.getElementById('signatureForm');
+    var sigImageInput = document.getElementById('signatureImageInput');
+
+    var isDrawing = false;
+    var lastX = 0;
+    var lastY = 0;
+    var lastTime = 0;
+    var hasDrawn = false;
+
+    function drawBaseline() {
+        ctx.save();
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = '#d1d5db';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(20, canvas.height * 0.75);
+        ctx.lineTo(canvas.width - 20, canvas.height * 0.75);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    function clearCanvas() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        drawBaseline();
+        hasDrawn = false;
+        sigError.classList.remove('show');
+    }
+
+    function getPos(e) {
+        var rect = canvas.getBoundingClientRect();
+        var scaleX = canvas.width / rect.width;
+        var scaleY = canvas.height / rect.height;
+        if (e.touches && e.touches.length > 0) {
+            return {
+                x: (e.touches[0].clientX - rect.left) * scaleX,
+                y: (e.touches[0].clientY - rect.top) * scaleY
+            };
+        }
+        return {
+            x: (e.clientX - rect.left) * scaleX,
+            y: (e.clientY - rect.top) * scaleY
+        };
+    }
+
+    function getBaseWidth() {
+        return parseFloat(strokeSelect.value) || 2.5;
+    }
+
+    function startDraw(e) {
+        e.preventDefault();
+        isDrawing = true;
+        var pos = getPos(e);
+        lastX = pos.x;
+        lastY = pos.y;
+        lastTime = Date.now();
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+    }
+
+    function draw(e) {
+        if (!isDrawing) return;
+        e.preventDefault();
+        var pos = getPos(e);
+        var now = Date.now();
+        var dx = pos.x - lastX;
+        var dy = pos.y - lastY;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        var dt = Math.max(now - lastTime, 1);
+        var speed = dist / dt;
+
+        // Pressure simulation: slower = thicker, faster = thinner
+        var base = getBaseWidth();
+        var width = base * Math.max(0.5, Math.min(1.5, 1.2 - speed * 0.15));
+
+        ctx.lineWidth = width;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = colorPicker.value;
+        ctx.lineTo(pos.x, pos.y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(pos.x, pos.y);
+
+        lastX = pos.x;
+        lastY = pos.y;
+        lastTime = now;
+        hasDrawn = true;
+    }
+
+    function endDraw(e) {
+        if (e) e.preventDefault();
+        isDrawing = false;
+    }
+
+    // Canvas events — mouse
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', endDraw);
+    canvas.addEventListener('mouseleave', endDraw);
+
+    // Canvas events — touch
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove', draw, { passive: false });
+    canvas.addEventListener('touchend', endDraw);
+
+    clearBtn.addEventListener('click', clearCanvas);
+
+    function isCanvasBlank() {
+        if (!hasDrawn) return true;
+        var blank = document.createElement('canvas');
+        blank.width = canvas.width;
+        blank.height = canvas.height;
+        var bCtx = blank.getContext('2d');
+        // Draw the same baseline on blank for comparison
+        bCtx.setLineDash([4, 4]);
+        bCtx.strokeStyle = '#d1d5db';
+        bCtx.lineWidth = 1;
+        bCtx.beginPath();
+        bCtx.moveTo(20, blank.height * 0.75);
+        bCtx.lineTo(blank.width - 20, blank.height * 0.75);
+        bCtx.stroke();
+        return canvas.toDataURL() === blank.toDataURL();
+    }
+
+    function openModal() {
+        clearCanvas();
+        overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+        overlay.classList.remove('active');
+        document.body.style.overflow = '';
+    }
+
+    if (signBtn) {
+        signBtn.addEventListener('click', function() {
+            if (signBtn.disabled) return;
+            openModal();
+        });
+    }
+
+    cancelBtn.addEventListener('click', closeModal);
+
+    overlay.addEventListener('click', function(e) {
+        if (e.target === overlay) closeModal();
+    });
+
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && overlay.classList.contains('active')) {
+            closeModal();
+        }
+    });
+
+    confirmBtn.addEventListener('click', function() {
+        if (isCanvasBlank()) {
+            sigError.classList.add('show');
+            modal.classList.add('sig-shake');
+            setTimeout(function() { modal.classList.remove('sig-shake'); }, 450);
+            return;
+        }
+        sigError.classList.remove('show');
+        var dataUrl = canvas.toDataURL('image/png');
+        sigImageInput.value = dataUrl;
+        closeModal();
+        signForm.submit();
+    });
+
+    // Init baseline
+    drawBaseline();
 })();
 </script>
 {% endblock %}

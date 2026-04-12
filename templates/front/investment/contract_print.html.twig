@@ -56,19 +56,29 @@
 
     <div class="section">
         <h2>Signatures</h2>
+        <hr style="border:none;border-top:1px solid #d1d5db;margin-bottom:14px">
         <table>
-            <tr><th>Partie</th><th>Nom signe</th><th>Date</th><th>Empreinte de signature</th></tr>
             <tr>
-                <td>Investisseur</td>
-                <td>{{ contract.investorSignatureName ?: contract.investor.fullName }}</td>
-                <td>{{ contract.investorSignedAt ? contract.investorSignedAt|date('d/m/Y H:i') : 'N/A' }}</td>
-                <td>{{ contract.investorSignatureHash ?: 'N/A' }}</td>
+                <th style="width:50%">Investisseur</th>
+                <th style="width:50%">Entrepreneur</th>
             </tr>
             <tr>
-                <td>Entrepreneur</td>
-                <td>{{ contract.entrepreneurSignatureName ?: contract.entrepreneur.fullName }}</td>
-                <td>{{ contract.entrepreneurSignedAt ? contract.entrepreneurSignedAt|date('d/m/Y H:i') : 'N/A' }}</td>
-                <td>{{ contract.entrepreneurSignatureHash ?: 'N/A' }}</td>
+                <td>
+                    {% if contract.investorSignatureImage %}
+                        <img src="{{ contract.investorSignatureImage }}" style="max-width:180px;max-height:70px;display:block;margin-bottom:4px">
+                    {% endif %}
+                    <div style="font-weight:bold;margin-bottom:2px">{{ contract.investorSignatureName ?: contract.investor.fullName }}</div>
+                    <div style="font-size:11px;color:#475569">{{ contract.investorSignedAt ? contract.investorSignedAt|date('d/m/Y H:i') : 'N/A' }}</div>
+                    <div style="font-family:Courier,monospace;font-size:9px;color:#94a3b8;margin-top:3px">{{ contract.investorSignatureHash ?: 'N/A' }}</div>
+                </td>
+                <td>
+                    {% if contract.entrepreneurSignatureImage %}
+                        <img src="{{ contract.entrepreneurSignatureImage }}" style="max-width:180px;max-height:70px;display:block;margin-bottom:4px">
+                    {% endif %}
+                    <div style="font-weight:bold;margin-bottom:2px">{{ contract.entrepreneurSignatureName ?: contract.entrepreneur.fullName }}</div>
+                    <div style="font-size:11px;color:#475569">{{ contract.entrepreneurSignedAt ? contract.entrepreneurSignedAt|date('d/m/Y H:i') : 'N/A' }}</div>
+                    <div style="font-family:Courier,monospace;font-size:9px;color:#94a3b8;margin-top:3px">{{ contract.entrepreneurSignatureHash ?: 'N/A' }}</div>
+                </td>
             </tr>
         </table>
     </div>
