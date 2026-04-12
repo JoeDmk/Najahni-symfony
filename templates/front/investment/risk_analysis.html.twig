@@ -172,6 +172,51 @@
 .risk-context-banner .rcb-step { padding: .15rem .5rem; border-radius: 10rem; }
 .risk-context-banner .rcb-step.active { background: rgba(59,130,246,.2); color: #93c5fd; font-weight: 600; }
 .risk-context-banner .rcb-arrow { color: #475569; }
+
+/* Chat chips */
+.chat-chip {
+    background: #f1f5f9;
+    border: 1px solid #94a3b8;
+    color: #334155;
+    font-size: .75rem;
+    padding: .25rem .65rem;
+    border-radius: 999px;
+    height: 28px;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+.chat-chip:hover {
+    background: #e2e8f0;
+    border-color: #64748b;
+    color: #0f172a;
+}
+
+/* Typing indicator */
+.typing-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: .5rem .85rem;
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 1rem;
+    margin-bottom: .5rem;
+}
+.typing-indicator .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #94a3b8;
+    animation: typingFade 1.2s ease-in-out infinite;
+}
+.typing-indicator .dot:nth-child(2) { animation-delay: .2s; }
+.typing-indicator .dot:nth-child(3) { animation-delay: .4s; }
+@keyframes typingFade {
+    0%, 60%, 100% { opacity: .3; }
+    30% { opacity: 1; }
+}
 </style>
 
 <div class="risk-context-banner">
@@ -328,12 +373,34 @@
         <div class="card border-0 shadow-sm mt-3" style="border-radius:1rem">
             <div class="card-body">
                 <h5 class="fw-semibold mb-3"><i class="bi bi-chat-dots me-2"></i>Chatbot NAJAHNI</h5>
-                <div id="chatMessages" style="height:250px;overflow-y:auto;border:1px solid #e9ecef;border-radius:.75rem;padding:.75rem;margin-bottom:.75rem;background:#fafafa">
-                    <div class="text-muted small text-center">Posez vos questions sur cette opportunite.</div>
-                </div>
-                <div class="input-group">
-                    <input type="text" id="chatInput" class="form-control" placeholder="Votre question..." maxlength="2000">
-                    <button type="button" id="chatSendBtn" class="btn btn-nj"><i class="bi bi-send"></i></button>
+                <div id="chatbotContainer"
+                     data-opportunity-id="{{ opportunity.id }}"
+                     data-opportunity-title="{{ opportunity.project ? opportunity.project.titre : 'N/A' }}"
+                     data-sector="{{ opportunity.project ? opportunity.project.secteur : 'N/A' }}"
+                     data-funding-target="{{ opportunity.targetAmount }}"
+                     data-deadline="{{ opportunity.deadline ? opportunity.deadline|date('d/m/Y') : 'N/A' }}"
+                     data-risk-score=""
+                     data-risk-level=""
+                     data-inflation=""
+                     data-gdp=""
+                     data-exchange-rate=""
+                     data-budget-min=""
+                     data-budget-max=""
+                     data-preferred-sectors=""
+                     data-risk-tolerance="">
+                    <div id="chatMessages" style="height:280px;overflow-y:auto;border:1px solid #e9ecef;border-radius:.75rem;padding:.75rem;margin-bottom:.75rem;background:#fafafa">
+                        <div class="text-muted small text-center" id="chatPlaceholder">Posez vos questions sur cette opportunite.</div>
+                    </div>
+                    <div id="chatSuggestedPrompts" class="d-flex flex-wrap gap-2 mb-2" style="transition:opacity .2s ease">
+                        <button type="button" class="btn chat-chip" data-prompt="Is this risk level acceptable for my investment profile?">Is this risk level acceptable for my investment profile?</button>
+                        <button type="button" class="btn chat-chip" data-prompt="What could go wrong with this investment?">What could go wrong with this investment?</button>
+                        <button type="button" class="btn chat-chip" data-prompt="How does Tunisia's current inflation affect this project?">How does Tunisia's current inflation affect this project?</button>
+                        <button type="button" class="btn chat-chip" data-prompt="What equity percentage is fair for this amount?">What equity percentage is fair for this amount?</button>
+                    </div>
+                    <div class="input-group">
+                        <input type="text" id="chatInput" class="form-control" placeholder="Votre question..." maxlength="2000">
+                        <button type="button" id="chatSendBtn" class="btn btn-nj"><i class="bi bi-send"></i></button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -561,6 +628,11 @@ document.addEventListener('DOMContentLoaded', function() {
                     window._updateGlobe(score, riskCountry.value);
                 }
 
+                // Update chatbot context with live risk/economic data
+                if (typeof window._updateChatContext === 'function') {
+                    window._updateChatContext(data);
+                }
+
                 // Load the plain-language verdict after score is ready
                 loadVerdict();
             })
@@ -615,51 +687,210 @@ document.addEventListener('DOMContentLoaded', function() {
     riskCountry.addEventListener('change', loadRisk);
     loadRisk();
 
-    // Chatbot
-    const chatMessages = document.getElementById('chatMessages');
-    const chatInput = document.getElementById('chatInput');
-    const chatSendBtn = document.getElementById('chatSendBtn');
+    // Chatbot with context, memory, chips, typewriter, markdown, typing indicator
+    var chatMessages = document.getElementById('chatMessages');
+    var chatInput = document.getElementById('chatInput');
+    var chatSendBtn = document.getElementById('chatSendBtn');
+    var chatContainer = document.getElementById('chatbotContainer');
+    var chatSuggestedPrompts = document.getElementById('chatSuggestedPrompts');
+    var conversationHistory = [];
+    var chatFirstMessageSent = false;
 
-    function appendChat(role, text) {
-        const div = document.createElement('div');
-        div.className = 'mb-2 ' + (role === 'user' ? 'text-end' : '');
-        const bubble = document.createElement('div');
-        bubble.className = 'd-inline-block px-3 py-2 rounded-3 ' + (role === 'user' ? 'bg-primary text-white' : 'bg-white border');
+    // ── Minimal markdown parser ──
+    function parseMd(text) {
+        var safe = String(text || '');
+        // bold
+        safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        // italic
+        safe = safe.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        // paragraphs by double newline
+        var blocks = safe.split(/\n{2,}/);
+        var html = [];
+        blocks.forEach(function(block) {
+            block = block.trim();
+            if (!block) return;
+            var lines = block.split('\n');
+            // check if ordered list
+            if (/^\d+\.\s/.test(lines[0])) {
+                html.push('<ol>' + lines.map(function(l) { return '<li>' + l.replace(/^\d+\.\s*/, '') + '</li>'; }).join('') + '</ol>');
+            }
+            // check if unordered list
+            else if (/^[-*]\s/.test(lines[0])) {
+                html.push('<ul>' + lines.map(function(l) { return '<li>' + l.replace(/^[-*]\s*/, '') + '</li>'; }).join('') + '</ul>');
+            } else {
+                html.push('<p>' + lines.join('<br>') + '</p>');
+            }
+        });
+        return html.join('');
+    }
+
+    function appendUserChat(text) {
+        var placeholder = document.getElementById('chatPlaceholder');
+        if (placeholder) placeholder.remove();
+        var div = document.createElement('div');
+        div.className = 'mb-2 text-end';
+        var bubble = document.createElement('div');
+        bubble.className = 'd-inline-block px-3 py-2 rounded-3 bg-primary text-white';
         bubble.style.maxWidth = '85%';
         bubble.style.textAlign = 'left';
-        bubble.style.whiteSpace = 'pre-wrap';
-        bubble.innerHTML = formatInlineMarkup(text);
+        bubble.textContent = text;
         div.appendChild(bubble);
         chatMessages.appendChild(div);
         chatMessages.scrollTop = chatMessages.scrollHeight;
     }
 
-    function sendChat() {
-        const msg = chatInput.value.trim();
-        if (!msg) return;
-        appendChat('user', msg);
-        chatInput.value = '';
-        chatSendBtn.disabled = true;
+    function showTypingIndicator() {
+        var div = document.createElement('div');
+        div.className = 'mb-2';
+        div.id = 'typingIndicator';
+        div.innerHTML = '<div class="typing-indicator"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+        chatMessages.appendChild(div);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
 
-        const body = new URLSearchParams();
-        body.append('message', msg);
+    function removeTypingIndicator() {
+        var el = document.getElementById('typingIndicator');
+        if (el) el.remove();
+    }
+
+    function typewriterEffect(element, htmlContent, callback) {
+        // strip tags to get raw text for char-by-char, then apply html at end
+        var temp = document.createElement('div');
+        temp.innerHTML = htmlContent;
+        var rawText = temp.textContent || temp.innerText || '';
+        var i = 0;
+        element.textContent = '';
+        var interval = setInterval(function() {
+            i += 1;
+            element.textContent = rawText.substring(0, i);
+            element.parentNode.parentNode.scrollTop = element.parentNode.parentNode.scrollHeight;
+            if (i >= rawText.length) {
+                clearInterval(interval);
+                // Now apply formatted HTML
+                element.innerHTML = htmlContent;
+                element.parentNode.parentNode.scrollTop = element.parentNode.parentNode.scrollHeight;
+                if (callback) callback();
+            }
+        }, 55); // ~18 chars/sec
+    }
+
+    function appendAssistantChat(text) {
+        var div = document.createElement('div');
+        div.className = 'mb-2';
+        var bubble = document.createElement('div');
+        bubble.className = 'd-inline-block px-3 py-2 rounded-3 bg-white border';
+        bubble.style.maxWidth = '85%';
+        bubble.style.textAlign = 'left';
+        var content = document.createElement('span');
+        bubble.appendChild(content);
+        div.appendChild(bubble);
+        chatMessages.appendChild(div);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        var mdHtml = parseMd(text);
+        typewriterEffect(content, mdHtml);
+    }
+
+    function getChatContext() {
+        return {
+            opportunityId: chatContainer.getAttribute('data-opportunity-id') || '',
+            opportunityTitle: chatContainer.getAttribute('data-opportunity-title') || '',
+            sector: chatContainer.getAttribute('data-sector') || '',
+            fundingTarget: chatContainer.getAttribute('data-funding-target') || '',
+            deadline: chatContainer.getAttribute('data-deadline') || '',
+            riskScore: chatContainer.getAttribute('data-risk-score') || '',
+            riskLevel: chatContainer.getAttribute('data-risk-level') || '',
+            inflationRate: chatContainer.getAttribute('data-inflation') || '',
+            gdpGrowth: chatContainer.getAttribute('data-gdp') || '',
+            exchangeRate: chatContainer.getAttribute('data-exchange-rate') || '',
+            investorBudgetMin: chatContainer.getAttribute('data-budget-min') || '',
+            investorBudgetMax: chatContainer.getAttribute('data-budget-max') || '',
+            investorPreferredSectors: chatContainer.getAttribute('data-preferred-sectors') || '',
+            investorRiskTolerance: chatContainer.getAttribute('data-risk-tolerance') || ''
+        };
+    }
+
+    function sendChat(msg) {
+        var userMsg = msg || chatInput.value.trim();
+        if (!userMsg) return;
+        chatInput.value = '';
+
+        // Hide chips after first message
+        if (!chatFirstMessageSent) {
+            chatFirstMessageSent = true;
+            chatSuggestedPrompts.style.opacity = '0';
+            setTimeout(function() { chatSuggestedPrompts.style.display = 'none'; }, 200);
+        }
+
+        appendUserChat(userMsg);
+        conversationHistory.push({role: 'user', content: userMsg});
+
+        // Cap at 10 pairs (20 entries)
+        while (conversationHistory.length > 20) {
+            conversationHistory.shift();
+            conversationHistory.shift();
+        }
+
+        chatSendBtn.disabled = true;
+        showTypingIndicator();
+
+        var ctx = getChatContext();
+        var body = new URLSearchParams();
+        body.append('message', userMsg);
+        body.append('conversationHistory', JSON.stringify(conversationHistory));
+        body.append('opportunityId', ctx.opportunityId);
+        body.append('opportunityTitle', ctx.opportunityTitle);
+        body.append('sector', ctx.sector);
+        body.append('fundingTarget', ctx.fundingTarget);
+        body.append('deadline', ctx.deadline);
+        body.append('riskScore', ctx.riskScore);
+        body.append('riskLevel', ctx.riskLevel);
+        body.append('inflationRate', ctx.inflationRate);
+        body.append('gdpGrowth', ctx.gdpGrowth);
+        body.append('exchangeRate', ctx.exchangeRate);
+        body.append('investorBudgetMin', ctx.investorBudgetMin);
+        body.append('investorBudgetMax', ctx.investorBudgetMax);
+        body.append('investorPreferredSectors', ctx.investorPreferredSectors);
+        body.append('investorRiskTolerance', ctx.investorRiskTolerance);
 
         fetch('{{ path("app_invest_chatbot") }}', {method:'POST', body: body})
-            .then(r => r.json())
-            .then(data => {
-                appendChat('assistant', data.response || data.error || 'Pas de reponse.');
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                removeTypingIndicator();
+                var responseText = data.response || data.error || 'Pas de reponse.';
+                appendAssistantChat(responseText);
+                conversationHistory.push({role: 'assistant', content: responseText});
                 chatSendBtn.disabled = false;
             })
-            .catch(() => {
-                appendChat('assistant', 'Erreur de connexion.');
+            .catch(function() {
+                removeTypingIndicator();
+                appendAssistantChat('Erreur de connexion.');
                 chatSendBtn.disabled = false;
             });
     }
 
-    chatSendBtn.addEventListener('click', sendChat);
+    chatSendBtn.addEventListener('click', function() { sendChat(); });
     chatInput.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') sendChat();
     });
+
+    // Chip click handlers
+    chatSuggestedPrompts.querySelectorAll('.chat-chip').forEach(function(chip) {
+        chip.addEventListener('click', function() {
+            sendChat(chip.getAttribute('data-prompt'));
+        });
+    });
+
+    // Update chatbot context data attributes when risk data loads
+    window._updateChatContext = function(data) {
+        if (data.score !== undefined) chatContainer.setAttribute('data-risk-score', data.score);
+        if (data.level) chatContainer.setAttribute('data-risk-level', data.level);
+        if (data.economicData) {
+            if (data.economicData.inflation !== undefined) chatContainer.setAttribute('data-inflation', data.economicData.inflation);
+            if (data.economicData.gdp !== undefined) chatContainer.setAttribute('data-gdp', data.economicData.gdp);
+            if (data.economicData.eurUsd !== undefined) chatContainer.setAttribute('data-exchange-rate', data.economicData.eurUsd);
+        }
+    };
 });
 </script>
 

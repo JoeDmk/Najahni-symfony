@@ -698,6 +698,58 @@ class InvestmentContractController extends AbstractController
         return $this->redirectToRoute('app_invest_contract_show', ['id' => $offer->getId()]);
     }
 
+    #[Route('/advisor', name: 'app_invest_contract_advisor', requirements: ['id' => '\d+'], methods: ['POST'])]
+    public function advisor(
+        InvestmentOffer $offer,
+        Request $request,
+        EntityManagerInterface $em,
+        ContractSignatureService $signatureService,
+        InvestmentChatbotService $chatbot,
+        InvestmentContractMessageRepository $messageRepository,
+        ContractMilestoneRepository $milestoneRepository,
+    ): JsonResponse {
+        $user = $this->requireUser();
+        $this->assertContractAccess($offer, $user);
+
+        $message = trim($request->request->get('message', ''));
+        if ($message === '') {
+            return $this->json(['response' => null, 'error' => 'Message vide.'], 400);
+        }
+
+        if (mb_strlen($message) > 2000) {
+            return $this->json(['response' => null, 'error' => 'Message trop long (max 2000 caracteres).'], 400);
+        }
+
+        $historyRaw = $request->request->get('conversationHistory', '[]');
+        $conversationHistory = json_decode($historyRaw, true);
+        if (!is_array($conversationHistory)) {
+            $conversationHistory = [];
+        }
+
+        $contract = $this->getOrCreateContract($offer, $em, $signatureService);
+        $messages = $messageRepository->findChronological($contract);
+        $milestones = $milestoneRepository->findByContract($contract);
+
+        $context = [
+            'mode' => 'contract',
+            'projectName' => $offer->getOpportunity()?->getProject()?->getTitre() ?? 'N/A',
+            'sector' => $offer->getOpportunity()?->getProject()?->getSecteur() ?? 'N/A',
+            'amount' => (string) $offer->getProposedAmount(),
+            'equity' => $contract->getEquityPercentage() !== null ? (string) $contract->getEquityPercentage() : 'Not set',
+            'contractStatus' => $contract->getStatus(),
+            'milestoneCount' => (string) count($milestones),
+            'messageCount' => (string) count($messages),
+            'bothSigned' => $contract->isFullySigned() ? 'yes' : 'no',
+        ];
+
+        try {
+            $response = $chatbot->chatWithContext($message, $context, $conversationHistory);
+            return $this->json(['response' => $response, 'error' => null]);
+        } catch (\Throwable $e) {
+            return $this->json(['response' => null, 'error' => 'Erreur du service IA.'], 500);
+        }
+    }
+
     #[Route('/ai-suggest', name: 'app_invest_contract_ai_suggest', requirements: ['id' => '\d+'], methods: ['POST'])]
     public function aiSuggest(
         InvestmentOffer $offer,

@@ -290,23 +290,89 @@ class InvestmentAdvancedController extends AbstractController
     // ─── Chatbot ─────────────────────────────────────────────
 
     #[Route('/chatbot', name: 'app_invest_chatbot', methods: ['POST'])]
-    public function chatbot(Request $request, InvestmentChatbotService $chatbot): JsonResponse
-    {
+    public function chatbot(
+        Request $request,
+        InvestmentChatbotService $chatbot,
+        InvestmentOpportunityRepository $oppRepo,
+        InvestorProfileRepository $profileRepo,
+    ): JsonResponse {
         $message = trim($request->request->get('message', ''));
         if ($message === '') {
-            return $this->json(['error' => 'Message vide.'], 400);
+            return $this->json(['response' => null, 'error' => 'Message vide.'], 400);
         }
 
         if (mb_strlen($message) > 2000) {
-            return $this->json(['error' => 'Message trop long (max 2000 caracteres).'], 400);
+            return $this->json(['response' => null, 'error' => 'Message trop long (max 2000 caracteres).'], 400);
         }
 
-        $response = $chatbot->chat($message);
+        // Decode conversation history
+        $historyRaw = $request->request->get('conversationHistory', '[]');
+        $conversationHistory = json_decode($historyRaw, true);
+        if (!is_array($conversationHistory)) {
+            $conversationHistory = [];
+        }
 
-        return $this->json([
-            'response' => $response,
-            'configured' => $chatbot->isConfigured(),
-        ]);
+        // Build context from POST params
+        $context = [
+            'mode' => 'risk',
+            'opportunityTitle' => $request->request->get('opportunityTitle', 'N/A'),
+            'sector' => $request->request->get('sector', 'N/A'),
+            'fundingTarget' => $request->request->get('fundingTarget', 'N/A'),
+            'deadline' => $request->request->get('deadline', 'N/A'),
+            'riskScore' => $request->request->get('riskScore', 'N/A'),
+            'riskLevel' => $request->request->get('riskLevel', 'N/A'),
+            'inflationRate' => $request->request->get('inflationRate', 'N/A'),
+            'gdpGrowth' => $request->request->get('gdpGrowth', 'N/A'),
+            'exchangeRate' => $request->request->get('exchangeRate', 'N/A'),
+            'investorBudgetMin' => $request->request->get('investorBudgetMin', 'N/A'),
+            'investorBudgetMax' => $request->request->get('investorBudgetMax', 'N/A'),
+            'investorPreferredSectors' => $request->request->get('investorPreferredSectors', 'N/A'),
+            'investorRiskTolerance' => $request->request->get('investorRiskTolerance', 'N/A'),
+        ];
+
+        // Enrich context from DB if opportunityId provided
+        $oppId = (int) $request->request->get('opportunityId', 0);
+        if ($oppId > 0) {
+            $opp = $oppRepo->find($oppId);
+            if ($opp) {
+                if ($context['opportunityTitle'] === 'N/A') {
+                    $context['opportunityTitle'] = $opp->getProject()?->getTitre() ?? 'N/A';
+                }
+                if ($context['sector'] === 'N/A') {
+                    $context['sector'] = $opp->getProject()?->getSecteur() ?? 'N/A';
+                }
+                if ($context['fundingTarget'] === 'N/A') {
+                    $context['fundingTarget'] = (string) $opp->getTargetAmount();
+                }
+                if ($context['deadline'] === 'N/A') {
+                    $context['deadline'] = $opp->getDeadline()?->format('d/m/Y') ?? 'N/A';
+                }
+            }
+        }
+
+        // Enrich investor profile from DB
+        $profile = $profileRepo->findByUser($this->getUser());
+        if ($profile) {
+            if ($context['investorBudgetMin'] === 'N/A') {
+                $context['investorBudgetMin'] = $profile->getBudgetMin();
+            }
+            if ($context['investorBudgetMax'] === 'N/A') {
+                $context['investorBudgetMax'] = $profile->getBudgetMax();
+            }
+            if ($context['investorPreferredSectors'] === 'N/A') {
+                $context['investorPreferredSectors'] = $profile->getPreferredSectors() ?? 'N/A';
+            }
+            if ($context['investorRiskTolerance'] === 'N/A') {
+                $context['investorRiskTolerance'] = (string) $profile->getRiskTolerance();
+            }
+        }
+
+        try {
+            $response = $chatbot->chatWithContext($message, $context, $conversationHistory);
+            return $this->json(['response' => $response, 'error' => null]);
+        } catch (\Throwable $e) {
+            return $this->json(['response' => null, 'error' => 'Erreur du service IA.'], 500);
+        }
     }
 
     #[Route('/chatbot/analyze-risk', name: 'app_invest_chatbot_risk', methods: ['POST'])]

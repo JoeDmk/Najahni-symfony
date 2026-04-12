@@ -134,6 +134,79 @@ PROMPT;
         return $this->sendOneShot($prompt, 200);
     }
 
+    /**
+     * Chat with full investment context and conversation history.
+     */
+    public function chatWithContext(string $userMessage, array $context, array $conversationHistory): string
+    {
+        $systemPrompt = $this->buildContextualSystemPrompt($context);
+
+        $messages = [['role' => 'system', 'content' => $systemPrompt]];
+        foreach ($conversationHistory as $turn) {
+            $role = $turn['role'] ?? '';
+            $content = $turn['content'] ?? '';
+            if (in_array($role, ['user', 'assistant'], true) && $content !== '') {
+                $messages[] = ['role' => $role, 'content' => $content];
+            }
+        }
+        $messages[] = ['role' => 'user', 'content' => $userMessage];
+
+        return $this->sendRequest($messages, 600);
+    }
+
+    private function buildContextualSystemPrompt(array $ctx): string
+    {
+        $mode = $ctx['mode'] ?? 'risk';
+
+        if ($mode === 'contract') {
+            return sprintf(
+                "You are a deal advisor on Najahni, a Tunisian investment platform. You are advising parties on a live contract negotiation. Here is the contract context:\n\n"
+                . "Project: %s\n"
+                . "Sector: %s\n"
+                . "Investment amount: %s TND\n"
+                . "Current equity percentage: %s%%\n"
+                . "Contract status: %s\n"
+                . "Milestones defined: %s\n"
+                . "Messages exchanged: %s\n"
+                . "Both parties signed: %s\n\n"
+                . "Your role is to help both parties reach a fair agreement. Answer questions about typical equity ranges, milestone structures, contract terms, and negotiation strategy for small Tunisian projects of this size and sector. Be specific, use the numbers above, and help move the deal forward. Never take sides. Respond in the same language the user uses.",
+                $ctx['projectName'] ?? 'N/A',
+                $ctx['sector'] ?? 'N/A',
+                $ctx['amount'] ?? 'N/A',
+                $ctx['equity'] ?? 'N/A',
+                $ctx['contractStatus'] ?? 'N/A',
+                $ctx['milestoneCount'] ?? '0',
+                $ctx['messageCount'] ?? '0',
+                $ctx['bothSigned'] ?? 'no',
+            );
+        }
+
+        return sprintf(
+            "You are an expert investment advisor on Najahni, a Tunisian investment platform connecting small businesses with investors. You are currently advising an investor who is evaluating a specific investment opportunity. Here is the context you must use to answer their questions:\n\n"
+            . "Project: %s\n"
+            . "Sector: %s\n"
+            . "Funding target: %s TND\n"
+            . "Project deadline: %s\n"
+            . "Current risk score: %s/100 — rated %s risk\n"
+            . "Tunisia economic conditions: Inflation %s%%, GDP growth %s%%, Exchange rate %s TND/USD\n"
+            . "Investor profile: Budget range %s–%s TND, preferred sectors %s, risk tolerance %s/10\n\n"
+            . "Answer every question with specific reference to this context. Never give generic financial advice. Always refer to the specific numbers and conditions above. If the investor asks whether this investment is right for them, compare the opportunity's risk profile against their stated preferences. Be direct, specific, and honest. Respond in the same language the investor uses — French or English.",
+            $ctx['opportunityTitle'] ?? 'N/A',
+            $ctx['sector'] ?? 'N/A',
+            $ctx['fundingTarget'] ?? 'N/A',
+            $ctx['deadline'] ?? 'N/A',
+            $ctx['riskScore'] ?? 'N/A',
+            $ctx['riskLevel'] ?? 'N/A',
+            $ctx['inflationRate'] ?? 'N/A',
+            $ctx['gdpGrowth'] ?? 'N/A',
+            $ctx['exchangeRate'] ?? 'N/A',
+            $ctx['investorBudgetMin'] ?? 'N/A',
+            $ctx['investorBudgetMax'] ?? 'N/A',
+            $ctx['investorPreferredSectors'] ?? 'N/A',
+            $ctx['investorRiskTolerance'] ?? 'N/A',
+        );
+    }
+
     public function clearHistory(): void
     {
         $this->conversationHistory = [];

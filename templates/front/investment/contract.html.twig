@@ -381,6 +381,51 @@
 .contract-status-bar .csb-right a { font-size: .75rem; color: #93c5fd; text-decoration: none; font-weight: 600; }
 .contract-status-bar .csb-right a:hover { text-decoration: underline; }
 .contract-content-push { margin-top: 40px; }
+
+/* Advisor chips */
+.advisor-chip {
+    background: #eff6ff;
+    border: 1px solid #93c5fd;
+    color: #1e40af;
+    font-size: .72rem;
+    padding: .2rem .6rem;
+    border-radius: 999px;
+    height: 28px;
+    line-height: 1;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background .15s, border-color .15s;
+}
+.advisor-chip:hover {
+    background: #dbeafe;
+    border-color: #3b82f6;
+    color: #1e3a8a;
+}
+
+/* Typing indicator */
+.typing-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: .5rem .85rem;
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 1rem;
+    margin-bottom: .5rem;
+}
+.typing-indicator .dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #94a3b8;
+    animation: typingFade 1.2s ease-in-out infinite;
+}
+.typing-indicator .dot:nth-child(2) { animation-delay: .2s; }
+.typing-indicator .dot:nth-child(3) { animation-delay: .4s; }
+@keyframes typingFade {
+    0%, 60%, 100% { opacity: .3; }
+    30% { opacity: 1; }
+}
 </style>
 
 {# ── Fixed persistent status bar ── #}
@@ -839,6 +884,36 @@
                 <button type="submit" class="btn btn-nj" id="contractMessageSubmit">Envoyer</button>
             </div>
         </form>
+
+        {# ── Deal Advisor (private AI panel) ── #}
+        <div class="border-top" style="border-color:#e2e8f0 !important"></div>
+        <div id="dealAdvisorPanel" style="background:#f0f9ff">
+            <div class="px-3 py-2 d-flex align-items-center justify-content-between cursor-pointer" id="dealAdvisorToggle" style="cursor:pointer">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="bi bi-lightbulb" style="color:#2563eb;font-size:1rem"></i>
+                    <span class="fw-bold small" style="color:#1e40af">Deal Advisor</span>
+                    <span class="badge bg-primary bg-opacity-10 text-primary" style="font-size:.68rem">IA privee</span>
+                </div>
+                <i class="bi bi-chevron-down small" id="dealAdvisorChevron" style="transition:transform .2s"></i>
+            </div>
+            <div id="dealAdvisorBody" class="d-none">
+                <div id="advisorMessages" style="height:220px;overflow-y:auto;padding:.75rem;background:#fafcff;border-top:1px solid #dbeafe">
+                    <div class="text-muted small text-center" id="advisorPlaceholder">Votre conseiller prive. Les reponses ne sont pas partagees avec l'autre partie.</div>
+                </div>
+                <div id="advisorSuggestedPrompts" class="d-flex flex-wrap gap-2 px-3 pt-2" style="transition:opacity .2s ease">
+                    <button type="button" class="btn advisor-chip" data-prompt="What equity percentage is typical for this investment size?">What equity percentage is typical for this investment size?</button>
+                    <button type="button" class="btn advisor-chip" data-prompt="Suggest a milestone structure for this project">Suggest a milestone structure for this project</button>
+                    <button type="button" class="btn advisor-chip" data-prompt="What terms should I include in this contract?">What terms should I include in this contract?</button>
+                    <button type="button" class="btn advisor-chip" data-prompt="Is this deal progressing at a normal pace?">Is this deal progressing at a normal pace?</button>
+                </div>
+                <div class="p-3">
+                    <div class="input-group">
+                        <input type="text" id="advisorInput" class="form-control form-control-sm" placeholder="Demandez conseil..." maxlength="2000">
+                        <button type="button" id="advisorSendBtn" class="btn btn-sm btn-primary"><i class="bi bi-send"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -1193,6 +1268,172 @@
         });
     });
     observer.observe(document.querySelector('[class*="block"]') || document.body, { childList: true, subtree: true });
+})();
+
+// Deal Advisor
+(function() {
+    var toggle = document.getElementById('dealAdvisorToggle');
+    var body = document.getElementById('dealAdvisorBody');
+    var chevron = document.getElementById('dealAdvisorChevron');
+    var messages = document.getElementById('advisorMessages');
+    var input = document.getElementById('advisorInput');
+    var sendBtn = document.getElementById('advisorSendBtn');
+    var chips = document.getElementById('advisorSuggestedPrompts');
+    var advisorUrl = '{{ path("app_invest_contract_advisor", {id: offer.id}) }}';
+    var advisorHistory = [];
+    var advisorFirstSent = false;
+    var advisorOpen = false;
+
+    if (!toggle || !body) return;
+
+    toggle.addEventListener('click', function() {
+        advisorOpen = !advisorOpen;
+        body.classList.toggle('d-none', !advisorOpen);
+        chevron.style.transform = advisorOpen ? 'rotate(180deg)' : '';
+    });
+
+    function parseMd(text) {
+        var safe = String(text || '');
+        safe = safe.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        safe = safe.replace(/\*(.+?)\*/g, '<em>$1</em>');
+        var blocks = safe.split(/\n{2,}/);
+        var html = [];
+        blocks.forEach(function(block) {
+            block = block.trim();
+            if (!block) return;
+            var lines = block.split('\n');
+            if (/^\d+\.\s/.test(lines[0])) {
+                html.push('<ol>' + lines.map(function(l) { return '<li>' + l.replace(/^\d+\.\s*/, '') + '</li>'; }).join('') + '</ol>');
+            } else if (/^[-*]\s/.test(lines[0])) {
+                html.push('<ul>' + lines.map(function(l) { return '<li>' + l.replace(/^[-*]\s*/, '') + '</li>'; }).join('') + '</ul>');
+            } else {
+                html.push('<p>' + lines.join('<br>') + '</p>');
+            }
+        });
+        return html.join('');
+    }
+
+    function typewriter(element, htmlContent, cb) {
+        var temp = document.createElement('div');
+        temp.innerHTML = htmlContent;
+        var rawText = temp.textContent || temp.innerText || '';
+        var i = 0;
+        element.textContent = '';
+        var iv = setInterval(function() {
+            i += 1;
+            element.textContent = rawText.substring(0, i);
+            messages.scrollTop = messages.scrollHeight;
+            if (i >= rawText.length) {
+                clearInterval(iv);
+                element.innerHTML = htmlContent;
+                messages.scrollTop = messages.scrollHeight;
+                if (cb) cb();
+            }
+        }, 55);
+    }
+
+    function appendUser(text) {
+        var placeholder = document.getElementById('advisorPlaceholder');
+        if (placeholder) placeholder.remove();
+        var div = document.createElement('div');
+        div.className = 'mb-2 text-end';
+        var bubble = document.createElement('div');
+        bubble.className = 'd-inline-block px-3 py-2 rounded-3 bg-primary text-white small';
+        bubble.style.maxWidth = '85%';
+        bubble.style.textAlign = 'left';
+        bubble.textContent = text;
+        div.appendChild(bubble);
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+    }
+
+    function appendAssistant(text) {
+        var div = document.createElement('div');
+        div.className = 'mb-2';
+        var bubble = document.createElement('div');
+        bubble.className = 'd-inline-block px-3 py-2 rounded-3 small';
+        bubble.style.maxWidth = '85%';
+        bubble.style.textAlign = 'left';
+        bubble.style.background = '#eff6ff';
+        bubble.style.border = '1px solid #bfdbfe';
+        var content = document.createElement('span');
+        bubble.appendChild(content);
+        div.appendChild(bubble);
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+        typewriter(content, parseMd(text));
+    }
+
+    function showTyping() {
+        var div = document.createElement('div');
+        div.className = 'mb-2';
+        div.id = 'advisorTyping';
+        div.innerHTML = '<div class="typing-indicator"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>';
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+    }
+
+    function removeTyping() {
+        var el = document.getElementById('advisorTyping');
+        if (el) el.remove();
+    }
+
+    function sendAdvisor(msg) {
+        var userMsg = msg || input.value.trim();
+        if (!userMsg) return;
+        input.value = '';
+
+        if (!advisorFirstSent) {
+            advisorFirstSent = true;
+            chips.style.opacity = '0';
+            setTimeout(function() { chips.style.display = 'none'; }, 200);
+        }
+
+        appendUser(userMsg);
+        advisorHistory.push({role: 'user', content: userMsg});
+        while (advisorHistory.length > 20) {
+            advisorHistory.shift();
+            advisorHistory.shift();
+        }
+
+        sendBtn.disabled = true;
+        showTyping();
+
+        var body = new URLSearchParams();
+        body.append('message', userMsg);
+        body.append('conversationHistory', JSON.stringify(advisorHistory));
+
+        fetch(advisorUrl, {method: 'POST', body: body})
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                removeTyping();
+                var resp = data.response || data.error || 'Pas de reponse.';
+                appendAssistant(resp);
+                advisorHistory.push({role: 'assistant', content: resp});
+                sendBtn.disabled = false;
+            })
+            .catch(function() {
+                removeTyping();
+                appendAssistant('Erreur de connexion.');
+                sendBtn.disabled = false;
+            });
+    }
+
+    sendBtn.addEventListener('click', function() { sendAdvisor(); });
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') sendAdvisor();
+    });
+
+    chips.querySelectorAll('.advisor-chip').forEach(function(chip) {
+        chip.addEventListener('click', function() {
+            if (!advisorOpen) {
+                advisorOpen = true;
+                body.classList.remove('d-none');
+                chevron.style.transform = 'rotate(180deg)';
+            }
+            sendAdvisor(chip.getAttribute('data-prompt'));
+        });
+    });
 })();
 </script>
 {% endblock %}
