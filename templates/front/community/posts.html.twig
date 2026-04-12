@@ -188,15 +188,20 @@
 {% endblock %}
 
 {% block main %}
+{% set newPostData = newPostData|default({content: ''}) %}
+{% set newPostErrors = newPostErrors|default({}) %}
+{% set openPostEditId = openPostEditId|default(null) %}
+{% set postEditData = postEditData|default({content: '', remove_image: false}) %}
+{% set postEditErrors = postEditErrors|default({}) %}
 <div class="row g-4">
     <div class="col-xl-8">
         <div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
             <div>
                 <h2 class="fw-bold mb-1"><i class="bi bi-chat-square-text me-2"></i>Fil d'actualité</h2>
-                <p class="text-muted mb-0">Publiez, traduisez et gerez vos reactions sans recharger toute la page.</p>
+                <p class="text-muted mb-0">Publiez, traduisez, reagissez et filtrez les posts en temps reel pendant la frappe.</p>
             </div>
             <form method="get" action="{{ path('app_community_posts') }}" class="community-feed-toolbar w-100">
-                <input type="search" name="q" value="{{ search }}" class="form-control" placeholder="Rechercher un auteur ou un texte...">
+                <input type="search" name="q" value="{{ search }}" class="form-control" placeholder="Rechercher un auteur ou un texte..." data-live-post-search>
                 <select name="sort" class="form-select">
                     <option value="newest" {{ sort == 'newest' ? 'selected' }}>Plus recentes</option>
                     <option value="oldest" {{ sort == 'oldest' ? 'selected' }}>Plus anciennes</option>
@@ -210,10 +215,18 @@
         <div class="card border-0 shadow-sm mb-4" style="border-radius:1rem">
             <div class="card-body p-4">
                 <form method="post" action="{{ path('app_community_post_new') }}" enctype="multipart/form-data">
-                    <textarea name="content" class="form-control mb-3" rows="3" placeholder="Quoi de neuf ? Partagez avec la communauté..." maxlength="500"></textarea>
+                    <label class="form-label fw-semibold">Texte</label>
+                    <textarea name="content" class="form-control mb-3{{ newPostErrors.content is defined ? ' is-invalid' }}" rows="3" placeholder="Quoi de neuf ? Partagez avec la communauté..." maxlength="500">{{ newPostData.content }}</textarea>
+                    {% if newPostErrors.content is defined %}
+                    <div class="invalid-feedback d-block mb-3">{{ newPostErrors.content }}</div>
+                    {% endif %}
                     <div class="row g-3 align-items-center">
                         <div class="col-md-6">
-                            <input type="file" name="image" class="form-control" accept="image/*">
+                            <label class="form-label fw-semibold">Image</label>
+                            <input type="file" name="image" class="form-control{{ newPostErrors.image is defined ? ' is-invalid' }}" accept="image/*">
+                            {% if newPostErrors.image is defined %}
+                            <div class="invalid-feedback d-block">{{ newPostErrors.image }}</div>
+                            {% endif %}
                         </div>
                         <div class="col-md-6 d-flex justify-content-between align-items-center">
                             <small class="text-muted">Texte ou image, max 500 caracteres</small>
@@ -230,10 +243,11 @@
         {% set summary = post.reactionSummary %}
         {% set reactionCaption = post.reactionsCount > 0 ? post.reactionsCount ~ ' reactions' : 'Pas encore de reaction' %}
         {% set currentReactionMeta = myReaction and reactionMeta[myReaction] is defined ? reactionMeta[myReaction] : reactionMeta['LIKE'] %}
+        {% set postEditActive = openPostEditId == post.id %}
         {% if myReaction and reactionMeta[myReaction] is defined %}
             {% set reactionCaption = reactionCaption ~ ' · Vous avez choisi ' ~ reactionMeta[myReaction].label %}
         {% endif %}
-        <div class="card border-0 shadow-sm mb-3" style="border-radius:1rem" data-post-id="{{ post.id }}">
+        <div id="post-{{ post.id }}" class="card border-0 shadow-sm mb-3" style="border-radius:1rem" data-post-id="{{ post.id }}" data-live-post-card data-live-post-text="{{ (post.user.firstname ~ ' ' ~ post.user.lastname ~ ' ' ~ post.content)|lower|e('html_attr') }}">
             <div class="card-body p-4">
                 <div class="d-flex align-items-center mb-3">
                     <div class="rounded-circle d-flex align-items-center justify-content-center me-3" style="width:42px;height:42px;background:var(--nj-gradient);color:#fff">
@@ -267,18 +281,26 @@
                 {% endif %}
 
                 {% if post.user == app.user or is_granted('ROLE_ADMIN') %}
-                <div class="collapse mb-3" id="edit-post-{{ post.id }}">
+                <div class="collapse mb-3{{ postEditActive ? ' show' : '' }}" id="edit-post-{{ post.id }}">
                     <div class="border rounded-4 p-3 bg-light-subtle">
                         <form method="post" action="{{ path('app_community_post_update', {id: post.id}) }}" enctype="multipart/form-data">
-                            <textarea name="content" class="form-control mb-3" rows="3" maxlength="500">{{ post.content }}</textarea>
+                            <label class="form-label fw-semibold">Texte</label>
+                            <textarea name="content" class="form-control mb-3{{ postEditActive and postEditErrors.content is defined ? ' is-invalid' }}" rows="3" maxlength="500">{{ postEditActive ? postEditData.content : post.content }}</textarea>
+                            {% if postEditActive and postEditErrors.content is defined %}
+                            <div class="invalid-feedback d-block mb-3">{{ postEditErrors.content }}</div>
+                            {% endif %}
                             <div class="row g-3 align-items-center">
                                 <div class="col-md-6">
-                                    <input type="file" name="image" class="form-control" accept="image/*">
+                                    <label class="form-label fw-semibold">Image</label>
+                                    <input type="file" name="image" class="form-control{{ postEditActive and postEditErrors.image is defined ? ' is-invalid' }}" accept="image/*">
+                                    {% if postEditActive and postEditErrors.image is defined %}
+                                    <div class="invalid-feedback d-block">{{ postEditErrors.image }}</div>
+                                    {% endif %}
                                 </div>
                                 <div class="col-md-6 d-flex flex-wrap justify-content-between align-items-center gap-2">
                                     {% if post.imageUrl %}
                                     <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" name="remove_image" id="remove-image-{{ post.id }}" value="1">
+                                        <input class="form-check-input" type="checkbox" name="remove_image" id="remove-image-{{ post.id }}" value="1" {{ postEditActive and postEditData.remove_image ? 'checked' }}>
                                         <label class="form-check-label small" for="remove-image-{{ post.id }}">Supprimer l'image</label>
                                     </div>
                                     {% endif %}
@@ -332,6 +354,12 @@
             <p class="text-muted mt-2">Aucune publication. Soyez le premier à partager !</p>
         </div>
         {% endfor %}
+        {% if posts|length > 0 %}
+        <div class="text-center py-5 d-none" data-live-post-empty>
+            <div class="text-center"><i class="bi bi-search" style="font-size:2.5rem;color:var(--nj-primary)"></i></div>
+            <p class="text-muted mt-2 mb-0">Aucune publication ne correspond a votre recherche en direct.</p>
+        </div>
+        {% endif %}
     </div>
 
     {# Sidebar #}
@@ -560,6 +588,42 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    const livePostSearch = document.querySelector('[data-live-post-search]');
+    const livePostCards = Array.from(document.querySelectorAll('[data-live-post-card]'));
+    const livePostEmpty = document.querySelector('[data-live-post-empty]');
+
+    const applyLivePostFilter = () => {
+        if (!(livePostSearch instanceof HTMLInputElement)) {
+            return;
+        }
+
+        const needle = livePostSearch.value.trim().toLowerCase();
+        let visible = 0;
+
+        livePostCards.forEach((card) => {
+            if (!(card instanceof HTMLElement)) {
+                return;
+            }
+
+            const haystack = (card.dataset.livePostText || '').toLowerCase();
+            const matches = needle === '' || haystack.includes(needle);
+            card.classList.toggle('d-none', !matches);
+
+            if (matches) {
+                visible += 1;
+            }
+        });
+
+        if (livePostEmpty instanceof HTMLElement) {
+            livePostEmpty.classList.toggle('d-none', visible !== 0);
+        }
+    };
+
+    if (livePostSearch instanceof HTMLInputElement) {
+        livePostSearch.addEventListener('input', applyLivePostFilter);
+        applyLivePostFilter();
+    }
 });
 </script>
 {% endblock %}

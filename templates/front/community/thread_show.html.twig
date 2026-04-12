@@ -4,6 +4,16 @@
 
 {% block main %}
 {% set canManageThread = thread.user == app.user or is_granted('ROLE_ADMIN') %}
+{% set threadSummaryResult = threadSummaryResult|default(null) %}
+{% set replySuggestionsResult = replySuggestionsResult|default({items: []}) %}
+{% set threadEditData = threadEditData|default({title: thread.title, content: thread.content}) %}
+{% set threadEditErrors = threadEditErrors|default({}) %}
+{% set openThreadEdit = openThreadEdit|default(false) %}
+{% set commentFormData = commentFormData|default({content: ''}) %}
+{% set commentFormErrors = commentFormErrors|default({}) %}
+{% set commentEditTargetId = commentEditTargetId|default(null) %}
+{% set commentEditData = commentEditData|default({content: ''}) %}
+{% set commentEditErrors = commentEditErrors|default({}) %}
 
 <a href="{{ path('app_community_group_show', {id: thread.group.id}) }}" class="text-decoration-none text-muted"><i class="bi bi-arrow-left me-1"></i>{{ thread.group.name }}</a>
 
@@ -30,14 +40,24 @@
     </div>
 
     {% if canManageThread %}
-    <div class="collapse mt-4" id="thread-edit-form">
+    <div class="collapse mt-4{{ openThreadEdit ? ' show' : '' }}" id="thread-edit-form">
         <div class="border rounded-4 p-3 bg-light-subtle">
-            <form method="post" action="{{ path('app_community_thread_update', {id: thread.id}) }}">
+            <form method="post" action="{{ path('app_community_thread_update', {id: thread.id}) }}" novalidate>
                 <div class="mb-3">
-                    <input type="text" name="title" class="form-control" value="{{ thread.title }}" required>
+                    <label class="form-label fw-semibold">Titre</label>
+                    <input type="text" name="title" class="form-control{{ threadEditErrors.title is defined ? ' is-invalid' }}" value="{{ threadEditData.title }}" maxlength="150" required>
+                    <div class="form-text">5 a 150 caracteres avec un titre lisible.</div>
+                    {% if threadEditErrors.title is defined %}
+                    <div class="invalid-feedback d-block">{{ threadEditErrors.title }}</div>
+                    {% endif %}
                 </div>
                 <div class="mb-3">
-                    <textarea name="content" class="form-control" rows="4" required>{{ thread.content }}</textarea>
+                    <label class="form-label fw-semibold">Contenu</label>
+                    <textarea name="content" class="form-control{{ threadEditErrors.content is defined ? ' is-invalid' }}" rows="4" maxlength="5000" required>{{ threadEditData.content }}</textarea>
+                    <div class="form-text">Decrivez clairement le contexte, la question et les attentes.</div>
+                    {% if threadEditErrors.content is defined %}
+                    <div class="invalid-feedback d-block">{{ threadEditErrors.content }}</div>
+                    {% endif %}
                 </div>
                 <button type="submit" class="btn btn-nj btn-sm">Enregistrer</button>
             </form>
@@ -62,21 +82,43 @@
         </div>
     </div>
 
-    {% if threadSummary %}
+    {% if threadSummaryResult %}
     <div class="rounded-4 border p-3 mb-3 bg-light-subtle">
-        <div class="small text-uppercase text-muted fw-semibold mb-2">Resume</div>
-        <div>{{ threadSummary }}</div>
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            <div class="small text-uppercase text-muted fw-semibold">Resume</div>
+            <span class="badge rounded-pill {{ threadSummaryResult.error ? 'text-bg-danger' : (threadSummaryResult.used_provider ? 'text-bg-success' : 'text-bg-secondary') }}">{{ threadSummaryResult.source_label }}{% if threadSummaryResult.model %} · {{ threadSummaryResult.model }}{% endif %}</span>
+        </div>
+        {% if threadSummaryResult.error_message %}
+        <div class="alert alert-danger py-2 px-3 small mb-2">{{ threadSummaryResult.error_message }}</div>
+        {% endif %}
+        {% if threadSummaryResult.content %}
+        <div>{{ threadSummaryResult.content }}</div>
+        {% endif %}
+        {% if threadSummaryResult.source_hint %}
+        <div class="small text-muted mt-2">{{ threadSummaryResult.source_hint }}</div>
+        {% endif %}
     </div>
     {% endif %}
 
-    {% if replySuggestions is not empty %}
+    {% if replySuggestionsResult.items is not empty or replySuggestionsResult.error_message %}
     <div>
-        <div class="small text-uppercase text-muted fw-semibold mb-2">Suggestions de reponse</div>
+        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+            <div class="small text-uppercase text-muted fw-semibold">Suggestions de reponse</div>
+            <span class="badge rounded-pill {{ replySuggestionsResult.error ? 'text-bg-danger' : (replySuggestionsResult.used_provider ? 'text-bg-success' : 'text-bg-secondary') }}">{{ replySuggestionsResult.source_label }}{% if replySuggestionsResult.model %} · {{ replySuggestionsResult.model }}{% endif %}</span>
+        </div>
+        {% if replySuggestionsResult.error_message %}
+        <div class="alert alert-danger py-2 px-3 small mb-2">{{ replySuggestionsResult.error_message }}</div>
+        {% endif %}
+        {% if replySuggestionsResult.items is not empty %}
         <div class="d-flex flex-column gap-2">
-            {% for suggestion in replySuggestions %}
+            {% for suggestion in replySuggestionsResult.items %}
             <button type="button" class="btn btn-outline-secondary text-start community-suggestion" data-suggestion="{{ suggestion|e('html_attr') }}">{{ suggestion }}</button>
             {% endfor %}
         </div>
+        {% endif %}
+        {% if replySuggestionsResult.source_hint %}
+        <div class="small text-muted mt-2">{{ replySuggestionsResult.source_hint }}</div>
+        {% endif %}
     </div>
     {% endif %}
 </div>
@@ -86,6 +128,7 @@
 
 {% for comment in comments %}
 {% set canManageComment = comment.user == app.user or is_granted('ROLE_ADMIN') %}
+{% set commentEditActive = commentEditTargetId == comment.id %}
 <div class="card border-0 shadow-sm mb-2" style="border-radius:.75rem">
     <div class="card-body p-3">
         <div class="d-flex align-items-center justify-content-between gap-3 mb-2">
@@ -108,10 +151,15 @@
         <p class="mb-0 small" style="white-space:pre-wrap">{{ comment.content }}</p>
 
         {% if canManageComment %}
-        <div class="collapse mt-3" id="edit-comment-{{ comment.id }}">
+        <div class="collapse mt-3{{ commentEditActive ? ' show' : '' }}" id="edit-comment-{{ comment.id }}">
             <div class="border rounded-4 p-3 bg-light-subtle">
-                <form method="post" action="{{ path('app_community_comment_update', {id: comment.id}) }}">
-                    <textarea name="content" class="form-control mb-2" rows="3" required>{{ comment.content }}</textarea>
+                <form method="post" action="{{ path('app_community_comment_update', {id: comment.id}) }}" novalidate>
+                    <label class="form-label fw-semibold">Modifier le commentaire</label>
+                    <textarea name="content" class="form-control mb-2{{ commentEditActive and commentEditErrors.content is defined ? ' is-invalid' }}" rows="3" maxlength="2000" required>{{ commentEditActive ? commentEditData.content : comment.content }}</textarea>
+                    <div class="form-text mb-2">Ecrivez un commentaire utile, pas juste quelques symboles.</div>
+                    {% if commentEditActive and commentEditErrors.content is defined %}
+                    <div class="invalid-feedback d-block mb-2">{{ commentEditErrors.content }}</div>
+                    {% endif %}
                     <button type="submit" class="btn btn-sm btn-nj">Enregistrer</button>
                 </form>
             </div>
@@ -127,8 +175,13 @@
 <div class="card border-0 shadow-sm mt-3" style="border-radius:1rem">
     <div class="card-body p-4">
         {% if canParticipate %}
-        <form method="post" action="{{ path('app_community_thread_comment', {id: thread.id}) }}">
-            <textarea name="content" class="form-control mb-2" rows="3" placeholder="Ajouter un commentaire..." required data-comment-target></textarea>
+        <form method="post" action="{{ path('app_community_thread_comment', {id: thread.id}) }}" novalidate>
+            <label class="form-label fw-semibold">Ajouter un commentaire</label>
+            <textarea name="content" class="form-control mb-2{{ commentFormErrors.content is defined ? ' is-invalid' }}" rows="3" placeholder="Ajouter un commentaire..." maxlength="2000" required data-comment-target>{{ commentFormData.content }}</textarea>
+            <div class="form-text mb-2">Expliquez votre idee ou votre retour en quelques phrases utiles.</div>
+            {% if commentFormErrors.content is defined %}
+            <div class="invalid-feedback d-block mb-2">{{ commentFormErrors.content }}</div>
+            {% endif %}
             <button type="submit" class="btn btn-nj btn-sm"><i class="bi bi-reply me-1"></i>Commenter</button>
         </form>
         {% else %}

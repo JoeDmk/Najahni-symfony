@@ -3,6 +3,8 @@
 {% block title %}Créer un groupe - Najahni{% endblock %}
 
 {% block main %}
+{% set formData = formData|default({name: '', description: '', is_private: false}) %}
+{% set formErrors = formErrors|default({}) %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="fw-bold mb-0"><i class="bi bi-people me-2"></i>Créer un groupe</h2>
     <a href="{{ path('app_community_groups') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Retour</a>
@@ -10,17 +12,26 @@
 
 <div class="card border-0 shadow-sm" style="border-radius:1rem;max-width:600px">
     <div class="card-body p-4">
-        <form method="post">
+        <p class="small text-muted mb-4">Les erreurs de saisie s affichent sous chaque champ apres l envoi du formulaire.</p>
+        <form method="post" novalidate>
             <div class="mb-3">
                 <label class="form-label fw-semibold">Nom du groupe</label>
-                <input type="text" name="name" class="form-control" required>
+                <input type="text" name="name" class="form-control{{ formErrors.name is defined ? ' is-invalid' }}" value="{{ formData.name }}" maxlength="120" required>
+                <div class="form-text">3 a 120 caracteres avec un nom simple et utile.</div>
+                {% if formErrors.name is defined %}
+                <div class="invalid-feedback d-block">{{ formErrors.name }}</div>
+                {% endif %}
             </div>
             <div class="mb-3">
                 <label class="form-label fw-semibold">Description</label>
-                <textarea name="description" class="form-control" rows="4" required></textarea>
+                <textarea name="description" class="form-control{{ formErrors.description is defined ? ' is-invalid' }}" rows="4" maxlength="1500" required>{{ formData.description }}</textarea>
+                <div class="form-text">Decrivez l objectif du groupe et le type de discussions attendues.</div>
+                {% if formErrors.description is defined %}
+                <div class="invalid-feedback d-block">{{ formErrors.description }}</div>
+                {% endif %}
             </div>
             <div class="form-check mb-3">
-                <input class="form-check-input" type="checkbox" name="is_private" id="isPrivate" value="1">
+                <input class="form-check-input" type="checkbox" name="is_private" id="isPrivate" value="1" {{ formData.is_private ? 'checked' }}>
                 <label class="form-check-label" for="isPrivate">Groupe privé</label>
             </div>
             <button type="submit" class="btn btn-nj"><i class="bi bi-check-lg me-2"></i>Créer</button>

@@ -2,6 +2,7 @@
 
 namespace App\Service;
 
+use App\Entity\Event;
 use Symfony\Component\Mailer\MailerInterface;
 use Symfony\Component\Mime\Email;
 use Symfony\Component\Mime\Address;
@@ -9,7 +10,7 @@ use Twig\Environment;
 
 class EmailService
 {
-    private const SENDER_EMAIL = 'mahdibenmariem1@gmail.com';
+    private const SENDER_EMAIL = 'm.dalilo2016@gmail.com';
     private const SENDER_NAME = 'Najahni';
 
     public function __construct(
@@ -75,6 +76,35 @@ class EmailService
             ->to($to)
             ->subject('Bienvenue sur Najahni !')
             ->html($html);
+
+        $this->mailer->send($email);
+    }
+
+    public function sendCommunityEventTicket(
+        string $to,
+        string $firstname,
+        Event $event,
+        array $ticket,
+        ?string $qrPng,
+        string $eventUrl,
+    ): void {
+        $html = $this->twig->render('emails/community_event_ticket.html.twig', [
+            'firstname' => $firstname,
+            'event' => $event,
+            'ticket' => $ticket,
+            'eventUrl' => $eventUrl,
+            'hasQrAttachment' => is_string($qrPng) && $qrPng !== '',
+        ]);
+
+        $email = (new Email())
+            ->from(new Address(self::SENDER_EMAIL, self::SENDER_NAME))
+            ->to($to)
+            ->subject('Votre ticket pour '.((string) $event->getTitle()).' - Najahni')
+            ->html($html);
+
+        if (is_string($qrPng) && $qrPng !== '') {
+            $email->attach($qrPng, 'ticket-evenement-'.((int) $event->getId()).'.png', 'image/png');
+        }
 
         $this->mailer->send($email);
     }

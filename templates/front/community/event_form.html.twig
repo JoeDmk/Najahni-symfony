@@ -3,6 +3,8 @@
 {% block title %}Créer un événement - Najahni{% endblock %}
 
 {% block main %}
+{% set formData = formData|default({title: '', description: '', event_date: '', capacity: '1'}) %}
+{% set formErrors = formErrors|default({}) %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="fw-bold mb-0"><i class="bi bi-calendar-plus me-2"></i>Créer un événement</h2>
     <a href="{{ path('app_community_events') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Retour</a>
@@ -10,23 +12,38 @@
 
 <div class="card border-0 shadow-sm" style="border-radius:1rem;max-width:600px">
     <div class="card-body p-4">
-        <form method="post">
+        <p class="small text-muted mb-4">Les erreurs de saisie s affichent sous chaque champ apres l envoi du formulaire.</p>
+        <form method="post" novalidate>
             <div class="mb-3">
                 <label class="form-label fw-semibold">Titre</label>
-                <input type="text" name="title" class="form-control" required>
+                <input type="text" name="title" class="form-control{{ formErrors.title is defined ? ' is-invalid' }}" value="{{ formData.title }}" maxlength="150" required>
+                <div class="form-text">5 a 150 caracteres avec un titre clair.</div>
+                {% if formErrors.title is defined %}
+                <div class="invalid-feedback d-block">{{ formErrors.title }}</div>
+                {% endif %}
             </div>
             <div class="mb-3">
                 <label class="form-label fw-semibold">Description</label>
-                <textarea name="description" class="form-control" rows="4" required></textarea>
+                <textarea name="description" class="form-control{{ formErrors.description is defined ? ' is-invalid' }}" rows="4" maxlength="4000" required>{{ formData.description }}</textarea>
+                <div class="form-text">Ajoutez l objectif, le programme et les informations utiles aux participants.</div>
+                {% if formErrors.description is defined %}
+                <div class="invalid-feedback d-block">{{ formErrors.description }}</div>
+                {% endif %}
             </div>
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Date & Heure</label>
-                    <input type="datetime-local" name="event_date" class="form-control" required>
+                    <input type="datetime-local" name="event_date" class="form-control{{ formErrors.event_date is defined ? ' is-invalid' }}" value="{{ formData.event_date }}" required>
+                    {% if formErrors.event_date is defined %}
+                    <div class="invalid-feedback d-block">{{ formErrors.event_date }}</div>
+                    {% endif %}
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Capacité</label>
-                    <input type="number" min="1" name="capacity" class="form-control" required>
+                    <input type="number" min="1" name="capacity" class="form-control{{ formErrors.capacity is defined ? ' is-invalid' }}" value="{{ formData.capacity }}" required>
+                    {% if formErrors.capacity is defined %}
+                    <div class="invalid-feedback d-block">{{ formErrors.capacity }}</div>
+                    {% endif %}
                 </div>
             </div>
             <button type="submit" class="btn btn-nj mt-4"><i class="bi bi-check-lg me-2"></i>Créer</button>

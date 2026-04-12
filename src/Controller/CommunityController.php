@@ -18,10 +18,12 @@ use App\Repository\PostReactionRepository;
 use App\Repository\PostRepository;
 use App\Repository\ThreadRepository;
 use App\Service\CommunityAiService;
+use App\Service\CommunityEventPdfService;
 use App\Service\CommunityPostTranslationService;
 use App\Service\CommunityTextModerationService;
 use App\Service\CommunityTicketService;
 use App\Service\CommunityWeatherService;
+use App\Service\EmailService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
@@ -29,6 +31,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Throwable;
 
@@ -42,6 +45,15 @@ class CommunityController extends AbstractController
     private const THREAD_CONTENT_MAX_LENGTH = 5000;
     private const COMMENT_CONTENT_MIN_LENGTH = 3;
     private const COMMENT_CONTENT_MAX_LENGTH = 2000;
+    private const GROUP_NAME_MIN_LENGTH = 3;
+    private const GROUP_NAME_MAX_LENGTH = 120;
+    private const GROUP_DESCRIPTION_MIN_LENGTH = 15;
+    private const GROUP_DESCRIPTION_MAX_LENGTH = 1500;
+    private const EVENT_TITLE_MIN_LENGTH = 5;
+    private const EVENT_TITLE_MAX_LENGTH = 150;
+    private const EVENT_DESCRIPTION_MIN_LENGTH = 15;
+    private const EVENT_DESCRIPTION_MAX_LENGTH = 4000;
+    private const EVENT_CAPACITY_MAX = 5000;
 
     private const REACTION_META = [
         PostReaction::TYPE_LIKE => ['label' => 'J\'aime', 'emoji' => '👍'],
@@ -66,58 +78,36 @@ class CommunityController extends AbstractController
     #[Route('/posts', name: 'app_community_posts')]
     public function posts(PostRepository $repo, Request $request): Response
     {
-        $search = trim((string) $request->query->get('q', ''));
-        $sort = trim((string) $request->query->get('sort', 'newest'));
-        $posts = $repo->findFeed();
-
-        if ($search !== '') {
-            $needle = mb_strtolower($search);
-            $posts = array_values(array_filter($posts, static function (Post $post) use ($needle): bool {
-                $haystack = mb_strtolower(trim((string) $post->getUser()?->getFullName().' '.(string) $post->getContent()));
-
-                return str_contains($haystack, $needle);
-            }));
-        }
-
-        usort($posts, static function (Post $left, Post $right) use ($sort): int {
-            return match ($sort) {
-                'oldest' => ($left->getCreatedAt()?->getTimestamp() ?? 0) <=> ($right->getCreatedAt()?->getTimestamp() ?? 0),
-                'reactions' => ($right->getReactionsCount() <=> $left->getReactionsCount())
-                    ?: (($right->getCreatedAt()?->getTimestamp() ?? 0) <=> ($left->getCreatedAt()?->getTimestamp() ?? 0)),
-                default => ($right->getCreatedAt()?->getTimestamp() ?? 0) <=> ($left->getCreatedAt()?->getTimestamp() ?? 0),
-            };
-        });
-
-        return $this->render('front/community/posts.html.twig', [
-            'posts' => $posts,
-            'search' => $search,
-            'sort' => $sort,
-            'reactionMeta' => self::REACTION_META,
-            'translationLanguages' => self::TRANSLATION_LANGUAGES,
-        ]);
+        return $this->renderPostsPage($repo, $request);
     }
 
     #[Route('/posts/new', name: 'app_community_post_new', methods: ['POST'])]
     public function newPost(
         Request $request,
         EntityManagerInterface $em,
+        PostRepository $repo,
         CommunityTextModerationService $textModerationService,
     ): Response
     {
         $content = trim((string) $request->request->get('content', ''));
+        $formData = [
+            'content' => $content,
+        ];
 
         try {
             $imageUrl = $this->storePostUpload($request->files->get('image'));
         } catch (Throwable $exception) {
-            $this->addFlash('danger', $exception->getMessage());
-
-            return $this->redirectToRoute('app_community_posts');
+            return $this->renderPostsPage($repo, $request, [
+                'newPostData' => $formData,
+                'newPostErrors' => ['image' => $exception->getMessage()],
+            ]);
         }
 
         if ($content === '' && $imageUrl === null) {
-            $this->addFlash('danger', 'Ajoutez du texte ou une image avant de publier.');
-
-            return $this->redirectToRoute('app_community_posts');
+            return $this->renderPostsPage($repo, $request, [
+                'newPostData' => $formData,
+                'newPostErrors' => ['content' => 'Ajoutez du texte ou choisissez une image avant de publier.'],
+            ]);
         }
 
         $moderated = $textModerationService->moderate($content);
@@ -234,6 +224,7 @@ class CommunityController extends AbstractController
         Post $post,
         Request $request,
         EntityManagerInterface $em,
+        PostRepository $repo,
         CommunityTextModerationService $textModerationService,
     ): Response
     {
@@ -244,17 +235,23 @@ class CommunityController extends AbstractController
         $content = trim((string) $request->request->get('content', ''));
         $oldImageUrl = $post->getImageUrl();
         $imageUrl = $post->getImageUrl();
+        $formData = [
+            'content' => $content,
+            'remove_image' => $request->request->getBoolean('remove_image'),
+        ];
 
-        if ($request->request->getBoolean('remove_image')) {
+        if ($formData['remove_image']) {
             $imageUrl = null;
         }
 
         try {
             $uploaded = $this->storePostUpload($request->files->get('image'));
         } catch (Throwable $exception) {
-            $this->addFlash('danger', $exception->getMessage());
-
-            return $this->redirectToRoute('app_community_posts');
+            return $this->renderPostsPage($repo, $request, [
+                'openPostEditId' => (int) $post->getId(),
+                'postEditData' => $formData,
+                'postEditErrors' => ['image' => $exception->getMessage()],
+            ]);
         }
 
         if ($uploaded !== null) {
@@ -262,9 +259,11 @@ class CommunityController extends AbstractController
         }
 
         if ($content === '' && $imageUrl === null) {
-            $this->addFlash('danger', 'Une publication doit contenir du texte ou une image.');
-
-            return $this->redirectToRoute('app_community_posts');
+            return $this->renderPostsPage($repo, $request, [
+                'openPostEditId' => (int) $post->getId(),
+                'postEditData' => $formData,
+                'postEditErrors' => ['content' => 'Une publication doit contenir du texte ou une image.'],
+            ]);
         }
 
         $moderated = $textModerationService->moderate($content);
@@ -322,21 +321,26 @@ class CommunityController extends AbstractController
     ): Response
     {
         if ($request->isMethod('POST')) {
-            $name = trim((string) $request->request->get('name', ''));
-            $description = trim((string) $request->request->get('description', ''));
+            $formData = [
+                'name' => $this->sanitizeSubmittedTitle((string) $request->request->get('name', '')),
+                'description' => $this->sanitizeSubmittedBody((string) $request->request->get('description', '')),
+                'is_private' => $request->request->getBoolean('is_private'),
+            ];
+            $formErrors = $this->validateGroupInput($formData['name'], $formData['description']);
 
-            if ($name === '' || $description === '') {
-                $this->addFlash('danger', 'Le nom et la description du groupe sont requis.');
-
-                return $this->render('front/community/group_form.html.twig');
+            if ($formErrors !== []) {
+                return $this->render('front/community/group_form.html.twig', [
+                    'formData' => $formData,
+                    'formErrors' => $formErrors,
+                ]);
             }
 
-            $moderated = $textModerationService->moderate($description);
+            $moderated = $textModerationService->moderate($formData['description']);
             $group = new Group();
-            $group->setName($name);
+            $group->setName($formData['name']);
             $group->setDescription($moderated['text']);
             $group->setGroupAdmin($this->currentUser());
-            $group->setIsPrivate($request->request->getBoolean('is_private'));
+            $group->setIsPrivate($formData['is_private']);
 
             $em->persist($group);
 
@@ -355,29 +359,63 @@ class CommunityController extends AbstractController
             return $this->redirectToRoute('app_community_group_show', ['id' => $group->getId()]);
         }
 
-        return $this->render('front/community/group_form.html.twig');
+        return $this->render('front/community/group_form.html.twig', [
+            'formData' => [
+                'name' => '',
+                'description' => '',
+                'is_private' => false,
+            ],
+            'formErrors' => [],
+        ]);
     }
 
     #[Route('/groups/{id}', name: 'app_community_group_show', requirements: ['id' => '\d+'])]
     public function showGroup(Group $group, ThreadRepository $threadRepo): Response
     {
-        $user = $this->currentUser();
-        $groupId = (int) ($group->getId() ?? 0);
-        $isOwner = $this->canManageGroup($group, $user);
-        $isMember = $isOwner || $this->groupRepository->isMember($groupId, (int) $user->getId());
-        $canViewContent = !$group->isPrivate() || $isMember || $this->isGranted('ROLE_ADMIN');
-        $threads = $canViewContent ? $threadRepo->findByGroup($group) : [];
+        return $this->renderGroupPage($group, $threadRepo);
+    }
 
-        return $this->render('front/community/group_show.html.twig', [
-            'group' => $group,
-            'threads' => $threads,
-            'isOwner' => $isOwner,
-            'isMember' => $isMember,
-            'canViewContent' => $canViewContent,
-            'canParticipate' => $isMember || $this->isGranted('ROLE_ADMIN'),
-            'hasPendingRequest' => !$isOwner && !$isMember && $this->groupRepository->hasPendingRequest($groupId, (int) $user->getId()),
-            'pendingRequests' => $isOwner ? $this->groupRepository->findPendingRequestsForGroup($groupId) : [],
-        ]);
+    #[Route('/groups/{id}/update', name: 'app_community_group_update', methods: ['POST'])]
+    public function updateGroup(
+        Group $group,
+        Request $request,
+        EntityManagerInterface $em,
+        ThreadRepository $threadRepo,
+        CommunityTextModerationService $textModerationService,
+    ): Response
+    {
+        if (!$this->canManageGroup($group, $this->currentUser())) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $formData = [
+            'name' => $this->sanitizeSubmittedTitle((string) $request->request->get('name', '')),
+            'description' => $this->sanitizeSubmittedBody((string) $request->request->get('description', '')),
+            'is_private' => $request->request->getBoolean('is_private'),
+        ];
+        $formErrors = $this->validateGroupInput($formData['name'], $formData['description']);
+
+        if ($formErrors !== []) {
+            return $this->renderGroupPage($group, $threadRepo, [
+                'groupEditData' => $formData,
+                'groupEditErrors' => $formErrors,
+                'openGroupEdit' => true,
+            ]);
+        }
+
+        $moderated = $textModerationService->moderate($formData['description']);
+        $group->setName($formData['name']);
+        $group->setDescription($moderated['text']);
+        $group->setIsPrivate($formData['is_private']);
+        $em->flush();
+
+        if ($moderated['changed']) {
+            $this->addFlash('info', 'La description a ete legerement moderee avant enregistrement.');
+        }
+
+        $this->addFlash('success', 'Groupe mis a jour.');
+
+        return $this->redirectToRoute('app_community_group_show', ['id' => $group->getId()]);
     }
 
     #[Route('/groups/{id}/join', name: 'app_community_group_join', methods: ['POST'])]
@@ -504,6 +542,7 @@ class CommunityController extends AbstractController
         Group $group,
         Request $request,
         EntityManagerInterface $em,
+        ThreadRepository $threadRepo,
         CommunityTextModerationService $textModerationService,
     ): Response
     {
@@ -515,11 +554,16 @@ class CommunityController extends AbstractController
 
         $title = $this->sanitizeSubmittedTitle((string) $request->request->get('title', ''));
         $content = $this->sanitizeSubmittedBody((string) $request->request->get('content', ''));
+        $formErrors = $this->validateThreadInput($title, $content);
 
-        if (($validationError = $this->validateThreadInput($title, $content)) !== null) {
-            $this->addFlash('danger', $validationError);
-
-            return $this->redirectToRoute('app_community_group_show', ['id' => $group->getId()]);
+        if ($formErrors !== []) {
+            return $this->renderGroupPage($group, $threadRepo, [
+                'threadFormData' => [
+                    'title' => $title,
+                    'content' => $content,
+                ],
+                'threadFormErrors' => $formErrors,
+            ]);
         }
 
         $moderated = $textModerationService->moderate($content);
@@ -554,13 +598,7 @@ class CommunityController extends AbstractController
             return $this->redirectToRoute('app_community_group_show', ['id' => $group->getId()]);
         }
 
-        return $this->render('front/community/thread_show.html.twig', [
-            'thread' => $thread,
-            'comments' => $commentRepository->findByThreadChronological($thread),
-            'threadSummary' => $request->getSession()->get($this->threadSummaryKey((int) $thread->getId())),
-            'replySuggestions' => $request->getSession()->get($this->threadSuggestionsKey((int) $thread->getId()), []),
-            'canParticipate' => $this->canParticipateInGroup($group, $this->currentUser()),
-        ]);
+        return $this->renderThreadPage($thread, $request, $commentRepository);
     }
 
     #[Route('/threads/{id}/comment', name: 'app_community_thread_comment', methods: ['POST'])]
@@ -568,6 +606,7 @@ class CommunityController extends AbstractController
         Thread $thread,
         Request $request,
         EntityManagerInterface $em,
+        CommentRepository $commentRepository,
         CommunityTextModerationService $textModerationService,
     ): Response
     {
@@ -578,10 +617,14 @@ class CommunityController extends AbstractController
         }
 
         $content = $this->sanitizeSubmittedBody((string) $request->request->get('content', ''));
-        if (($validationError = $this->validateCommentInput($content)) !== null) {
-            $this->addFlash('danger', $validationError);
-
-            return $this->redirectToRoute('app_community_thread_show', ['id' => $thread->getId()]);
+        $formErrors = $this->validateCommentInput($content);
+        if ($formErrors !== []) {
+            return $this->renderThreadPage($thread, $request, $commentRepository, [
+                'commentFormData' => [
+                    'content' => $content,
+                ],
+                'commentFormErrors' => $formErrors,
+            ]);
         }
 
         $moderated = $textModerationService->moderate($content);
@@ -607,6 +650,7 @@ class CommunityController extends AbstractController
         Thread $thread,
         Request $request,
         EntityManagerInterface $em,
+        CommentRepository $commentRepository,
         CommunityTextModerationService $textModerationService,
     ): Response
     {
@@ -617,10 +661,16 @@ class CommunityController extends AbstractController
         $title = $this->sanitizeSubmittedTitle((string) $request->request->get('title', ''));
         $content = $this->sanitizeSubmittedBody((string) $request->request->get('content', ''));
 
-        if (($validationError = $this->validateThreadInput($title, $content)) !== null) {
-            $this->addFlash('danger', $validationError);
-
-            return $this->redirectToRoute('app_community_thread_show', ['id' => $thread->getId()]);
+        $formErrors = $this->validateThreadInput($title, $content);
+        if ($formErrors !== []) {
+            return $this->renderThreadPage($thread, $request, $commentRepository, [
+                'threadEditData' => [
+                    'title' => $title,
+                    'content' => $content,
+                ],
+                'threadEditErrors' => $formErrors,
+                'openThreadEdit' => true,
+            ]);
         }
 
         $moderated = $textModerationService->moderate($content);
@@ -660,6 +710,7 @@ class CommunityController extends AbstractController
         Comment $comment,
         Request $request,
         EntityManagerInterface $em,
+        CommentRepository $commentRepository,
         CommunityTextModerationService $textModerationService,
     ): Response
     {
@@ -668,10 +719,15 @@ class CommunityController extends AbstractController
         }
 
         $content = $this->sanitizeSubmittedBody((string) $request->request->get('content', ''));
-        if (($validationError = $this->validateCommentInput($content)) !== null) {
-            $this->addFlash('danger', $validationError);
-
-            return $this->redirectToRoute('app_community_thread_show', ['id' => $comment->getThread()?->getId()]);
+        $formErrors = $this->validateCommentInput($content);
+        if ($formErrors !== []) {
+            return $this->renderThreadPage($comment->getThread(), $request, $commentRepository, [
+                'commentEditTargetId' => (int) $comment->getId(),
+                'commentEditData' => [
+                    'content' => $content,
+                ],
+                'commentEditErrors' => $formErrors,
+            ]);
         }
 
         $moderated = $textModerationService->moderate($content);
@@ -718,7 +774,7 @@ class CommunityController extends AbstractController
 
         $summary = $communityAiService->summarizeThread($thread, $commentRepository->findByThreadChronological($thread));
         $request->getSession()->set($this->threadSummaryKey((int) $thread->getId()), $summary);
-        $this->addFlash('success', 'Resume de discussion mis a jour.');
+        $this->addCommunityAiFlash($summary, 'Resume de discussion genere via Groq.', 'Resume de discussion mis a jour en mode local.');
 
         return $this->redirectToRoute('app_community_thread_show', ['id' => $thread->getId()]);
     }
@@ -737,7 +793,7 @@ class CommunityController extends AbstractController
 
         $suggestions = $communityAiService->suggestThreadReplies($thread, $commentRepository->findByThreadChronological($thread));
         $request->getSession()->set($this->threadSuggestionsKey((int) $thread->getId()), $suggestions);
-        $this->addFlash('success', 'Suggestions de reponse generees.');
+        $this->addCommunityAiFlash($suggestions, 'Suggestions de reponse generees via Groq.', 'Suggestions de reponse generees en mode local.');
 
         return $this->redirectToRoute('app_community_thread_show', ['id' => $thread->getId()]);
     }
@@ -782,23 +838,28 @@ class CommunityController extends AbstractController
     ): Response
     {
         if ($request->isMethod('POST')) {
-            $title = trim((string) $request->request->get('title', ''));
-            $description = trim((string) $request->request->get('description', ''));
-            $eventDate = $this->normalizeEventDate((string) $request->request->get('event_date', ''));
-            $capacity = max(1, (int) $request->request->get('capacity', 1));
+            $formData = [
+                'title' => $this->sanitizeSubmittedTitle((string) $request->request->get('title', '')),
+                'description' => $this->sanitizeSubmittedBody((string) $request->request->get('description', '')),
+                'event_date' => trim((string) $request->request->get('event_date', '')),
+                'capacity' => trim((string) $request->request->get('capacity', '')),
+            ];
+            $eventDate = $this->normalizeEventDate($formData['event_date']);
+            $formErrors = $this->validateEventInput($formData['title'], $formData['description'], $eventDate, $formData['capacity']);
 
-            if ($title === '' || $description === '' || $eventDate === null) {
-                $this->addFlash('danger', 'Le titre, la description et la date sont requis.');
-
-                return $this->render('front/community/event_form.html.twig');
+            if ($formErrors !== []) {
+                return $this->render('front/community/event_form.html.twig', [
+                    'formData' => $formData,
+                    'formErrors' => $formErrors,
+                ]);
             }
 
-            $moderated = $textModerationService->moderate($description);
+            $moderated = $textModerationService->moderate($formData['description']);
             $event = new Event();
-            $event->setTitle($title);
+            $event->setTitle($formData['title']);
             $event->setDescription($moderated['text']);
             $event->setEventDate($eventDate);
-            $event->setCapacity($capacity);
+            $event->setCapacity((int) $formData['capacity']);
             $event->setCreatedBy($this->currentUser());
 
             $em->persist($event);
@@ -817,7 +878,15 @@ class CommunityController extends AbstractController
             return $this->redirectToRoute('app_community_event_show', ['id' => $event->getId()]);
         }
 
-        return $this->render('front/community/event_form.html.twig');
+        return $this->render('front/community/event_form.html.twig', [
+            'formData' => [
+                'title' => '',
+                'description' => '',
+                'event_date' => '',
+                'capacity' => '1',
+            ],
+            'formErrors' => [],
+        ]);
     }
 
     #[Route('/events/{id}', name: 'app_community_event_show', requirements: ['id' => '\d+'])]
@@ -825,34 +894,18 @@ class CommunityController extends AbstractController
         Event $event,
         Request $request,
         CommunityWeatherService $communityWeatherService,
-        CommunityTicketService $communityTicketService,
     ): Response
     {
-        $user = $this->currentUser();
-        $participants = $event->getParticipants()->toArray();
-        usort($participants, static function (EventParticipant $left, EventParticipant $right): int {
-            return strcmp(
-                trim((string) $left->getUser()?->getFullName()),
-                trim((string) $right->getUser()?->getFullName()),
-            );
-        });
-
-        return $this->render('front/community/event_show.html.twig', [
-            'event' => $event,
-            'participants' => $participants,
-            'weather' => $communityWeatherService->forecastForEvent($event->getEventDate()),
-            'isCreator' => $this->canManageEvent($event, $user),
-            'isParticipant' => $event->hasParticipant($user),
-            'isFull' => !$event->hasCapacity(),
-            'eventAiOutput' => $request->getSession()->get($this->eventAiKey((int) $event->getId())),
-            'eventAiMode' => $request->getSession()->get($this->eventAiModeKey((int) $event->getId()), 'summary'),
-            'ticket' => $event->hasParticipant($user) ? $communityTicketService->buildTicket($event, $user) : null,
-            'ticketValidation' => $request->getSession()->get($this->eventTicketValidationKey((int) $event->getId())),
-        ]);
+        return $this->renderEventPage($event, $request, $communityWeatherService);
     }
 
     #[Route('/events/{id}/join', name: 'app_community_event_join', methods: ['POST'])]
-    public function joinEvent(Event $event, EntityManagerInterface $em): Response
+    public function joinEvent(
+        Event $event,
+        EntityManagerInterface $em,
+        CommunityTicketService $communityTicketService,
+        EmailService $emailService,
+    ): Response
     {
         $user = $this->currentUser();
 
@@ -874,7 +927,28 @@ class CommunityController extends AbstractController
         $em->persist($participant);
         $em->flush();
 
-        $this->addFlash('success', 'Inscription confirmée !');
+        $ticket = $communityTicketService->buildTicket($event, $user);
+        $qrPng = null;
+
+        try {
+            $qrPng = $communityTicketService->renderQrPng($ticket['payload']);
+        } catch (Throwable) {
+        }
+
+        try {
+            $emailService->sendCommunityEventTicket(
+                (string) $user->getEmail(),
+                (string) $user->getFirstname(),
+                $event,
+                $ticket,
+                $qrPng,
+                $this->generateUrl('app_community_event_show', ['id' => $event->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
+            );
+
+            $this->addFlash('success', 'Inscription confirmee. Le ticket QR a ete envoye par email.');
+        } catch (Throwable $exception) {
+            $this->addFlash('warning', 'Inscription confirmee, mais l envoi du ticket par email a echoue.');
+        }
 
         return $this->redirectToRoute('app_community_event_show', ['id' => $event->getId()]);
     }
@@ -905,6 +979,7 @@ class CommunityController extends AbstractController
         Event $event,
         Request $request,
         EntityManagerInterface $em,
+        CommunityWeatherService $communityWeatherService,
         CommunityTextModerationService $textModerationService,
     ): Response
     {
@@ -912,22 +987,28 @@ class CommunityController extends AbstractController
             throw $this->createAccessDeniedException();
         }
 
-        $title = trim((string) $request->request->get('title', ''));
-        $description = trim((string) $request->request->get('description', ''));
-        $eventDate = $this->normalizeEventDate((string) $request->request->get('event_date', ''));
-        $capacity = max(1, (int) $request->request->get('capacity', 1));
+        $formData = [
+            'title' => $this->sanitizeSubmittedTitle((string) $request->request->get('title', '')),
+            'description' => $this->sanitizeSubmittedBody((string) $request->request->get('description', '')),
+            'event_date' => trim((string) $request->request->get('event_date', '')),
+            'capacity' => trim((string) $request->request->get('capacity', '')),
+        ];
+        $eventDate = $this->normalizeEventDate($formData['event_date']);
+        $formErrors = $this->validateEventInput($formData['title'], $formData['description'], $eventDate, $formData['capacity']);
 
-        if ($title === '' || $description === '' || $eventDate === null) {
-            $this->addFlash('danger', 'Le titre, la description et la date sont requis.');
-
-            return $this->redirectToRoute('app_community_event_show', ['id' => $event->getId()]);
+        if ($formErrors !== []) {
+            return $this->renderEventPage($event, $request, $communityWeatherService, [
+                'eventEditData' => $formData,
+                'eventEditErrors' => $formErrors,
+                'openEventEdit' => true,
+            ]);
         }
 
-        $moderated = $textModerationService->moderate($description);
-        $event->setTitle($title);
+        $moderated = $textModerationService->moderate($formData['description']);
+        $event->setTitle($formData['title']);
         $event->setDescription($moderated['text']);
         $event->setEventDate($eventDate);
-        $event->setCapacity($capacity);
+        $event->setCapacity((int) $formData['capacity']);
         $em->flush();
 
         if ($moderated['changed']) {
@@ -961,11 +1042,37 @@ class CommunityController extends AbstractController
     ): Response
     {
         $mode = trim((string) $request->request->get('mode', 'summary'));
-        $request->getSession()->set($this->eventAiKey((int) $event->getId()), $communityAiService->generateEventText($event, $mode));
+        $result = $communityAiService->generateEventText($event, $mode);
+        $request->getSession()->set($this->eventAiKey((int) $event->getId()), $result);
         $request->getSession()->set($this->eventAiModeKey((int) $event->getId()), $mode);
-        $this->addFlash('success', 'Assistant evenement mis a jour.');
+        $this->addCommunityAiFlash($result, 'Assistant evenement mis a jour via Groq.', 'Assistant evenement mis a jour en mode local.');
 
         return $this->redirectToRoute('app_community_event_show', ['id' => $event->getId()]);
+    }
+
+    #[Route('/events/{id}/report.pdf', name: 'app_community_event_report', methods: ['GET'])]
+    public function exportEventReport(
+        Event $event,
+        CommunityAiService $communityAiService,
+        CommunityEventPdfService $communityEventPdfService,
+    ): Response
+    {
+        if (!$this->canManageEvent($event, $this->currentUser())) {
+            throw $this->createAccessDeniedException();
+        }
+
+        $participants = $this->sortedEventParticipants($event);
+        $aiSections = [
+            'summary' => $this->normalizeTextAiResult($communityAiService->generateEventText($event, 'summary')),
+            'promo' => $this->normalizeTextAiResult($communityAiService->generateEventText($event, 'promo')),
+            'checklist' => $this->normalizeTextAiResult($communityAiService->generateEventText($event, 'checklist')),
+        ];
+
+        $response = new Response($communityEventPdfService->render($event, $participants, $aiSections));
+        $response->headers->set('Content-Type', 'application/pdf');
+        $response->headers->set('Content-Disposition', 'attachment; filename="'.$this->eventReportFilename($event).'"');
+
+        return $response;
     }
 
     #[Route('/events/{id}/tickets/validate', name: 'app_community_event_ticket_validate', methods: ['POST'])]
@@ -1040,6 +1147,283 @@ class CommunityController extends AbstractController
         return $this->redirectToRoute('app_community_event_show', ['id' => $eventId]);
     }
 
+    private function renderGroupPage(Group $group, ThreadRepository $threadRepo, array $context = []): Response
+    {
+        $user = $this->currentUser();
+        $groupId = (int) ($group->getId() ?? 0);
+        $isOwner = $this->canManageGroup($group, $user);
+        $isMember = $isOwner || $this->groupRepository->isMember($groupId, (int) $user->getId());
+        $canViewContent = !$group->isPrivate() || $isMember || $this->isGranted('ROLE_ADMIN');
+        $threads = $canViewContent ? $threadRepo->findByGroup($group) : [];
+
+        return $this->render('front/community/group_show.html.twig', array_replace([
+            'group' => $group,
+            'threads' => $threads,
+            'isOwner' => $isOwner,
+            'isMember' => $isMember,
+            'canViewContent' => $canViewContent,
+            'canParticipate' => $isMember || $this->isGranted('ROLE_ADMIN'),
+            'hasPendingRequest' => !$isOwner && !$isMember && $this->groupRepository->hasPendingRequest($groupId, (int) $user->getId()),
+            'pendingRequests' => $isOwner ? $this->groupRepository->findPendingRequestsForGroup($groupId) : [],
+            'threadFormData' => [
+                'title' => '',
+                'content' => '',
+            ],
+            'threadFormErrors' => [],
+            'groupEditData' => [
+                'name' => (string) $group->getName(),
+                'description' => (string) $group->getDescription(),
+                'is_private' => $group->isPrivate(),
+            ],
+            'groupEditErrors' => [],
+            'openGroupEdit' => false,
+        ], $context));
+    }
+
+    private function renderPostsPage(PostRepository $repo, Request $request, array $context = []): Response
+    {
+        $search = trim((string) $request->query->get('q', ''));
+        $sort = trim((string) $request->query->get('sort', 'newest'));
+        $posts = $repo->findFeed();
+
+        if ($search !== '') {
+            $needle = mb_strtolower($search);
+            $posts = array_values(array_filter($posts, static function (Post $post) use ($needle): bool {
+                $haystack = mb_strtolower(trim((string) $post->getUser()?->getFullName().' '.(string) $post->getContent()));
+
+                return str_contains($haystack, $needle);
+            }));
+        }
+
+        usort($posts, static function (Post $left, Post $right) use ($sort): int {
+            return match ($sort) {
+                'oldest' => ($left->getCreatedAt()?->getTimestamp() ?? 0) <=> ($right->getCreatedAt()?->getTimestamp() ?? 0),
+                'reactions' => ($right->getReactionsCount() <=> $left->getReactionsCount())
+                    ?: (($right->getCreatedAt()?->getTimestamp() ?? 0) <=> ($left->getCreatedAt()?->getTimestamp() ?? 0)),
+                default => ($right->getCreatedAt()?->getTimestamp() ?? 0) <=> ($left->getCreatedAt()?->getTimestamp() ?? 0),
+            };
+        });
+
+        return $this->render('front/community/posts.html.twig', array_replace([
+            'posts' => $posts,
+            'search' => $search,
+            'sort' => $sort,
+            'reactionMeta' => self::REACTION_META,
+            'translationLanguages' => self::TRANSLATION_LANGUAGES,
+            'newPostData' => [
+                'content' => '',
+            ],
+            'newPostErrors' => [],
+            'openPostEditId' => null,
+            'postEditData' => [
+                'content' => '',
+                'remove_image' => false,
+            ],
+            'postEditErrors' => [],
+        ], $context));
+    }
+
+    private function renderThreadPage(Thread $thread, Request $request, CommentRepository $commentRepository, array $context = []): Response
+    {
+        $group = $thread->getGroup();
+        if (!$group instanceof Group) {
+            throw $this->createNotFoundException();
+        }
+
+        if (!$this->canAccessGroup($group, $this->currentUser())) {
+            $this->addFlash('warning', 'Cette discussion appartient a un groupe prive que vous ne pouvez pas consulter.');
+
+            return $this->redirectToRoute('app_community_group_show', ['id' => $group->getId()]);
+        }
+
+        return $this->render('front/community/thread_show.html.twig', array_replace([
+            'thread' => $thread,
+            'comments' => $commentRepository->findByThreadChronological($thread),
+            'threadSummaryResult' => $this->normalizeTextAiResult($request->getSession()->get($this->threadSummaryKey((int) $thread->getId()))),
+            'replySuggestionsResult' => $this->normalizeSuggestionsAiResult($request->getSession()->get($this->threadSuggestionsKey((int) $thread->getId()), [])),
+            'canParticipate' => $this->canParticipateInGroup($group, $this->currentUser()),
+            'threadEditData' => [
+                'title' => (string) $thread->getTitle(),
+                'content' => (string) $thread->getContent(),
+            ],
+            'threadEditErrors' => [],
+            'openThreadEdit' => false,
+            'commentFormData' => [
+                'content' => '',
+            ],
+            'commentFormErrors' => [],
+            'commentEditTargetId' => null,
+            'commentEditData' => [
+                'content' => '',
+            ],
+            'commentEditErrors' => [],
+        ], $context));
+    }
+
+    private function renderEventPage(
+        Event $event,
+        Request $request,
+        CommunityWeatherService $communityWeatherService,
+        array $context = [],
+    ): Response {
+        $user = $this->currentUser();
+        $participants = $this->sortedEventParticipants($event);
+
+        return $this->render('front/community/event_show.html.twig', array_replace([
+            'event' => $event,
+            'participants' => $participants,
+            'weather' => $communityWeatherService->forecastForEvent($event->getEventDate()),
+            'isCreator' => $this->canManageEvent($event, $user),
+            'isParticipant' => $event->hasParticipant($user),
+            'isFull' => !$event->hasCapacity(),
+            'eventAiResult' => $this->normalizeTextAiResult($request->getSession()->get($this->eventAiKey((int) $event->getId()))),
+            'eventAiMode' => $request->getSession()->get($this->eventAiModeKey((int) $event->getId()), 'summary'),
+            'ticketValidation' => $request->getSession()->get($this->eventTicketValidationKey((int) $event->getId())),
+            'eventEditData' => [
+                'title' => (string) $event->getTitle(),
+                'description' => (string) $event->getDescription(),
+                'event_date' => $event->getEventDate()?->format('Y-m-d\TH:i') ?? '',
+                'capacity' => (string) max((int) $event->getCapacity(), 1),
+            ],
+            'eventEditErrors' => [],
+            'openEventEdit' => false,
+        ], $context));
+    }
+
+    private function normalizeTextAiResult(mixed $value): ?array
+    {
+        if (is_string($value)) {
+            $content = trim($value);
+
+            return $content === '' ? null : [
+                'content' => $content,
+                'used_provider' => false,
+                'configured' => false,
+                'provider' => 'Local',
+                'model' => null,
+                'source_label' => 'Mode local',
+                'source_hint' => null,
+                'error' => false,
+                'error_message' => null,
+            ];
+        }
+
+        if (!is_array($value)) {
+            return null;
+        }
+
+        $content = trim((string) ($value['content'] ?? ''));
+        $error = (bool) ($value['error'] ?? false);
+        $errorMessage = trim((string) ($value['error_message'] ?? ''));
+
+        if ($content === '' && $errorMessage === '') {
+            return null;
+        }
+
+        $usedProvider = (bool) ($value['used_provider'] ?? false);
+        $configured = (bool) ($value['configured'] ?? false);
+        $model = trim((string) ($value['model'] ?? ''));
+        $sourceHint = trim((string) ($value['source_hint'] ?? ''));
+
+        return [
+            'content' => $content,
+            'used_provider' => $usedProvider,
+            'configured' => $configured,
+            'provider' => trim((string) ($value['provider'] ?? ($usedProvider ? 'Groq' : 'Local'))),
+            'model' => $model !== '' ? $model : null,
+            'source_label' => trim((string) ($value['source_label'] ?? ($error ? 'Groq indisponible' : ($usedProvider ? 'Groq' : ($configured ? 'Repli local' : 'Mode local'))))),
+            'source_hint' => $sourceHint !== '' ? $sourceHint : null,
+            'error' => $error,
+            'error_message' => $errorMessage !== '' ? $errorMessage : null,
+        ];
+    }
+
+    private function normalizeSuggestionsAiResult(mixed $value): array
+    {
+        if (is_array($value) && array_is_list($value)) {
+            return [
+                'items' => $this->normalizeSuggestionItems($value),
+                'used_provider' => false,
+                'configured' => false,
+                'provider' => 'Local',
+                'model' => null,
+                'source_label' => 'Mode local',
+                'source_hint' => null,
+                'error' => false,
+                'error_message' => null,
+            ];
+        }
+
+        if (!is_array($value)) {
+            return [
+                'items' => [],
+                'used_provider' => false,
+                'configured' => false,
+                'provider' => 'Local',
+                'model' => null,
+                'source_label' => 'Mode local',
+                'source_hint' => null,
+                'error' => false,
+                'error_message' => null,
+            ];
+        }
+
+        $usedProvider = (bool) ($value['used_provider'] ?? false);
+        $configured = (bool) ($value['configured'] ?? false);
+        $model = trim((string) ($value['model'] ?? ''));
+        $sourceHint = trim((string) ($value['source_hint'] ?? ''));
+        $error = (bool) ($value['error'] ?? false);
+        $errorMessage = trim((string) ($value['error_message'] ?? ''));
+
+        return [
+            'items' => $this->normalizeSuggestionItems($value['items'] ?? []),
+            'used_provider' => $usedProvider,
+            'configured' => $configured,
+            'provider' => trim((string) ($value['provider'] ?? ($usedProvider ? 'Groq' : 'Local'))),
+            'model' => $model !== '' ? $model : null,
+            'source_label' => trim((string) ($value['source_label'] ?? ($error ? 'Groq indisponible' : ($usedProvider ? 'Groq' : ($configured ? 'Repli local' : 'Mode local'))))),
+            'source_hint' => $sourceHint !== '' ? $sourceHint : null,
+            'error' => $error,
+            'error_message' => $errorMessage !== '' ? $errorMessage : null,
+        ];
+    }
+
+    /** @return EventParticipant[] */
+    private function sortedEventParticipants(Event $event): array
+    {
+        $participants = $event->getParticipants()->toArray();
+        usort($participants, static function (EventParticipant $left, EventParticipant $right): int {
+            return strcmp(
+                trim((string) $left->getUser()?->getFullName()),
+                trim((string) $right->getUser()?->getFullName()),
+            );
+        });
+
+        return $participants;
+    }
+
+    /** @param mixed $items
+     *  @return string[]
+     */
+    private function normalizeSuggestionItems(mixed $items): array
+    {
+        if (!is_array($items)) {
+            return [];
+        }
+
+        $normalized = [];
+        foreach ($items as $item) {
+            $text = trim((string) $item);
+            if ($text === '') {
+                continue;
+            }
+
+            $normalized[] = $text;
+        }
+
+        return array_values(array_unique($normalized));
+    }
+
     private function currentUser(): User
     {
         $user = $this->getUser();
@@ -1103,6 +1487,25 @@ class CommunityController extends AbstractController
         $this->addFlash('danger', $message);
 
         return $this->redirectToRoute('app_community_posts');
+    }
+
+    /** @param array<string, mixed> $result */
+    private function addCommunityAiFlash(array $result, string $successMessage, string $localMessage): void
+    {
+        if ((bool) ($result['error'] ?? false)) {
+            $message = trim((string) ($result['error_message'] ?? ''));
+            $this->addFlash('danger', $message !== '' ? $message : 'Groq n a pas renvoye de resultat exploitable.');
+
+            return;
+        }
+
+        if ((bool) ($result['used_provider'] ?? false)) {
+            $this->addFlash('success', $successMessage);
+
+            return;
+        }
+
+        $this->addFlash('info', $localMessage);
     }
 
     private function reactionStateResponse(Post $post, User $user): JsonResponse
@@ -1202,66 +1605,139 @@ class CommunityController extends AbstractController
         $session->remove($this->threadSuggestionsKey($threadId));
     }
 
-    private function validateThreadInput(string $title, string $content): ?string
+    private function validateGroupInput(string $name, string $description): array
     {
-        if ($title === '' || $content === '') {
-            return 'Le titre et le contenu de la discussion sont requis.';
+        $errors = [];
+
+        if ($name === '') {
+            $errors['name'] = 'Le nom du groupe est requis.';
+        } elseif (mb_strlen($name) < self::GROUP_NAME_MIN_LENGTH) {
+            $errors['name'] = 'Le nom du groupe doit contenir au moins 3 caracteres.';
+        } elseif (mb_strlen($name) > self::GROUP_NAME_MAX_LENGTH) {
+            $errors['name'] = 'Le nom du groupe est trop long.';
+        } elseif (!$this->hasEnoughMeaningfulCharacters($name, 3)) {
+            $errors['name'] = 'Le nom du groupe doit contenir de vrais caracteres utiles.';
+        } elseif ($this->hasExcessiveRepeatedCharacters($name)) {
+            $errors['name'] = 'Merci d eviter les suites de caracteres repetes dans le nom du groupe.';
         }
 
-        if (mb_strlen($title) < self::THREAD_TITLE_MIN_LENGTH) {
-            return 'Le titre doit contenir au moins 5 caracteres.';
+        if ($description === '') {
+            $errors['description'] = 'La description du groupe est requise.';
+        } elseif (mb_strlen($description) < self::GROUP_DESCRIPTION_MIN_LENGTH) {
+            $errors['description'] = 'La description doit contenir au moins 15 caracteres utiles.';
+        } elseif (mb_strlen($description) > self::GROUP_DESCRIPTION_MAX_LENGTH) {
+            $errors['description'] = 'La description du groupe est trop longue.';
+        } elseif (!$this->hasEnoughMeaningfulCharacters($description, 10)) {
+            $errors['description'] = 'La description doit contenir un vrai message exploitable.';
+        } elseif ($this->hasExcessiveRepeatedCharacters($description)) {
+            $errors['description'] = 'Merci d eviter les suites de caracteres repetes dans la description.';
         }
 
-        if (mb_strlen($title) > self::THREAD_TITLE_MAX_LENGTH) {
-            return 'Le titre est trop long.';
-        }
-
-        if (!$this->hasEnoughMeaningfulCharacters($title, 4)) {
-            return 'Le titre doit contenir plus que quelques symboles ou caracteres repetes.';
-        }
-
-        if (mb_strlen($content) < self::THREAD_CONTENT_MIN_LENGTH) {
-            return 'Le contenu de la discussion doit contenir au moins 15 caracteres utiles.';
-        }
-
-        if (mb_strlen($content) > self::THREAD_CONTENT_MAX_LENGTH) {
-            return 'Le contenu de la discussion est trop long.';
-        }
-
-        if (!$this->hasEnoughMeaningfulCharacters($content, 10)) {
-            return 'Le contenu de la discussion doit contenir un vrai message exploitable.';
-        }
-
-        if ($this->hasExcessiveRepeatedCharacters($title) || $this->hasExcessiveRepeatedCharacters($content)) {
-            return 'Merci d eviter les suites de caracteres repetes dans votre discussion.';
-        }
-
-        return null;
+        return $errors;
     }
 
-    private function validateCommentInput(string $content): ?string
+    private function validateThreadInput(string $title, string $content): array
     {
+        $errors = [];
+
+        if ($title === '') {
+            $errors['title'] = 'Le titre de la discussion est requis.';
+        } elseif (mb_strlen($title) < self::THREAD_TITLE_MIN_LENGTH) {
+            $errors['title'] = 'Le titre doit contenir au moins 5 caracteres.';
+        } elseif (mb_strlen($title) > self::THREAD_TITLE_MAX_LENGTH) {
+            $errors['title'] = 'Le titre est trop long.';
+        } elseif (!$this->hasEnoughMeaningfulCharacters($title, 4)) {
+            $errors['title'] = 'Le titre doit contenir plus que quelques symboles ou caracteres repetes.';
+        } elseif ($this->hasExcessiveRepeatedCharacters($title)) {
+            $errors['title'] = 'Merci d eviter les suites de caracteres repetes dans votre titre.';
+        }
+
         if ($content === '') {
-            return 'Le commentaire ne peut pas etre vide.';
+            $errors['content'] = 'Le contenu de la discussion est requis.';
+        } elseif (mb_strlen($content) < self::THREAD_CONTENT_MIN_LENGTH) {
+            $errors['content'] = 'Le contenu de la discussion doit contenir au moins 15 caracteres utiles.';
+        } elseif (mb_strlen($content) > self::THREAD_CONTENT_MAX_LENGTH) {
+            $errors['content'] = 'Le contenu de la discussion est trop long.';
+        } elseif (!$this->hasEnoughMeaningfulCharacters($content, 10)) {
+            $errors['content'] = 'Le contenu de la discussion doit contenir un vrai message exploitable.';
+        } elseif ($this->hasExcessiveRepeatedCharacters($content)) {
+            $errors['content'] = 'Merci d eviter les suites de caracteres repetes dans votre discussion.';
         }
 
-        if (mb_strlen($content) < self::COMMENT_CONTENT_MIN_LENGTH) {
-            return 'Le commentaire est trop court pour etre utile.';
+        return $errors;
+    }
+
+    private function validateCommentInput(string $content): array
+    {
+        $errors = [];
+
+        if ($content === '') {
+            $errors['content'] = 'Le commentaire ne peut pas etre vide.';
+        } elseif (mb_strlen($content) < self::COMMENT_CONTENT_MIN_LENGTH) {
+            $errors['content'] = 'Le commentaire est trop court pour etre utile.';
+        } elseif (mb_strlen($content) > self::COMMENT_CONTENT_MAX_LENGTH) {
+            $errors['content'] = 'Le commentaire est trop long.';
+        } elseif (!$this->hasEnoughMeaningfulCharacters($content, 3)) {
+            $errors['content'] = 'Le commentaire doit contenir plus que quelques symboles ou caracteres repetes.';
+        } elseif ($this->hasExcessiveRepeatedCharacters($content)) {
+            $errors['content'] = 'Merci d eviter les suites de caracteres repetes dans votre commentaire.';
         }
 
-        if (mb_strlen($content) > self::COMMENT_CONTENT_MAX_LENGTH) {
-            return 'Le commentaire est trop long.';
+        return $errors;
+    }
+
+    private function validateEventInput(string $title, string $description, ?\DateTime $eventDate, string $capacity): array
+    {
+        $errors = [];
+
+        if ($title === '') {
+            $errors['title'] = 'Le titre de l evenement est requis.';
+        } elseif (mb_strlen($title) < self::EVENT_TITLE_MIN_LENGTH) {
+            $errors['title'] = 'Le titre doit contenir au moins 5 caracteres.';
+        } elseif (mb_strlen($title) > self::EVENT_TITLE_MAX_LENGTH) {
+            $errors['title'] = 'Le titre de l evenement est trop long.';
+        } elseif (!$this->hasEnoughMeaningfulCharacters($title, 4)) {
+            $errors['title'] = 'Le titre doit contenir plus que quelques symboles ou caracteres repetes.';
+        } elseif ($this->hasExcessiveRepeatedCharacters($title)) {
+            $errors['title'] = 'Merci d eviter les suites de caracteres repetes dans le titre.';
         }
 
-        if (!$this->hasEnoughMeaningfulCharacters($content, 3)) {
-            return 'Le commentaire doit contenir plus que quelques symboles ou caracteres repetes.';
+        if ($description === '') {
+            $errors['description'] = 'La description de l evenement est requise.';
+        } elseif (mb_strlen($description) < self::EVENT_DESCRIPTION_MIN_LENGTH) {
+            $errors['description'] = 'La description doit contenir au moins 15 caracteres utiles.';
+        } elseif (mb_strlen($description) > self::EVENT_DESCRIPTION_MAX_LENGTH) {
+            $errors['description'] = 'La description de l evenement est trop longue.';
+        } elseif (!$this->hasEnoughMeaningfulCharacters($description, 10)) {
+            $errors['description'] = 'La description doit contenir un vrai message exploitable.';
+        } elseif ($this->hasExcessiveRepeatedCharacters($description)) {
+            $errors['description'] = 'Merci d eviter les suites de caracteres repetes dans la description.';
         }
 
-        if ($this->hasExcessiveRepeatedCharacters($content)) {
-            return 'Merci d eviter les suites de caracteres repetes dans votre commentaire.';
+        if (!$eventDate instanceof \DateTime) {
+            $errors['event_date'] = 'La date et l heure de l evenement sont requises.';
+        } else {
+            $now = new \DateTimeImmutable('now');
+            if ($eventDate->getTimestamp() <= $now->getTimestamp()) {
+                $errors['event_date'] = 'Choisissez une date future pour cet evenement.';
+            }
         }
 
-        return null;
+        if ($capacity === '') {
+            $errors['capacity'] = 'La capacite est requise.';
+        } elseif (filter_var($capacity, FILTER_VALIDATE_INT) === false) {
+            $errors['capacity'] = 'La capacite doit etre un nombre entier.';
+        } else {
+            $capacityValue = (int) $capacity;
+
+            if ($capacityValue < 1) {
+                $errors['capacity'] = 'La capacite doit etre au moins de 1 participant.';
+            } elseif ($capacityValue > self::EVENT_CAPACITY_MAX) {
+                $errors['capacity'] = 'La capacite est trop elevee pour cet evenement.';
+            }
+        }
+
+        return $errors;
     }
 
     private function sanitizeSubmittedTitle(string $value): string
@@ -1307,5 +1783,14 @@ class CommunityController extends AbstractController
     private function eventTicketValidationKey(int $eventId): string
     {
         return 'community.event.ticket.validation.'.$eventId;
+    }
+
+    private function eventReportFilename(Event $event): string
+    {
+        $slug = mb_strtolower(trim((string) $event->getTitle()));
+        $slug = (string) preg_replace('/[^a-z0-9]+/i', '-', $slug);
+        $slug = trim($slug, '-');
+
+        return sprintf('event-report-%d-%s.pdf', (int) $event->getId(), $slug !== '' ? $slug : 'community');
     }
 }

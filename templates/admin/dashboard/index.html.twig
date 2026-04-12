@@ -116,6 +116,83 @@
     </div>
 </div>
 
+<div class="row g-4 mb-4">
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card" style="border-left:4px solid #0ea5a4">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted small mb-1">Groupes</p>
+                    <h3 class="fw-bold mb-0" style="color:var(--nj-dark)">{{ totalGroups }}</h3>
+                </div>
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:50px;height:50px;background:rgba(14,165,164,.12)">
+                    <i class="bi bi-people" style="font-size:1.5rem;color:#0ea5a4"></i>
+                </div>
+            </div>
+            <a href="{{ path('admin_community_groups') }}" class="btn btn-sm btn-outline-primary mt-3">Gerer les groupes</a>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card" style="border-left:4px solid #f59e0b">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted small mb-1">Evenements</p>
+                    <h3 class="fw-bold mb-0" style="color:var(--nj-dark)">{{ totalEvents }}</h3>
+                </div>
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:50px;height:50px;background:rgba(245,158,11,.12)">
+                    <i class="bi bi-calendar-event" style="font-size:1.5rem;color:#f59e0b"></i>
+                </div>
+            </div>
+            <a href="{{ path('admin_community_events') }}" class="btn btn-sm btn-outline-primary mt-3">Gerer les evenements</a>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card" style="border-left:4px solid #ec4899">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted small mb-1">Publications</p>
+                    <h3 class="fw-bold mb-0" style="color:var(--nj-dark)">{{ totalPosts }}</h3>
+                </div>
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:50px;height:50px;background:rgba(236,72,153,.12)">
+                    <i class="bi bi-chat-square-text" style="font-size:1.5rem;color:#ec4899"></i>
+                </div>
+            </div>
+            <a href="{{ path('admin_community_posts') }}" class="btn btn-sm btn-outline-primary mt-3">Gerer les publications</a>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="stat-card" style="border-left:4px solid #16a34a">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <p class="text-muted small mb-1">Stats Utilisateurs</p>
+                    <h3 class="fw-bold mb-0" style="color:var(--nj-dark)">{{ totalUsers }}</h3>
+                </div>
+                <div class="rounded-circle d-flex align-items-center justify-content-center" style="width:50px;height:50px;background:rgba(22,163,74,.12)">
+                    <i class="bi bi-bar-chart-line" style="font-size:1.5rem;color:#16a34a"></i>
+                </div>
+            </div>
+            <a href="{{ path('admin_users_stats') }}" class="btn btn-sm btn-outline-primary mt-3">Voir les stats</a>
+        </div>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm mb-4" style="border-radius:1rem">
+    <div class="card-body p-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+            <div>
+                <h5 class="fw-bold mb-1"><i class="bi bi-lightning-charge me-2"></i>Acces rapide</h5>
+                <p class="text-muted small mb-0">Depuis ce tableau de bord, vous pouvez ouvrir les vues de stats et les pages ou l admin modifie ou supprime le contenu.</p>
+            </div>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{{ path('admin_users') }}" class="btn btn-outline-primary btn-sm">Utilisateurs</a>
+                <a href="{{ path('admin_users_stats') }}" class="btn btn-outline-primary btn-sm">Stats</a>
+                <a href="{{ path('admin_community_groups') }}" class="btn btn-outline-primary btn-sm">Groupes</a>
+                <a href="{{ path('admin_community_posts') }}" class="btn btn-outline-primary btn-sm">Posts</a>
+                <a href="{{ path('admin_community_events') }}" class="btn btn-outline-primary btn-sm">Evenements</a>
+            </div>
+        </div>
+    </div>
+</div>
+
 {# Upcoming Events #}
 {% if upcomingEvents|length > 0 %}
 <div class="card border-0 shadow-sm" style="border-radius:1rem">

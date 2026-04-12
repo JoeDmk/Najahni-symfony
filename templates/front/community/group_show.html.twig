@@ -2,7 +2,26 @@
 
 {% block title %}{{ group.name }} - Najahni{% endblock %}
 
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    .community-thread-card {
+        transition: transform .18s ease, box-shadow .18s ease;
+    }
+
+    .community-thread-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 1.25rem 2.5rem rgba(15, 23, 42, .12) !important;
+    }
+</style>
+{% endblock %}
+
 {% block main %}
+{% set threadFormData = threadFormData|default({title: '', content: ''}) %}
+{% set threadFormErrors = threadFormErrors|default({}) %}
+{% set groupEditData = groupEditData|default({name: group.name, description: group.description, is_private: group.isPrivate}) %}
+{% set groupEditErrors = groupEditErrors|default({}) %}
+{% set openGroupEdit = openGroupEdit|default(false) %}
 <a href="{{ path('app_community_groups') }}" class="text-decoration-none text-muted"><i class="bi bi-arrow-left me-1"></i>Tous les groupes</a>
 
 <div class="row g-4 mt-3">
@@ -45,6 +64,7 @@
                     {% endif %}
 
                     {% if isOwner %}
+                    <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#group-edit-form"><i class="bi bi-pencil-square me-1"></i>Modifier</button>
                     <form method="post" action="{{ path('app_community_group_delete', {id: group.id}) }}">
                         <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>Supprimer</button>
                     </form>
@@ -52,6 +72,37 @@
                 </div>
             </div>
         </div>
+
+        {% if isOwner %}
+        <div class="collapse{{ openGroupEdit ? ' show' : '' }} mb-4" id="group-edit-form">
+            <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+                <h5 class="fw-bold mb-3">Modifier le groupe</h5>
+                <form method="post" action="{{ path('app_community_group_update', {id: group.id}) }}" novalidate>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Nom du groupe</label>
+                        <input type="text" name="name" class="form-control{{ groupEditErrors.name is defined ? ' is-invalid' }}" value="{{ groupEditData.name }}" maxlength="120" required>
+                        <div class="form-text">3 a 120 caracteres avec un nom clair pour les membres.</div>
+                        {% if groupEditErrors.name is defined %}
+                        <div class="invalid-feedback d-block">{{ groupEditErrors.name }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Description</label>
+                        <textarea name="description" class="form-control{{ groupEditErrors.description is defined ? ' is-invalid' }}" rows="4" maxlength="1500" required>{{ groupEditData.description }}</textarea>
+                        <div class="form-text">Precisez le but du groupe, les sujets attendus et les regles utiles.</div>
+                        {% if groupEditErrors.description is defined %}
+                        <div class="invalid-feedback d-block">{{ groupEditErrors.description }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="is_private" id="group-edit-private" value="1" {{ groupEditData.is_private ? 'checked' }}>
+                        <label class="form-check-label" for="group-edit-private">Groupe prive</label>
+                    </div>
+                    <button type="submit" class="btn btn-nj btn-sm"><i class="bi bi-check-lg me-1"></i>Enregistrer</button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
 
         <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
             <h5 class="fw-bold mb-3">Acces et adhesion</h5>
@@ -86,12 +137,22 @@
         <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
             <h5 class="fw-bold mb-3">Nouvelle discussion</h5>
             {% if canParticipate %}
-            <form method="post" action="{{ path('app_community_thread_new', {id: group.id}) }}">
+            <form method="post" action="{{ path('app_community_thread_new', {id: group.id}) }}" novalidate>
                 <div class="mb-3">
-                    <input type="text" name="title" class="form-control" placeholder="Titre de la discussion" required>
+                    <label class="form-label fw-semibold">Titre</label>
+                    <input type="text" name="title" class="form-control{{ threadFormErrors.title is defined ? ' is-invalid' }}" value="{{ threadFormData.title }}" placeholder="Titre de la discussion" maxlength="150" required>
+                    <div class="form-text">5 a 150 caracteres avec une idee claire.</div>
+                    {% if threadFormErrors.title is defined %}
+                    <div class="invalid-feedback d-block">{{ threadFormErrors.title }}</div>
+                    {% endif %}
                 </div>
                 <div class="mb-3">
-                    <textarea name="content" class="form-control" rows="3" placeholder="Contenu..." required></textarea>
+                    <label class="form-label fw-semibold">Contenu</label>
+                    <textarea name="content" class="form-control{{ threadFormErrors.content is defined ? ' is-invalid' }}" rows="3" placeholder="Contenu..." maxlength="5000" required>{{ threadFormData.content }}</textarea>
+                    <div class="form-text">Expliquez le contexte et ce que vous attendez des reponses.</div>
+                    {% if threadFormErrors.content is defined %}
+                    <div class="invalid-feedback d-block">{{ threadFormErrors.content }}</div>
+                    {% endif %}
                 </div>
                 <button type="submit" class="btn btn-nj"><i class="bi bi-chat-dots me-2"></i>Publier</button>
             </form>
@@ -103,19 +164,21 @@
         </div>
 
         {% for thread in threads %}
-        <div class="card border-0 shadow-sm mb-3" style="border-radius:1rem">
-            <div class="card-body p-4">
-                <h5 class="fw-bold"><a href="{{ path('app_community_thread_show', {id: thread.id}) }}" class="text-decoration-none text-dark">{{ thread.title }}</a></h5>
-                <p class="text-muted mb-2">{{ thread.content|length > 200 ? thread.content|slice(0, 200) ~ '...' : thread.content }}</p>
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-                    <small class="text-muted">Par {{ thread.user.firstname }} {{ thread.user.lastname }} · {{ thread.createdAt|date('d/m/Y H:i') }}</small>
-                    <div class="d-flex align-items-center gap-2">
+        <a href="{{ path('app_community_thread_show', {id: thread.id}) }}" class="text-decoration-none text-reset d-block">
+            <div class="card border-0 shadow-sm mb-3 community-thread-card" style="border-radius:1rem">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-2">
+                        <h5 class="fw-bold mb-0">{{ thread.title }}</h5>
                         <span class="badge bg-primary bg-opacity-10 text-primary"><i class="bi bi-chat me-1"></i>{{ thread.comments|length }}</span>
-                        <a href="{{ path('app_community_thread_show', {id: thread.id}) }}" class="btn btn-sm btn-outline-primary">Ouvrir</a>
+                    </div>
+                    <p class="text-muted mb-3">{{ thread.content|length > 200 ? thread.content|slice(0, 200) ~ '...' : thread.content }}</p>
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <small class="text-muted">Par {{ thread.user.firstname }} {{ thread.user.lastname }} · {{ thread.createdAt|date('d/m/Y H:i') }}</small>
+                        <small class="text-muted">Cliquez pour ouvrir</small>
                     </div>
                 </div>
             </div>
-        </div>
+        </a>
         {% else %}
         <p class="text-muted text-center py-3">Aucune discussion dans ce groupe.</p>
         {% endfor %}

@@ -7,6 +7,7 @@ use App\Repository\ProjetRepository;
 use App\Repository\CoursRepository;
 use App\Repository\GroupRepository;
 use App\Repository\EventRepository;
+use App\Repository\PostRepository;
 use App\Repository\InvestmentOpportunityRepository;
 use App\Repository\MentorshipRequestRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -25,6 +26,7 @@ class AdminDashboardController extends AbstractController
         CoursRepository $coursRepo,
         GroupRepository $groupRepo,
         EventRepository $eventRepo,
+        PostRepository $postRepo,
         InvestmentOpportunityRepository $investRepo,
         MentorshipRequestRepository $mentorRepo,
     ): Response {
@@ -38,6 +40,8 @@ class AdminDashboardController extends AbstractController
             'totalProjets' => $projetRepo->count([]),
             'totalCours' => $coursRepo->count([]),
             'totalGroups' => $groupRepo->count([]),
+            'totalEvents' => $eventRepo->count([]),
+            'totalPosts' => $postRepo->count([]),
             'totalOpportunities' => $investRepo->count([]),
             'totalMentorships' => $mentorRepo->count([]),
             'upcomingEvents' => $eventRepo->findUpcoming(5),
