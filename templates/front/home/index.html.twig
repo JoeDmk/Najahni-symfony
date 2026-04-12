@@ -2,126 +2,829 @@
 
 {% block title %}Accueil - Najahni{% endblock %}
 
+{% block body_attributes %}data-page="home"{% endblock %}
+
+{% block stylesheets %}
+<style>
+/* ═══════════════════════════════════════════════════════════
+   HOMEPAGE — ALL FEATURES
+   ═══════════════════════════════════════════════════════════ */
+
+/* Override layout wrapper padding for full-bleed hero */
+main.container-fluid { padding: 0 !important; }
+body { background: #f0f2f5; }
+
+/* ── Guest value proposition ── */
+.nj-audience-section { padding: 4rem 0 2rem; }
+.nj-audience-card {
+    height: 100%;
+    border-radius: 1rem;
+    background: #fff;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, .08);
+    padding: 2rem 1.6rem;
+    border: 1px solid rgba(148, 163, 184, .16);
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity .5s ease, transform .5s ease, box-shadow .25s ease;
+}
+.nj-audience-card.revealed { opacity: 1; transform: translateY(0); }
+.nj-audience-card:hover { box-shadow: 0 18px 42px rgba(15, 23, 42, .12); }
+.nj-audience-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    margin-bottom: 1rem;
+}
+.nj-audience-card h4 { font-size: 1.15rem; font-weight: 800; color: #111827; margin-bottom: .55rem; }
+.nj-audience-card p { color: #6b7280; font-size: .93rem; line-height: 1.6; margin-bottom: 1rem; }
+.nj-audience-points {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1.25rem;
+    display: grid;
+    gap: .55rem;
+}
+.nj-audience-points li {
+    color: #374151;
+    font-size: .86rem;
+    display: flex;
+    align-items: flex-start;
+    gap: .55rem;
+}
+.nj-audience-points i { color: var(--nj-primary); margin-top: .1rem; }
+
+/* ── Feature 1: Hero ── */
+.nj-hero {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: linear-gradient(-45deg, #0a0e27, #1a0533, #0f1b4d, #12063a);
+    background-size: 400% 400%;
+    animation: gradientShift 12s ease infinite;
+}
+@keyframes gradientShift {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+.nj-hero-canvas {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0;
+    transition: opacity 2s ease;
+}
+.nj-hero-canvas.loaded { opacity: .35; }
+.nj-hero-content {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    color: #fff;
+    padding: 2rem 1rem;
+    max-width: 780px;
+}
+
+/* Cycling pill badge */
+.nj-stat-pill {
+    display: inline-block;
+    background: rgba(255,255,255,.12);
+    backdrop-filter: blur(6px);
+    color: #fff;
+    padding: .4rem 1.2rem;
+    border-radius: 999px;
+    font-size: .82rem;
+    font-weight: 500;
+    margin-bottom: 1.5rem;
+    min-width: 200px;
+    transition: opacity .35s ease;
+}
+.nj-stat-pill.fade-out { opacity: 0; }
+
+/* Shimmer headline */
+.nj-hero h1 { font-size: 3.2rem; font-weight: 800; line-height: 1.15; margin-bottom: 1rem; }
+@media(max-width:767px){ .nj-hero h1 { font-size: 2rem; } }
+.nj-hero h1 .gradient-text {
+    background: linear-gradient(90deg, #7c3aed, #3b82f6, #06d6a0, #f59e0b, #7c3aed);
+    background-size: 300% 100%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: shimmerText 6s linear infinite;
+}
+@keyframes shimmerText {
+    0%   { background-position: 0% 50%;   }
+    100% { background-position: 300% 50%; }
+}
+
+.nj-hero .lead { font-size: 1.05rem; opacity: .8; max-width: 560px; margin: 0 auto 2rem; }
+
+/* CTA buttons */
+.btn-hero-primary {
+    background: linear-gradient(135deg, #7c3aed, #3b82f6);
+    border: none; color: #fff; font-weight: 700; font-size: 1rem;
+    padding: .75rem 2rem; border-radius: .75rem;
+    transition: transform .2s, box-shadow .2s;
+}
+.btn-hero-primary:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(124,58,237,.45); color:#fff; }
+.btn-hero-secondary {
+    background: transparent; border: 2px solid rgba(255,255,255,.5); color: #fff;
+    font-weight: 600; font-size: 1rem; padding: .7rem 2rem; border-radius: .75rem;
+    transition: background .2s, border-color .2s;
+}
+.btn-hero-secondary:hover { background: rgba(255,255,255,.12); border-color: #fff; color:#fff; }
+
+/* Micro-stats row */
+.nj-hero-stats {
+    display: flex; gap: 2.5rem; justify-content: center; flex-wrap: wrap;
+    margin-top: 2.5rem; padding-top: 1.5rem;
+    border-top: 1px solid rgba(255,255,255,.12);
+}
+.nj-hero-stat { text-align: center; color: rgba(255,255,255,.85); }
+.nj-hero-stat .stat-num { font-size: 1.6rem; font-weight: 800; display: block; }
+.nj-hero-stat .stat-label { font-size: .72rem; text-transform: uppercase; letter-spacing: .8px; opacity: .65; }
+
+/* Scroll indicator */
+.nj-scroll-indicator {
+    position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
+    z-index: 1; color: rgba(255,255,255,.5);
+    animation: scrollBounce 2s ease-in-out infinite;
+}
+@keyframes scrollBounce {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50%      { transform: translateX(-50%) translateY(10px); }
+}
+
+/* ── Feature 2: Activity Ticker ── */
+.nj-ticker {
+    height: 40px; overflow: hidden;
+    background: rgba(15,12,41,.92);
+    backdrop-filter: blur(8px);
+    position: relative;
+    opacity: 0; transform: translateY(-20px);
+    transition: opacity .4s ease, transform .4s ease;
+}
+.nj-ticker.revealed { opacity: 1; transform: translateY(0); }
+.nj-ticker-track {
+    display: flex; align-items: center; height: 100%;
+    animation: tickerScroll 55s linear infinite;
+    width: max-content;
+}
+.nj-ticker:hover .nj-ticker-track { animation-play-state: paused; }
+@keyframes tickerScroll {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+.nj-ticker-item {
+    display: inline-flex; align-items: center; gap: .4rem;
+    padding: 0 1.5rem; white-space: nowrap;
+    color: rgba(255,255,255,.75); font-size: .78rem; font-weight: 500;
+}
+.nj-ticker-dot {
+    width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+}
+.nj-ticker-dot.project     { background: #3b82f6; }
+.nj-ticker-dot.investment  { background: #06d6a0; }
+.nj-ticker-dot.mentorship  { background: #f59e0b; }
+.nj-ticker-dot.community   { background: #a855f7; }
+.nj-ticker-dot.user         { background: #94a3b8; }
+
+/* ── Feature 3: Module Cards ── */
+.nj-modules { padding: 4rem 0; }
+.nj-module-card {
+    border-radius: 1rem; overflow: hidden; background: #fff;
+    box-shadow: 0 2px 12px rgba(0,0,0,.06);
+    transition: transform .35s ease, box-shadow .35s ease;
+    position: relative; height: 100%;
+    display: flex; flex-direction: column;
+    /* Scroll reveal initial state */
+    opacity: 0; transform: translateY(30px);
+    transition: opacity .5s ease, transform .5s ease, box-shadow .35s ease;
+}
+.nj-module-card.revealed { opacity: 1; transform: translateY(0); }
+.nj-module-card:hover { transform: translateY(-8px); box-shadow: 0 20px 50px rgba(0,0,0,.14); }
+.nj-module-card.revealed:hover { transform: translateY(-8px); }
+.nj-module-header {
+    padding: 1.8rem 1.5rem 1.5rem; text-align: center;
+    background-size: 200% 200%;
+    background-position: 0% 50%;
+    transition: background-position .6s ease;
+}
+.nj-module-card:hover .nj-module-header { background-position: 100% 50%; }
+.nj-module-header i { font-size: 2.2rem; color: #fff; }
+.nj-module-body { padding: 1.5rem; flex: 1; display: flex; flex-direction: column; }
+.nj-module-body h5 { font-weight: 700; font-size: 1.05rem; margin-bottom: .4rem; color: #1a1a2e; }
+.nj-module-body p { color: #6c757d; font-size: .88rem; line-height: 1.5; flex: 1; }
+.nj-module-stat {
+    position: absolute; top: .8rem; right: .8rem;
+    background: rgba(255,255,255,.25); backdrop-filter: blur(4px);
+    color: #fff; font-size: .68rem; font-weight: 600;
+    padding: .2rem .65rem; border-radius: 999px;
+}
+.nj-module-cta {
+    display: inline-block; font-weight: 600; font-size: .85rem;
+    color: var(--nj-primary); text-decoration: none;
+    transition: color .2s;
+}
+.nj-module-cta:hover { color: var(--nj-accent); }
+.nj-module-cta i { transition: transform .2s; }
+.nj-module-cta:hover i { transform: translateX(4px); }
+
+/* ── Feature 4: Social Proof ── */
+.nj-social-proof { padding: 4rem 0; }
+.nj-impact-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 2rem;
+    /* Scroll reveal initial state */
+    opacity: 0; transform: translateY(30px);
+    transition: opacity .6s ease, transform .6s ease;
+}
+.nj-impact-grid.revealed { opacity: 1; transform: translateY(0); }
+@media(max-width:991px){ .nj-impact-grid { grid-template-columns: repeat(2, 1fr); } }
+@media(max-width:575px){ .nj-impact-grid { grid-template-columns: 1fr 1fr; gap: 1rem; } }
+.nj-impact-item { text-align: center; padding: 1.5rem; }
+.nj-impact-num { font-size: 2.8rem; font-weight: 800; color: var(--nj-dark); line-height: 1; }
+.nj-impact-label { font-weight: 700; font-size: .95rem; color: #333; margin-top: .25rem; }
+.nj-impact-sub { font-size: .78rem; color: #6c757d; margin-top: .15rem; }
+
+/* Strengths cards */
+.nj-strengths {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.2rem;
+    margin-top: 3rem;
+}
+@media(max-width:991px){
+    .nj-strengths { grid-template-columns: repeat(2, 1fr); }
+}
+@media(max-width:575px){
+    .nj-strengths { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; gap: 1rem; padding-bottom: .5rem; }
+    .nj-strengths .nj-strength-card { min-width: 260px; scroll-snap-align: start; }
+}
+.nj-strength-card {
+    background: #1a1a2e; border-radius: .75rem; padding: 1.2rem 1.3rem;
+    color: #fff; position: relative; overflow: hidden;
+    /* Scroll reveal initial state */
+    opacity: 0; transform: translateX(-30px);
+    transition: opacity .4s ease, transform .4s ease;
+}
+.nj-strength-card.revealed { opacity: 1; transform: translateX(0); }
+.nj-strength-card::before {
+    content: ''; position: absolute; left: 0; top: 0; width: 4px; height: 100%;
+}
+.nj-strength-card:nth-child(1)::before { background: #3b82f6; }
+.nj-strength-card:nth-child(2)::before { background: #06d6a0; }
+.nj-strength-card:nth-child(3)::before { background: #f59e0b; }
+.nj-strength-card:nth-child(4)::before { background: #a855f7; }
+.nj-strength-card i { font-size: 1.4rem; margin-bottom: .5rem; display: block; }
+.nj-strength-card h6 { font-weight: 700; font-size: .9rem; margin-bottom: .25rem; }
+.nj-strength-card p { font-size: .78rem; color: rgba(255,255,255,.6); margin: 0; }
+
+/* Closing statement */
+.nj-closing {
+    background: var(--nj-dark); padding: 5rem 2rem; text-align: center;
+    margin-top: 3rem; border-radius: 1.5rem;
+    /* Scroll reveal */
+    opacity: 0; transform: scale(.97);
+    transition: opacity .8s ease, transform .8s ease;
+}
+.nj-closing.revealed { opacity: 1; transform: scale(1); }
+.nj-closing h2 { color: #fff; font-weight: 800; font-size: 1.6rem; max-width: 700px; margin: 0 auto 1.5rem; line-height: 1.4; }
+@media(max-width:767px){ .nj-closing h2 { font-size: 1.2rem; } }
+</style>
+{% endblock %}
+
 {% block main %}
-{# Hero Section #}
-<section class="hero-section text-center py-5 mb-5">
-    <div class="container position-relative py-4" style="z-index:1">
-        <span class="badge bg-white bg-opacity-25 text-white px-3 py-2 rounded-pill mb-3" style="font-size:.9rem"><i class="bi bi-stars me-1"></i>Plateforme entrepreneuriale #1 en Tunisie</span>
-        <h1 class="display-4 fw-bold mb-3">Propulsez votre<br>parcours entrepreneurial</h1>
-        <p class="lead mb-4 mx-auto opacity-85" style="max-width:600px">Connectez-vous avec des mentors expérimentés, trouvez des investisseurs et développez vos compétences pour réussir.</p>
+{% set isGuest = not is_granted('ROLE_USER') %}
+{# ═══════════════════════════════════════════════
+   FEATURE 1 — Hero Section
+   ═══════════════════════════════════════════════ #}
+<section class="nj-hero" id="njHero">
+    <canvas class="nj-hero-canvas" id="heroCanvas"></canvas>
+    <div class="nj-hero-content">
+        {# Cycling stats pill #}
+        <div class="nj-stat-pill" id="heroPill">
+            <span id="heroPillText">{{ platformStats.activeProjects }} projets actifs</span>
+        </div>
+
+        {% if isGuest %}
+            <h1>Vous avez un projet.<br><span class="gradient-text">Najahni vous donne les moyens de le realiser.</span></h1>
+            <p class="lead">Najahni connecte les entrepreneurs avec des investisseurs, les met en relation avec des mentors, et leur donne les outils pour faire grandir leur projet.</p>
+        {% else %}
+            <h1>La plateforme qui transforme<br><span class="gradient-text">les idees en investissements.</span></h1>
+            <p class="lead">Najahni connecte les entrepreneurs tunisiens avec des investisseurs, mentors, et une communaute de {{ platformStats.totalUsers }}+ membres.</p>
+        {% endif %}
+
         <div class="d-flex gap-3 justify-content-center flex-wrap">
             {% if app.user %}
-                <a href="{{ path('app_projet_index') }}" class="btn btn-light btn-lg px-4 fw-semibold shadow-sm"><i class="bi bi-rocket-takeoff me-2"></i>Mes Projets</a>
-                <a href="{{ path('app_community_posts') }}" class="btn btn-outline-light btn-lg px-4"><i class="bi bi-people me-2"></i>Communauté</a>
+                <a href="{{ path('app_projet_index') }}" class="btn btn-hero-primary">Mes Projets</a>
+                <a href="{{ path('app_invest_opportunities') }}" class="btn btn-hero-secondary">Opportunites d'investissement</a>
             {% else %}
-                <a href="{{ path('app_register') }}" class="btn btn-light btn-lg px-4 fw-semibold shadow-sm"><i class="bi bi-person-plus me-2"></i>Commencer gratuitement</a>
-                <a href="{{ path('app_login') }}" class="btn btn-outline-light btn-lg px-4"><i class="bi bi-box-arrow-in-right me-2"></i>Se connecter</a>
+                <a href="{{ path('app_register') }}" class="btn btn-hero-primary">Rejoindre Najahni - c'est gratuit</a>
+                <a href="{{ path('app_login') }}" class="btn btn-hero-secondary">Se connecter</a>
             {% endif %}
+        </div>
+
+        <div class="nj-hero-stats">
+            <div class="nj-hero-stat">
+                <span class="stat-num" data-count="{{ platformStats.activeProjects }}">0</span>
+                <span class="stat-label">Projets actifs</span>
+            </div>
+            <div class="nj-hero-stat">
+                <span class="stat-num" data-count="{{ platformStats.totalInvestors }}">0</span>
+                <span class="stat-label">Investisseurs</span>
+            </div>
+            <div class="nj-hero-stat">
+                <span class="stat-num" data-count="{{ platformStats.fundedDeals }}">0</span>
+                <span class="stat-label">Deals finances</span>
+            </div>
+        </div>
+    </div>
+    <div class="nj-scroll-indicator">
+        <i class="bi bi-chevron-down" style="font-size:1.5rem"></i>
+    </div>
+</section>
+
+{% if isGuest %}
+{# ═══════════════════════════════════════════════
+   GUEST VALUE PROPOSITION
+   ═══════════════════════════════════════════════ #}
+<section class="nj-audience-section">
+    <div class="container">
+        <div class="text-center mb-4">
+            <h3 class="fw-bold mb-2">Pourquoi rejoindre Najahni ?</h3>
+            <p class="text-muted mb-0">Trois profils, trois raisons concretes d'entrer dans l'ecosysteme.</p>
+        </div>
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="nj-audience-card" style="transition-delay:0ms">
+                    <div class="nj-audience-icon" style="background:rgba(67,97,238,.12);color:var(--nj-primary)">
+                        <i class="bi bi-rocket-takeoff"></i>
+                    </div>
+                    <h4>Pour les entrepreneurs</h4>
+                    <p>Donnez une structure a votre projet, rendez-le visible, et avancez avec de vrais relais pour financer et accelerer son execution.</p>
+                    <ul class="nj-audience-points">
+                        <li><i class="bi bi-check-circle-fill"></i><span>Publiez un projet clair et credible</span></li>
+                        <li><i class="bi bi-check-circle-fill"></i><span>Accedez a des investisseurs et des mentors</span></li>
+                        <li><i class="bi bi-check-circle-fill"></i><span>Faites progresser votre projet avec des outils concrets</span></li>
+                    </ul>
+                    <a href="{{ path('app_register') }}" class="btn btn-nj w-100">Creer mon compte gratuitement</a>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="nj-audience-card" style="transition-delay:100ms">
+                    <div class="nj-audience-icon" style="background:rgba(114,9,183,.12);color:var(--nj-accent)">
+                        <i class="bi bi-graph-up-arrow"></i>
+                    </div>
+                    <h4>Pour les investisseurs</h4>
+                    <p>Reperez des opportunites reelles, evaluez les projets plus vite, et entrez en relation avec des porteurs qui ont besoin d'un partenaire solide.</p>
+                    <ul class="nj-audience-points">
+                        <li><i class="bi bi-check-circle-fill"></i><span>Consultez des opportunites entrepreneuriales</span></li>
+                        <li><i class="bi bi-check-circle-fill"></i><span>Negociez des offres dans un cadre structure</span></li>
+                        <li><i class="bi bi-check-circle-fill"></i><span>Suivez des deals finances sur une meme plateforme</span></li>
+                    </ul>
+                    <a href="{{ path('app_register') }}" class="btn btn-nj w-100">Rejoindre comme investisseur</a>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="nj-audience-card" style="transition-delay:200ms">
+                    <div class="nj-audience-icon" style="background:rgba(6,214,160,.16);color:var(--nj-success)">
+                        <i class="bi bi-mortarboard"></i>
+                    </div>
+                    <h4>Pour les mentors</h4>
+                    <p>Partagez votre experience avec des entrepreneurs qui avancent, accompagnez des projets utiles, et rendez votre expertise visible la ou elle compte.</p>
+                    <ul class="nj-audience-points">
+                        <li><i class="bi bi-check-circle-fill"></i><span>Recevez des demandes d'accompagnement</span></li>
+                        <li><i class="bi bi-check-circle-fill"></i><span>Intervenez la ou votre experience a de la valeur</span></li>
+                        <li><i class="bi bi-check-circle-fill"></i><span>Contribuez a l'ecosysteme entrepreneurial tunisien</span></li>
+                    </ul>
+                    <a href="{{ path('app_register') }}" class="btn btn-nj w-100">Devenir mentor sur Najahni</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endif %}
+
+{# ═══════════════════════════════════════════════
+   FEATURE 2 — Activity Ticker
+   ═══════════════════════════════════════════════ #}
+{% if activityFeed|length > 0 %}
+<div class="nj-ticker" id="njTicker">
+    <div class="nj-ticker-track" id="tickerTrack">
+        {% for event in activityFeed %}
+            <span class="nj-ticker-item">
+                <span class="nj-ticker-dot {{ event.type }}"></span>
+                {{ event.text }} &middot; <span style="opacity:.5">{{ event.ago }}</span>
+            </span>
+        {% endfor %}
+        {# Duplicate for seamless loop #}
+        {% for event in activityFeed %}
+            <span class="nj-ticker-item">
+                <span class="nj-ticker-dot {{ event.type }}"></span>
+                {{ event.text }} &middot; <span style="opacity:.5">{{ event.ago }}</span>
+            </span>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{# ═══════════════════════════════════════════════
+   FEATURE 3 — Module Cards
+   ═══════════════════════════════════════════════ #}
+<section class="nj-modules">
+    <div class="container">
+        <h3 class="fw-bold text-center mb-2">Ce que Najahni fait pour vous</h3>
+        <p class="text-center text-muted mb-4">Six modules. Un seul objectif : votre reussite.</p>
+        <div class="row g-4">
+            {% set modules = [
+                {
+                    icon: 'bi-cash-stack',
+                    gradient: 'linear-gradient(135deg, #7209b7, #3a0ca3)',
+                    title: 'Trouvez des investisseurs pour votre projet',
+                    desc: 'Publiez votre opportunite, negociez les termes, et finalisez un contrat signe numeriquement.',
+                    stat: platformStats.openOpportunities ~ ' opportunites actives',
+                    cta: 'Voir les opportunites',
+                    route: path('app_invest_opportunities')
+                },
+                {
+                    icon: 'bi-rocket-takeoff',
+                    gradient: 'linear-gradient(135deg, #4361ee, #3a0ca3)',
+                    title: 'Transformez votre idee en projet structure',
+                    desc: 'Creez, evaluez et presentez votre projet a une communaute d\'experts et d\'investisseurs.',
+                    stat: platformStats.totalProjects ~ ' projets en cours',
+                    cta: 'Creer un projet',
+                    route: path('app_projet_index')
+                },
+                {
+                    icon: 'bi-people-fill',
+                    gradient: 'linear-gradient(135deg, #3a0ca3, #7209b7)',
+                    title: 'Rejoignez une communaute d\'entrepreneurs actifs',
+                    desc: 'Echangez, collaborez, et grandissez avec des milliers d\'entrepreneurs tunisiens.',
+                    stat: platformStats.totalUsers ~ ' membres actifs',
+                    cta: 'Rejoindre',
+                    route: path('app_community_posts')
+                },
+                {
+                    icon: 'bi-mortarboard',
+                    gradient: 'linear-gradient(135deg, #06d6a0, #0d9488)',
+                    title: 'Apprenez de ceux qui ont deja reussi',
+                    desc: 'Reservez des sessions avec des mentors experimentes et progressez plus vite.',
+                    stat: platformStats.totalMentorsAvail ~ ' mentors disponibles',
+                    cta: 'Trouver un mentor',
+                    route: path('app_mentorat_requests')
+                },
+                {
+                    icon: 'bi-book',
+                    gradient: 'linear-gradient(135deg, #f72585, #b5179e)',
+                    title: 'Developpez les competences qui font la difference',
+                    desc: 'Suivez des formations adaptees aux entrepreneurs et obtenez des badges reconnus.',
+                    stat: platformStats.totalCours ~ ' cours disponibles',
+                    cta: 'Commencer',
+                    route: path('app_apprentissage_cours')
+                },
+                {
+                    icon: 'bi-person-vcard',
+                    gradient: 'linear-gradient(135deg, #f59e0b, #e6a700)',
+                    title: 'Votre profil, votre identite entrepreneuriale',
+                    desc: 'Un profil complet qui vous represente aupres des investisseurs, mentors, et partenaires.',
+                    stat: platformStats.totalUsers ~ ' profils crees',
+                    cta: 'Creer mon profil',
+                    route: path('app_profile')
+                }
+            ] %}
+
+            {% for m in modules %}
+            <div class="col-md-6 col-lg-4">
+                <div class="nj-module-card" data-tilt style="transition-delay: {{ (loop.index0 % 3) * 100 }}ms">
+                    <span class="nj-module-stat">{{ m.stat }}</span>
+                    <div class="nj-module-header" style="background: {{ m.gradient }}">
+                        <i class="bi {{ m.icon }}"></i>
+                    </div>
+                    <div class="nj-module-body">
+                        <h5>{{ m.title }}</h5>
+                        <p>{{ m.desc }}</p>
+                        <a href="{{ m.route }}" class="nj-module-cta">{{ m.cta }} <i class="bi bi-arrow-right ms-1"></i></a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
         </div>
     </div>
 </section>
 
-{# Modules Grid #}
-<h3 class="fw-bold text-center mb-2">Nos 6 modules</h3>
-<p class="text-center text-muted mb-4">Tout ce dont vous avez besoin pour réussir votre aventure entrepreneuriale</p>
-<div class="row g-4 mb-5">
-    <div class="col-md-4">
-        <div class="module-card h-100">
-            <div class="module-icon" style="background:rgba(67,97,238,.1)"><i class="bi bi-rocket-takeoff" style="color:var(--nj-primary)"></i></div>
-            <h5>Gestion de Projets</h5>
-            <p>Créez, évaluez et suivez vos projets entrepreneuriaux avec des outils puissants.</p>
-            <a href="{{ path('app_projet_index') }}" class="btn btn-outline-nj btn-sm">Explorer <i class="bi bi-arrow-right ms-1"></i></a>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="module-card h-100">
-            <div class="module-icon" style="background:rgba(114,9,183,.1)"><i class="bi bi-cash-stack" style="color:var(--nj-accent)"></i></div>
-            <h5>Investissement</h5>
-            <p>Publiez des opportunités et recevez des offres de financement pour vos projets.</p>
-            <a href="{{ path('app_invest_opportunities') }}" class="btn btn-outline-nj btn-sm">Découvrir <i class="bi bi-arrow-right ms-1"></i></a>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="module-card h-100">
-            <div class="module-icon" style="background:rgba(58,12,163,.1)"><i class="bi bi-people-fill" style="color:var(--nj-secondary)"></i></div>
-            <h5>Communauté</h5>
-            <p>Échangez avec d'autres entrepreneurs, rejoignez des groupes et participez à des événements.</p>
-            <a href="{{ path('app_community_posts') }}" class="btn btn-outline-nj btn-sm">Rejoindre <i class="bi bi-arrow-right ms-1"></i></a>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="module-card h-100">
-            <div class="module-icon" style="background:rgba(6,214,160,.15)"><i class="bi bi-mortarboard" style="color:var(--nj-success)"></i></div>
-            <h5>Mentorat</h5>
-            <p>Trouvez un mentor expérimenté pour vous guider et planifiez des sessions en ligne.</p>
-            <a href="{{ path('app_mentorat_requests') }}" class="btn btn-outline-nj btn-sm">Commencer <i class="bi bi-arrow-right ms-1"></i></a>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="module-card h-100">
-            <div class="module-icon" style="background:rgba(247,37,133,.1)"><i class="bi bi-book" style="color:#f72585"></i></div>
-            <h5>Apprentissage</h5>
-            <p>Suivez des cours, obtenez des badges et développez vos compétences entrepreneuriales.</p>
-            <a href="{{ path('app_apprentissage_cours') }}" class="btn btn-outline-nj btn-sm">Apprendre <i class="bi bi-arrow-right ms-1"></i></a>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="module-card h-100">
-            <div class="module-icon" style="background:rgba(255,209,102,.2)"><i class="bi bi-person-vcard" style="color:#e6a700"></i></div>
-            <h5>Gestion Utilisateurs</h5>
-            <p>Profils riches, authentification sécurisée et gestion avancée des rôles.</p>
-            <a href="{{ path('app_profile') }}" class="btn btn-outline-nj btn-sm">Mon profil <i class="bi bi-arrow-right ms-1"></i></a>
-        </div>
-    </div>
-</div>
-
-{# About Section #}
-<div class="card border-0 shadow-sm mb-5" style="border-radius:1.5rem;overflow:hidden">
-    <div class="row g-0 align-items-center">
-        <div class="col-lg-7 p-5">
-            <span class="feature-badge mb-3"><i class="bi bi-lightning-charge-fill"></i> Plateforme tout-en-un</span>
-            <h2 class="fw-bold mt-3 mb-3">Pourquoi choisir Najahni ?</h2>
-            <p class="text-muted mb-4">Najahni combine tous les outils essentiels pour accompagner les entrepreneurs tunisiens de l'idée au succès. Notre écosystème connecte créateurs, mentors et investisseurs dans un seul espace.</p>
-            <div class="row g-3">
-                <div class="col-sm-6">
-                    <div class="d-flex align-items-start gap-2">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px;height:36px;background:rgba(67,97,238,.1)">
-                            <i class="bi bi-check-lg" style="color:var(--nj-primary)"></i>
-                        </div>
-                        <div><strong class="d-block">Évaluation IA</strong><small class="text-muted">Scores automatiques pour vos projets</small></div>
-                    </div>
-                </div>
-                <div class="col-sm-6">
-                    <div class="d-flex align-items-start gap-2">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px;height:36px;background:rgba(114,9,183,.1)">
-                            <i class="bi bi-check-lg" style="color:var(--nj-accent)"></i>
-                        </div>
-                        <div><strong class="d-block">Paiement sécurisé</strong><small class="text-muted">Intégration Stripe & Flouci</small></div>
-                    </div>
-                </div>
-                <div class="col-sm-6">
-                    <div class="d-flex align-items-start gap-2">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px;height:36px;background:rgba(6,214,160,.15)">
-                            <i class="bi bi-check-lg" style="color:var(--nj-success)"></i>
-                        </div>
-                        <div><strong class="d-block">Visio intégrée</strong><small class="text-muted">Sessions de mentorat en direct</small></div>
-                    </div>
-                </div>
-                <div class="col-sm-6">
-                    <div class="d-flex align-items-start gap-2">
-                        <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width:36px;height:36px;background:rgba(247,37,133,.1)">
-                            <i class="bi bi-check-lg" style="color:#f72585"></i>
-                        </div>
-                        <div><strong class="d-block">Badges & XP</strong><small class="text-muted">Gamification de l'apprentissage</small></div>
-                    </div>
-                </div>
+{# ═══════════════════════════════════════════════
+   FEATURE 4 — Social Proof
+   ═══════════════════════════════════════════════ #}
+<section class="nj-social-proof">
+    <div class="container">
+        {# Part 1 — Impact numbers #}
+        <div class="nj-impact-grid" id="impactGrid">
+            <div class="nj-impact-item">
+                <span class="nj-impact-num" data-count="{{ platformStats.totalEntrepreneurs }}">0</span>
+                <div class="nj-impact-label">Entrepreneurs</div>
+                <div class="nj-impact-sub">ont cree leur projet sur Najahni</div>
+            </div>
+            <div class="nj-impact-item">
+                <span class="nj-impact-num" data-count="{{ platformStats.totalInvestors }}">0</span>
+                <div class="nj-impact-label">Investisseurs</div>
+                <div class="nj-impact-sub">cherchent activement des opportunites</div>
+            </div>
+            <div class="nj-impact-item">
+                <span class="nj-impact-num" data-count="{{ platformStats.fundedDeals }}">0</span>
+                <div class="nj-impact-label">Deals</div>
+                <div class="nj-impact-sub">finances avec succes sur la plateforme</div>
+            </div>
+            <div class="nj-impact-item">
+                <span class="nj-impact-num" data-count="{{ platformStats.totalSessions }}">0</span>
+                <div class="nj-impact-label">Sessions</div>
+                <div class="nj-impact-sub">de mentorat realisees</div>
             </div>
         </div>
-        <div class="col-lg-5 text-center p-5" style="background:var(--nj-gradient)">
-            <div class="text-center p-3"><i class="bi bi-rocket-takeoff text-white" style="font-size:6rem"></i></div>
-            <h4 class="text-white fw-bold mt-3 mb-2">Najahni</h4>
-            <p class="text-white opacity-75 mb-0">Votre succès commence ici</p>
+
+        {# Part 2 — Strengths #}
+        <div class="nj-strengths" id="strengthsGrid">
+            <div class="nj-strength-card" style="transition-delay:0ms">
+                <i class="bi bi-file-earmark-lock2"></i>
+                <h6>Contrats signes numeriquement</h6>
+                <p>SHA-256 signature electronique integree</p>
+            </div>
+            <div class="nj-strength-card" style="transition-delay:80ms">
+                <i class="bi bi-shield-check"></i>
+                <h6>Paiement Stripe securise</h6>
+                <p>Transactions protegees et tracees</p>
+            </div>
+            <div class="nj-strength-card" style="transition-delay:160ms">
+                <i class="bi bi-cpu"></i>
+                <h6>IA integree au workflow</h6>
+                <p>Analyse de risque et matching automatise</p>
+            </div>
+            <div class="nj-strength-card" style="transition-delay:240ms">
+                <i class="bi bi-geo-alt"></i>
+                <h6>100% Tunisien</h6>
+                <p>Concu pour l'ecosysteme entrepreneurial local</p>
+            </div>
+        </div>
+
+        {# Part 3 — Closing statement #}
+        <div class="nj-closing" id="njClosing">
+            {% if isGuest %}
+                <h2>Pret a commencer ? Creez votre compte gratuitement.</h2>
+                <a href="{{ path('app_register') }}" class="btn btn-hero-primary">Creer mon compte gratuitement</a>
+            {% else %}
+                <h2>Najahni n'est pas un outil. C'est l'ecosysteme complet dont chaque entrepreneur tunisien a besoin.</h2>
+                <a href="{{ path('app_register') }}" class="btn btn-hero-primary">Commencer maintenant</a>
+            {% endif %}
         </div>
     </div>
-</div>
+</section>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+(function() {
+    'use strict';
+
+    /* ═══════════════════════════════════════════
+       FEATURE 1 — Hero counter + pill cycling
+       ═══════════════════════════════════════════ */
+
+    // Animate counters from 0 to target over duration ms
+    function animateCounters(elements, duration) {
+        elements.forEach(function(el) {
+            var target = parseInt(el.getAttribute('data-count'), 10) || 0;
+            if (target === 0) { el.textContent = '0'; return; }
+            var start = performance.now();
+            function step(now) {
+                var progress = Math.min((now - start) / duration, 1);
+                var eased = 1 - Math.pow(1 - progress, 3); // ease-out cubic
+                el.textContent = Math.floor(eased * target);
+                if (progress < 1) requestAnimationFrame(step);
+                else el.textContent = target;
+            }
+            requestAnimationFrame(step);
+        });
+    }
+
+    // Hero micro-stats count-up on load
+    var heroNums = document.querySelectorAll('.nj-hero-stat .stat-num');
+    if (heroNums.length) animateCounters(heroNums, 1500);
+
+    // Pill badge cycling
+    var pillEl = document.getElementById('heroPillText');
+    if (pillEl) {
+        var pillData = [
+            '{{ platformStats.activeProjects }} projets actifs',
+            '{{ platformStats.totalInvestors }} investisseurs inscrits',
+            '{{ platformStats.fundedDeals }} deals finances'
+        ];
+        var pillIndex = 0;
+        var pillContainer = pillEl.parentElement;
+        setInterval(function() {
+            pillContainer.classList.add('fade-out');
+            setTimeout(function() {
+                pillIndex = (pillIndex + 1) % pillData.length;
+                pillEl.textContent = pillData[pillIndex];
+                pillContainer.classList.remove('fade-out');
+            }, 350);
+        }, 3000);
+    }
+
+    /* ═══════════════════════════════════════════
+       FEATURE 5 — Three.js Network Visualization
+       ═══════════════════════════════════════════ */
+    function initThreeNetwork() {
+        if (window.innerWidth < 768) return; // skip mobile
+        var canvas = document.getElementById('heroCanvas');
+        if (!canvas || typeof THREE === 'undefined') return;
+
+        var hero = document.getElementById('njHero');
+        var W = hero.offsetWidth, H = hero.offsetHeight;
+        var renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+        renderer.setSize(W, H);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera(60, W / H, 1, 1000);
+        camera.position.z = 250;
+
+        var BOUNDS = 160;
+        var nodes = [];
+        var nodeMeshes = [];
+        var velocities = [];
+
+        // Node types: 5 investor (gold, large), 30 entrepreneur (blue, med), 45 community (white, small)
+        var types = [];
+        var i;
+        for (i = 0; i < 5; i++) types.push({ color: 0xf59e0b, size: 3.5 });
+        for (i = 0; i < 30; i++) types.push({ color: 0x3b82f6, size: 2.2 });
+        for (i = 0; i < 45; i++) types.push({ color: 0xffffff, size: 1.3 });
+
+        for (i = 0; i < 80; i++) {
+            var geo = new THREE.SphereGeometry(types[i].size, 12, 12);
+            var mat = new THREE.MeshBasicMaterial({ color: types[i].color, transparent: true, opacity: .7 });
+            var mesh = new THREE.Mesh(geo, mat);
+            mesh.position.set(
+                (Math.random() - .5) * BOUNDS * 2,
+                (Math.random() - .5) * BOUNDS * 2,
+                (Math.random() - .5) * BOUNDS * 2
+            );
+            scene.add(mesh);
+            nodeMeshes.push(mesh);
+            velocities.push(new THREE.Vector3(
+                (Math.random() - .5) * .15,
+                (Math.random() - .5) * .15,
+                (Math.random() - .5) * .15
+            ));
+        }
+
+        // Lines
+        var lineMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: .12 });
+        var lineGeo = new THREE.BufferGeometry();
+        var MAX_LINES = 300;
+        var linePositions = new Float32Array(MAX_LINES * 6);
+        lineGeo.setAttribute('position', new THREE.BufferAttribute(linePositions, 3));
+        lineGeo.setDrawRange(0, 0);
+        var lines = new THREE.LineSegments(lineGeo, lineMat);
+        scene.add(lines);
+
+        var angle = 0;
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // Move nodes
+            for (var n = 0; n < 80; n++) {
+                var p = nodeMeshes[n].position;
+                var v = velocities[n];
+                p.add(v);
+                if (Math.abs(p.x) > BOUNDS) v.x *= -1;
+                if (Math.abs(p.y) > BOUNDS) v.y *= -1;
+                if (Math.abs(p.z) > BOUNDS) v.z *= -1;
+            }
+
+            // Update lines (proximity)
+            var lineCount = 0;
+            var DIST = 80;
+            for (var a = 0; a < 80 && lineCount < MAX_LINES; a++) {
+                for (var b = a + 1; b < 80 && lineCount < MAX_LINES; b++) {
+                    var d = nodeMeshes[a].position.distanceTo(nodeMeshes[b].position);
+                    if (d < DIST) {
+                        var idx = lineCount * 6;
+                        linePositions[idx]     = nodeMeshes[a].position.x;
+                        linePositions[idx + 1] = nodeMeshes[a].position.y;
+                        linePositions[idx + 2] = nodeMeshes[a].position.z;
+                        linePositions[idx + 3] = nodeMeshes[b].position.x;
+                        linePositions[idx + 4] = nodeMeshes[b].position.y;
+                        linePositions[idx + 5] = nodeMeshes[b].position.z;
+                        lineCount++;
+                    }
+                }
+            }
+            lineGeo.attributes.position.needsUpdate = true;
+            lineGeo.setDrawRange(0, lineCount * 2);
+
+            // Auto-rotate camera
+            angle += 0.001745; // ~0.1 deg/frame => ~60s per revolution at 60fps
+            camera.position.x = 250 * Math.sin(angle);
+            camera.position.z = 250 * Math.cos(angle);
+            camera.lookAt(0, 0, 0);
+
+            renderer.render(scene, camera);
+        }
+        animate();
+        canvas.classList.add('loaded');
+
+        window.addEventListener('resize', function() {
+            W = hero.offsetWidth; H = hero.offsetHeight;
+            camera.aspect = W / H;
+            camera.updateProjectionMatrix();
+            renderer.setSize(W, H);
+        });
+    }
+
+    // Load Three.js then init
+    if (window.innerWidth >= 768) {
+        var s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
+        s.onload = initThreeNetwork;
+        document.head.appendChild(s);
+    }
+
+    /* ═══════════════════════════════════════════
+       FEATURE 6 — Scroll-triggered reveals
+       ═══════════════════════════════════════════ */
+    if ('IntersectionObserver' in window) {
+        var revealObs = new IntersectionObserver(function(entries) {
+            entries.forEach(function(entry) {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('revealed');
+                    revealObs.unobserve(entry.target);
+                }
+            });
+        }, { threshold: 0.15 });
+
+        // Ticker
+        var ticker = document.getElementById('njTicker');
+        if (ticker) revealObs.observe(ticker);
+
+        // Module cards
+        document.querySelectorAll('.nj-module-card').forEach(function(card) {
+            revealObs.observe(card);
+        });
+
+        // Audience cards
+        document.querySelectorAll('.nj-audience-card').forEach(function(card) {
+            revealObs.observe(card);
+        });
+
+        // Strength cards
+        document.querySelectorAll('.nj-strength-card').forEach(function(card) {
+            revealObs.observe(card);
+        });
+
+        // Closing
+        var closing = document.getElementById('njClosing');
+        if (closing) revealObs.observe(closing);
+
+        // Impact grid — also triggers counter animation
+        var impactGrid = document.getElementById('impactGrid');
+        if (impactGrid) {
+            var impactObs = new IntersectionObserver(function(entries) {
+                entries.forEach(function(entry) {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('revealed');
+                        animateCounters(entry.target.querySelectorAll('.nj-impact-num'), 1500);
+                        impactObs.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.15 });
+            impactObs.observe(impactGrid);
+        }
+    }
+
+    /* ═══════════════════════════════════════════
+       FEATURE 3 — 3D Tilt on module cards
+       ═══════════════════════════════════════════ */
+    document.querySelectorAll('[data-tilt]').forEach(function(card) {
+        card.addEventListener('mousemove', function(e) {
+            var rect = card.getBoundingClientRect();
+            var x = e.clientX - rect.left;
+            var y = e.clientY - rect.top;
+            var cx = rect.width / 2;
+            var cy = rect.height / 2;
+            var rotY = ((x - cx) / cx) * 6;
+            var rotX = ((cy - y) / cy) * 6;
+            card.style.transform = 'perspective(800px) rotateX(' + rotX + 'deg) rotateY(' + rotY + 'deg) translateY(-8px)';
+        });
+        card.addEventListener('mouseleave', function() {
+            card.style.transform = '';
+        });
+    });
+
+})();
+</script>
 {% endblock %}
