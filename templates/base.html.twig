@@ -12,10 +12,38 @@
         :root{--nj-primary:#4361ee;--nj-secondary:#3a0ca3;--nj-accent:#7209b7;--nj-success:#06d6a0;--nj-warning:#ffd166;--nj-danger:#ef476f;--nj-dark:#1a1a2e;--nj-gradient:linear-gradient(135deg,var(--nj-primary),var(--nj-accent))}
         *{box-sizing:border-box}
         body{font-family:'Inter',sans-serif;background:#f0f2f5;min-height:100vh;color:#333}
-        .navbar-nj{background:var(--nj-gradient);box-shadow:0 4px 24px rgba(67,97,238,.25)}
+        .navbar-nj{background:var(--nj-gradient);box-shadow:0 4px 24px rgba(67,97,238,.25);transition:background .3s ease,box-shadow .3s ease}
+        body[data-page="home"] .navbar-nj.nj-nav-transparent{background:linear-gradient(180deg,rgba(10,14,39,.82),rgba(26,5,51,.32))!important;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:none!important}
         .navbar-nj .navbar-brand{font-weight:800;font-size:1.5rem;letter-spacing:-.5px}
+        .nj-brand-gradient{color:#fff;background:linear-gradient(90deg,#ffffff 0%,#dff7ff 24%,#b8fff1 52%,#ffffff 76%,#dbe8ff 100%);background-size:300% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(0 0 10px rgba(255,255,255,.22));animation:njBrandShift 4s ease infinite}
+        @keyframes njBrandShift{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
         .navbar-nj .nav-link{color:rgba(255,255,255,.85)!important;font-weight:500;transition:all .2s;border-radius:.5rem;padding:.5rem 1rem!important}
-        .navbar-nj .nav-link:hover,.navbar-nj .nav-link.active{color:#fff!important;background:rgba(255,255,255,.18)}
+        .navbar-nj .nav-link:hover,.navbar-nj .nav-link.active{color:#fff!important;background:transparent}
+        .navbar-nj .me-auto .nav-link{position:relative}
+        .navbar-nj .me-auto .nav-link::after{content:'';position:absolute;bottom:2px;left:0;width:0;height:2px;background:var(--nj-success);border-radius:1px;transition:width .2s ease}
+        .navbar-nj .me-auto .nav-link:hover::after,.navbar-nj .me-auto .nav-link.active::after{width:100%}
+        a.nj-bell-pulse{animation:njBellGlow 2s ease-in-out infinite}
+        @keyframes njBellGlow{0%,100%{filter:none}50%{filter:drop-shadow(0 0 6px rgba(239,71,111,.5))}}
+        .btn-nj-signup{background:#fff!important;color:var(--nj-dark)!important;font-weight:700;border:none;border-radius:.75rem;padding:.5rem 1.25rem!important;box-shadow:0 2px 8px rgba(0,0,0,.15);transition:all .25s}
+        .btn-nj-signup:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(0,0,0,.2);color:var(--nj-dark)!important}
+        .btn-nj-ghost{background:transparent!important;color:#fff!important;font-weight:500;border:1.5px solid rgba(255,255,255,.6)!important;border-radius:.75rem;padding:.5rem 1.25rem!important;transition:all .25s}
+        .btn-nj-ghost:hover{border-color:#fff!important;background:rgba(255,255,255,.1)!important;color:#fff!important}
+        .nj-announce-bar{height:32px;background:linear-gradient(135deg,#0f0f23,#1a1a2e);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;z-index:1041}
+        .nj-announce-bar .nj-announce-msg{color:rgba(255,255,255,.85);font-size:.78rem;font-weight:500;letter-spacing:.02em;position:absolute;opacity:0;transition:opacity .5s ease,transform .5s ease;transform:translateX(10px)}
+        .nj-announce-bar .nj-announce-msg.active{opacity:1;transform:translateX(0)}
+        .nj-announce-bar .nj-announce-close{position:absolute;right:.75rem;background:none;border:none;color:rgba(255,255,255,.5);font-size:.85rem;cursor:pointer;padding:0;line-height:1;transition:color .2s}
+        .nj-announce-bar .nj-announce-close:hover{color:#fff}
+        @media(max-width:991.98px){
+            .nj-announce-bar{display:none!important}
+            .navbar-nj .navbar-collapse{background:var(--nj-gradient);border-radius:0 0 1rem 1rem;margin:0 -.5rem;padding:0 .75rem}
+            .navbar-nj .collapsing{transition:height .35s ease}
+            .navbar-nj .navbar-collapse .nav-link{padding:.75rem 1rem!important;width:100%}
+            .navbar-nj .navbar-collapse .dropdown-menu{background:rgba(255,255,255,.12);border:none;border-radius:.75rem}
+            .navbar-nj .navbar-collapse .dropdown-item{color:rgba(255,255,255,.85);border-radius:.5rem}
+            .navbar-nj .navbar-collapse .dropdown-item:hover,.navbar-nj .navbar-collapse .dropdown-item:focus{background:rgba(255,255,255,.15);color:#fff}
+            .navbar-nj .navbar-collapse .dropdown-divider{border-color:rgba(255,255,255,.15)}
+            .btn-nj-signup,.btn-nj-ghost{width:100%;text-align:center;margin-top:.25rem}
+        }
         .card{border:none;border-radius:1rem;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.06);transition:all .3s ease}
         .card:hover{transform:translateY(-3px);box-shadow:0 12px 30px rgba(0,0,0,.1)}
         .btn-nj{background:var(--nj-gradient);border:none;color:#fff;font-weight:600;border-radius:.75rem;padding:.6rem 1.5rem;transition:all .3s}
@@ -66,7 +94,7 @@
     </style>
     {% block stylesheets %}{% endblock %}
 </head>
-<body>
+<body {% block body_attributes %}{% endblock %}>
     {% for label, messages in app.flashes %}
         {% for message in messages %}
         <div class="toast-container position-fixed top-0 end-0 p-3">

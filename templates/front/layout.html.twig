@@ -1,10 +1,18 @@
 {% extends 'base.html.twig' %}
 
 {% block body %}
+{# Announcement Bar #}
+<div class="nj-announce-bar" id="njAnnounceBar">
+    <span class="nj-announce-msg active">Najahni connecte entrepreneurs et investisseurs en Tunisie</span>
+    <span class="nj-announce-msg">Nouveau : Contrats sign&eacute;s num&eacute;riquement avec SHA-256</span>
+    <span class="nj-announce-msg">Rejoignez {{ njPlatformUserCount|default(0)|number_format(0, ',', ' ') }} membres actifs sur la plateforme</span>
+    <button class="nj-announce-close" id="njAnnounceClose" aria-label="Fermer"><i class="bi bi-x"></i></button>
+</div>
+
 {# Top Navbar #}
 <nav class="navbar navbar-expand-lg navbar-nj navbar-dark sticky-top">
     <div class="container-fluid px-4">
-        <a class="navbar-brand text-white" href="{{ path('app_home') }}">Najahni</a>
+        <a class="navbar-brand nj-brand-gradient" href="{{ path('app_home') }}">Najahni</a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
             <span class="navbar-toggler-icon"></span>
         </button>
@@ -51,8 +59,8 @@
                     </ul>
                 </li>
                 {% else %}
-                <li class="nav-item"><a class="nav-link" href="{{ path('app_login') }}"><i class="bi bi-box-arrow-in-right me-1"></i>Connexion</a></li>
-                <li class="nav-item"><a class="nav-link" href="{{ path('app_register') }}"><i class="bi bi-person-plus me-1"></i>Inscription</a></li>
+                <li class="nav-item"><a class="nav-link btn-nj-ghost ms-lg-2" href="{{ path('app_login') }}"><i class="bi bi-box-arrow-in-right me-1"></i>Connexion</a></li>
+                <li class="nav-item"><a class="nav-link btn-nj-signup ms-lg-2" href="{{ path('app_register') }}"><i class="bi bi-person-plus me-1"></i>Inscription</a></li>
                 {% endif %}
             </ul>
         </div>
@@ -110,8 +118,10 @@
         if (data.unreadCount > 0) {
             badge.textContent = data.unreadCount > 9 ? '9+' : data.unreadCount;
             badge.classList.remove('d-none');
+            document.getElementById('notifBell').classList.add('nj-bell-pulse');
         } else {
             badge.classList.add('d-none');
+            document.getElementById('notifBell').classList.remove('nj-bell-pulse');
         }
         if (!data.notifications.length) {
             list.innerHTML = '<div class="text-center text-muted small py-4"><i class="bi bi-bell-slash" style="font-size:1.5rem"></i><p class="mt-2 mb-0">Aucune notification</p></div>';
@@ -157,4 +167,42 @@
 })();
 </script>
 {% endif %}
+
+<script>
+(function(){
+    /* ── 1. Scroll-reactive navbar (homepage only) ── */
+    if(document.body.dataset.page==='home'){
+        var nav=document.querySelector('.navbar-nj');
+        if(nav){
+            nav.classList.add('nj-nav-transparent');
+            window.addEventListener('scroll',function(){
+                if(window.scrollY>10){nav.classList.remove('nj-nav-transparent')}else{nav.classList.add('nj-nav-transparent')}
+            },{passive:true});
+        }
+    }
+
+    /* ── 7. Announcement bar rotation + dismiss ── */
+    var bar=document.getElementById('njAnnounceBar');
+    if(bar){
+        if(localStorage.getItem('nj_announce_dismissed')){
+            bar.remove();
+            return;
+        }
+        var msgs=bar.querySelectorAll('.nj-announce-msg'),cur=0;
+        setInterval(function(){
+            msgs[cur].classList.remove('active');
+            cur=(cur+1)%msgs.length;
+            msgs[cur].classList.add('active');
+        },4000);
+        document.getElementById('njAnnounceClose').addEventListener('click',function(){
+            bar.style.transition='height .3s ease,opacity .3s ease';
+            bar.style.height='0';
+            bar.style.opacity='0';
+            bar.style.overflow='hidden';
+            localStorage.setItem('nj_announce_dismissed','1');
+            setTimeout(function(){bar.remove()},300);
+        });
+    }
+})();
+</script>
 {% endblock %}
