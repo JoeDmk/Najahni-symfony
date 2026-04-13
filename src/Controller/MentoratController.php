@@ -532,6 +532,94 @@ class MentoratController extends AbstractController
     }
 
     // ──────────────────────────────────────────────
+    //  CALENDAR — Entrepreneur view
+    // ──────────────────────────────────────────────
+
+    #[Route('/calendar', name: 'app_mentorat_calendar')]
+    public function calendar(Request $request, MentorAvailabilityRepository $availRepo): Response
+    {
+        $year  = (int) $request->query->get('year', date('Y'));
+        $month = (int) $request->query->get('month', date('n'));
+
+        if ($month < 1)  { $month = 12; $year--; }
+        if ($month > 12) { $month = 1;  $year++; }
+
+        $firstDay = new \DateTime("$year-$month-01");
+        $lastDay  = (clone $firstDay)->modify('last day of this month');
+
+        // Fetch all mentor availabilities for this month
+        $availabilities = $availRepo->createQueryBuilder('a')
+            ->join('a.mentor', 'm')
+            ->where('a.date BETWEEN :start AND :end')
+            ->andWhere('m.isBanned = false')
+            ->andWhere('m.isActive = true')
+            ->setParameter('start', $firstDay)
+            ->setParameter('end', $lastDay)
+            ->orderBy('a.date', 'ASC')
+            ->addOrderBy('a.startTime', 'ASC')
+            ->getQuery()->getResult();
+
+        // Group availabilities by date string (Y-m-d)
+        $availByDate = [];
+        foreach ($availabilities as $a) {
+            $key = $a->getDate()->format('Y-m-d');
+            $availByDate[$key][] = $a;
+        }
+
+        return $this->render('front/mentorat/calendar.html.twig', [
+            'year'        => $year,
+            'month'       => $month,
+            'firstDay'    => $firstDay,
+            'lastDay'     => $lastDay,
+            'availByDate' => $availByDate,
+        ]);
+    }
+
+    // ──────────────────────────────────────────────
+    //  MY CALENDAR — Mentor's own availability view
+    // ──────────────────────────────────────────────
+
+    #[Route('/my-calendar', name: 'app_mentorat_my_calendar')]
+    public function myCalendar(Request $request, MentorAvailabilityRepository $availRepo): Response
+    {
+        $user = $this->getUser();
+
+        $year  = (int) $request->query->get('year', date('Y'));
+        $month = (int) $request->query->get('month', date('n'));
+
+        if ($month < 1)  { $month = 12; $year--; }
+        if ($month > 12) { $month = 1;  $year++; }
+
+        $firstDay = new \DateTime("$year-$month-01");
+        $lastDay  = (clone $firstDay)->modify('last day of this month');
+
+        // Fetch only THIS mentor's availabilities for the month
+        $availabilities = $availRepo->createQueryBuilder('a')
+            ->where('a.mentor = :mentor')
+            ->andWhere('a.date BETWEEN :start AND :end')
+            ->setParameter('mentor', $user)
+            ->setParameter('start', $firstDay)
+            ->setParameter('end', $lastDay)
+            ->orderBy('a.date', 'ASC')
+            ->addOrderBy('a.startTime', 'ASC')
+            ->getQuery()->getResult();
+
+        $availByDate = [];
+        foreach ($availabilities as $a) {
+            $key = $a->getDate()->format('Y-m-d');
+            $availByDate[$key][] = $a;
+        }
+
+        return $this->render('front/mentorat/my_calendar.html.twig', [
+            'year'        => $year,
+            'month'       => $month,
+            'firstDay'    => $firstDay,
+            'lastDay'     => $lastDay,
+            'availByDate' => $availByDate,
+        ]);
+    }
+
+    // ──────────────────────────────────────────────
     //  CHATBOT TAB
     // ──────────────────────────────────────────────
 

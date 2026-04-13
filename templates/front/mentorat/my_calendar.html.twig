@@ -1,0 +1,160 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Mon calendrier - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-mortarboard me-2"></i>Mentorat</h2>
+</div>
+
+{# ── Tab Navigation ── #}
+<ul class="nav nav-tabs mb-4">
+    <li class="nav-item"><a class="nav-link" href="{{ path('app_mentorat_requests') }}"><i class="bi bi-send me-1"></i>Demandes</a></li>
+    <li class="nav-item"><a class="nav-link" href="{{ path('app_mentorat_sessions') }}"><i class="bi bi-camera-video me-1"></i>Sessions</a></li>
+    <li class="nav-item"><a class="nav-link active" href="{{ path('app_mentorat_my_calendar') }}"><i class="bi bi-calendar2-week me-1"></i>Mon Calendrier</a></li>
+    <li class="nav-item"><a class="nav-link" href="{{ path('app_mentorat_availability') }}"><i class="bi bi-calendar-check me-1"></i>Disponibilités</a></li>
+    <li class="nav-item"><a class="nav-link" href="{{ path('app_mentorat_chatbot') }}"><i class="bi bi-robot me-1"></i>Chatbot</a></li>
+</ul>
+
+<div class="mb-3">
+    <p class="text-muted mb-0"><i class="bi bi-info-circle me-1"></i>Les jours en <span class="badge bg-success bg-opacity-75">vert</span> correspondent aux dates où vous avez publié vos disponibilités.</p>
+</div>
+
+{% set months = ['', 'Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'] %}
+{% set days = ['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'] %}
+
+{% set prevMonth = month - 1 %}
+{% set prevYear = year %}
+{% if prevMonth < 1 %}{% set prevMonth = 12 %}{% set prevYear = year - 1 %}{% endif %}
+{% set nextMonth = month + 1 %}
+{% set nextYear = year %}
+{% if nextMonth > 12 %}{% set nextMonth = 1 %}{% set nextYear = year + 1 %}{% endif %}
+
+<div class="card border-0 shadow-sm mb-4" style="border-radius:1rem;overflow:hidden">
+    <div class="card-header d-flex justify-content-between align-items-center py-3 px-4" style="background:var(--nj-gradient);border:none">
+        <a href="{{ path('app_mentorat_my_calendar', {year: prevYear, month: prevMonth}) }}" class="btn btn-sm btn-light rounded-pill px-3">
+            <i class="bi bi-chevron-left"></i>
+        </a>
+        <h4 class="mb-0 text-white fw-bold">{{ months[month] }} {{ year }}</h4>
+        <a href="{{ path('app_mentorat_my_calendar', {year: nextYear, month: nextMonth}) }}" class="btn btn-sm btn-light rounded-pill px-3">
+            <i class="bi bi-chevron-right"></i>
+        </a>
+    </div>
+
+    <div class="card-body p-0">
+        {# Day-of-week header #}
+        <div class="row g-0 text-center border-bottom" style="background:#f8f9fa">
+            {% for d in days %}
+                <div class="col py-2 fw-semibold small text-uppercase text-muted">{{ d }}</div>
+            {% endfor %}
+        </div>
+
+        {# Calendar grid #}
+        {% set startDow = firstDay|date('N')|number_format(0) %}
+        {% set totalDays = lastDay|date('j')|number_format(0) %}
+        {% set today = "now"|date('Y-m-d') %}
+        {% set rows = ((startDow - 1 + totalDays) / 7)|round(0, 'ceil') %}
+
+        {% for week in 0..rows - 1 %}
+        <div class="row g-0">
+            {% for dow in 1..7 %}
+                {% set cellIndex = week * 7 + dow %}
+                {% set dayNum = cellIndex - (startDow - 1) %}
+
+                {% if dayNum >= 1 and dayNum <= totalDays %}
+                    {% set dateStr = "%04d-%02d-%02d"|format(year, month, dayNum) %}
+                    {% set hasAvail = availByDate[dateStr] is defined %}
+                    {% set isToday = dateStr == today %}
+
+                    <div class="col border-end border-bottom calendar-cell position-relative{% if hasAvail %} calendar-available{% endif %}{% if isToday %} calendar-today{% endif %}"
+                         style="min-height:100px;cursor:{% if hasAvail %}pointer{% else %}default{% endif %}"
+                         {% if hasAvail %}data-bs-toggle="modal" data-bs-target="#modal-{{ dateStr }}"{% endif %}>
+                        <div class="p-2">
+                            <span class="day-number{% if isToday %} today-badge{% endif %}">{{ dayNum }}</span>
+                            {% if hasAvail %}
+                                <div class="mt-1">
+                                    {% for avail in availByDate[dateStr] %}
+                                        <div class="avail-slot mb-1">
+                                            <i class="bi bi-clock"></i> {{ avail.startTime|date('H:i') }}–{{ avail.endTime|date('H:i') }}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="col border-end border-bottom" style="min-height:100px;background:#fafafa"></div>
+                {% endif %}
+            {% endfor %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+{# Legend #}
+<div class="d-flex gap-4 mb-4 flex-wrap">
+    <div class="d-flex align-items-center gap-2">
+        <div style="width:18px;height:18px;border-radius:4px;background:rgba(25,135,84,.15);border:2px solid #198754"></div>
+        <span class="small text-muted">Jour avec disponibilité publiée</span>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <div style="width:18px;height:18px;border-radius:4px;background:rgba(67,97,238,.12);border:2px solid var(--nj-primary)"></div>
+        <span class="small text-muted">Aujourd'hui</span>
+    </div>
+</div>
+
+{# Modals — detail per date with edit/delete #}
+{% for dateStr, avails in availByDate %}
+<div class="modal fade" id="modal-{{ dateStr }}" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:1rem;border:none">
+            <div class="modal-header" style="background:var(--nj-gradient);border-radius:1rem 1rem 0 0">
+                <h5 class="modal-title text-white fw-bold">
+                    <i class="bi bi-calendar-check me-2"></i>Mes créneaux — {{ dateStr|date('d/m/Y') }}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                {% for avail in avails %}
+                <div class="d-flex align-items-center justify-content-between p-3 mb-2 rounded-3" style="background:rgba(25,135,84,.06);border:1px solid rgba(25,135,84,.15)">
+                    <div>
+                        <div class="fw-semibold"><i class="bi bi-clock text-success me-1"></i>{{ avail.startTime|date('H:i') }} → {{ avail.endTime|date('H:i') }}</div>
+                        <small class="text-muted">Ajouté le {{ avail.createdAt|date('d/m/Y à H:i') }}</small>
+                    </div>
+                    <div class="d-flex gap-1">
+                        <a href="{{ path('app_mentorat_availability') }}" class="btn btn-sm btn-outline-primary" title="Modifier"><i class="bi bi-pencil"></i></a>
+                        <form method="post" action="{{ path('app_mentorat_availability_delete', {id: avail.id}) }}" onsubmit="return confirm('Supprimer ce créneau ?')">
+                            <input type="hidden" name="_token" value="{{ csrf_token('mentorat_avail_del_' ~ avail.id) }}">
+                            <button class="btn btn-sm btn-outline-danger" title="Supprimer"><i class="bi bi-trash"></i></button>
+                        </form>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <div class="modal-footer border-0 pt-0">
+                <a href="{{ path('app_mentorat_availability') }}" class="btn btn-nj w-100"><i class="bi bi-plus-lg me-1"></i>Gérer mes disponibilités</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
+<style>
+.calendar-cell { transition: background .2s; }
+.calendar-cell:hover { background: rgba(0,0,0,.02); }
+.calendar-available { background: rgba(25,135,84,.08) !important; }
+.calendar-available:hover { background: rgba(25,135,84,.15) !important; }
+.calendar-today { border-left: 3px solid var(--nj-primary) !important; }
+.day-number {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; font-weight: 600; font-size: .9rem;
+    border-radius: 50%; color: #495057;
+}
+.today-badge { background: var(--nj-primary); color: #fff !important; }
+.avail-slot {
+    font-size: .7rem; color: #198754; font-weight: 500;
+    background: rgba(25,135,84,.1); border-radius: .3rem;
+    padding: .1rem .4rem; display: inline-block;
+}
+</style>
+{% endblock %}
