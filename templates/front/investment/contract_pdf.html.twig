@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Contrat d'investissement</title>
+    <style>
+        @page { margin: 26px 24px 32px; }
+        body { font-family: Helvetica, Arial, sans-serif; font-size: 12px; color: #0f172a; }
+        .header { background: #0f172a; color: #fff; padding: 18px 20px; border-radius: 10px; }
+        .header h1 { margin: 0 0 6px; font-size: 22px; }
+        .muted { color: #475569; }
+        .meta-table, .signature-table { width: 100%; border-collapse: collapse; margin-top: 18px; }
+        .meta-table td, .signature-table td, .signature-table th { border: 1px solid #cbd5e1; padding: 8px 10px; vertical-align: top; }
+        .section { margin-top: 22px; }
+        .section-title { font-size: 15px; font-weight: bold; margin-bottom: 8px; color: #1d4ed8; }
+        .box { border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; background: #f8fafc; }
+        .terms { white-space: pre-wrap; line-height: 1.55; }
+        .footer { margin-top: 24px; font-size: 10px; color: #64748b; }
+        .pill { display: inline-block; padding: 4px 9px; background: #dcfce7; color: #166534; border-radius: 999px; font-weight: bold; font-size: 10px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Contrat d'investissement signe</h1>
+        <div>Projet: {{ offer.opportunity.project ? offer.opportunity.project.titre : 'Projet' }}</div>
+        <div>Document genere le {{ generatedAt|date('d/m/Y H:i') }}</div>
+    </div>
+
+    <table class="meta-table">
+        <tr>
+            <td><strong>Montant investi</strong><br>{{ offer.proposedAmount|number_format(2, ',', ' ') }} DT</td>
+            <td><strong>Participation</strong><br>{{ contract.equityPercentage ? contract.equityPercentage|number_format(2, ',', ' ') ~ ' %' : 'A definir' }}</td>
+            <td><strong>Statut</strong><br><span class="pill">{{ contract.status }}</span></td>
+        </tr>
+        <tr>
+            <td><strong>Investisseur</strong><br>{{ contract.investor.fullName }}<br>{{ contract.investor.email }}</td>
+            <td><strong>Entrepreneur</strong><br>{{ contract.entrepreneur.fullName }}<br>{{ contract.entrepreneur.email }}</td>
+            <td><strong>Projet</strong><br>{{ offer.opportunity.project ? offer.opportunity.project.titre : 'Projet' }}<br>{{ offer.opportunity.project and offer.opportunity.project.secteur ? offer.opportunity.project.secteur : 'Secteur non precise' }}</td>
+        </tr>
+        <tr>
+            <td colspan="3"><strong>Empreinte SHA-256 du contrat</strong><br>{{ contract.termsDigest }}</td>
+        </tr>
+    </table>
+
+    <div class="section">
+        <div class="section-title">Contreparties et conditions</div>
+        <div class="box">
+            <strong>Contreparties</strong><br>
+            {{ contract.consideration ?: 'Non precisees' }}
+            <br><br>
+            <strong>Etapes et obligations</strong><br>
+            {{ contract.milestones ?: 'Non precisees' }}
+        </div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Termes complets du contrat</div>
+        <div class="box terms">{{ contract.terms }}</div>
+    </div>
+
+    <div class="section">
+        <div class="section-title">Signatures numeriques</div>
+        <hr style="border:none;border-top:1px solid #cbd5e1;margin-bottom:14px">
+        <table class="signature-table">
+            <tr>
+                <th style="width:50%">Investisseur</th>
+                <th style="width:50%">Entrepreneur</th>
+            </tr>
+            <tr>
+                <td>
+                    {% if contract.investorSignatureImage %}
+                        <img src="{{ contract.investorSignatureImage }}" style="max-width:180px;max-height:70px;display:block;margin-bottom:4px">
+                    {% endif %}
+                    <div style="font-size:13px;font-weight:bold;margin-bottom:2px">{{ contract.investorSignatureName ?: contract.investor.fullName }}</div>
+                    <div style="font-size:10px;color:#475569">{{ contract.investorSignedAt ? contract.investorSignedAt|date('d/m/Y H:i') : 'N/A' }}</div>
+                    <div style="font-family:Courier,monospace;font-size:8px;color:#94a3b8;margin-top:3px">{{ contract.investorSignatureHash ?: 'N/A' }}</div>
+                </td>
+                <td>
+                    {% if contract.entrepreneurSignatureImage %}
+                        <img src="{{ contract.entrepreneurSignatureImage }}" style="max-width:180px;max-height:70px;display:block;margin-bottom:4px">
+                    {% endif %}
+                    <div style="font-size:13px;font-weight:bold;margin-bottom:2px">{{ contract.entrepreneurSignatureName ?: contract.entrepreneur.fullName }}</div>
+                    <div style="font-size:10px;color:#475569">{{ contract.entrepreneurSignedAt ? contract.entrepreneurSignedAt|date('d/m/Y H:i') : 'N/A' }}</div>
+                    <div style="font-family:Courier,monospace;font-size:8px;color:#94a3b8;margin-top:3px">{{ contract.entrepreneurSignatureHash ?: 'N/A' }}</div>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="footer">
+        <table style="width:100%;border:none">
+            <tr>
+                <td style="border:none;vertical-align:bottom;padding:0">
+                    Document genere automatiquement par Najahni. Toute modification ulterieure des termes invalide les signatures precedentes et cree une nouvelle empreinte SHA-256.
+                </td>
+                <td style="border:none;text-align:right;vertical-align:bottom;padding:0;width:110px">
+                    {% if qrCodeDataUri is defined and qrCodeDataUri %}
+                    <img src="{{ qrCodeDataUri }}" style="width:100px;height:100px" alt="QR verification">
+                    {% endif %}
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

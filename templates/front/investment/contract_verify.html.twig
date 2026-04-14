@@ -1,0 +1,67 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Verification du contrat - Najahni{% endblock %}
+
+{% block main %}
+<div class="container py-5" style="max-width:640px">
+    {% if valid %}
+    <div class="card border-0 shadow-sm" style="border-radius:1rem">
+        <div class="card-body text-center p-5">
+            <div style="width:72px;height:72px;border-radius:50%;background:#dcfce7;display:inline-flex;align-items:center;justify-content:center;margin-bottom:1.2rem">
+                <i class="bi bi-check-lg" style="font-size:2rem;color:#16a34a"></i>
+            </div>
+            <h3 class="fw-bold mb-3">Contrat verifie</h3>
+            <p class="text-muted mb-4">Ce contrat d'investissement est authentique et a ete signe numeriquement par les deux parties.</p>
+
+            <div class="text-start" style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:.75rem;padding:1rem 1.2rem;margin-bottom:1rem">
+                <div class="row g-3 small">
+                    <div class="col-6">
+                        <div class="text-muted">Projet</div>
+                        <div class="fw-semibold">{{ contract.offer.opportunity.project ? contract.offer.opportunity.project.titre : 'Projet' }}</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted">Montant</div>
+                        <div class="fw-semibold">{{ contract.offer.proposedAmount|number_format(0, ',', ' ') }} DT</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted">Investisseur</div>
+                        <div class="fw-semibold">{{ contract.investor.fullName }}</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted">Entrepreneur</div>
+                        <div class="fw-semibold">{{ contract.entrepreneur.fullName }}</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted">Signe (investisseur)</div>
+                        <div class="fw-semibold">{{ contract.investorSignedAt ? contract.investorSignedAt|date('d/m/Y H:i') : 'N/A' }}</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted">Signe (entrepreneur)</div>
+                        <div class="fw-semibold">{{ contract.entrepreneurSignedAt ? contract.entrepreneurSignedAt|date('d/m/Y H:i') : 'N/A' }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-start small" style="background:#f1f5f9;border-radius:.5rem;padding:.75rem 1rem;word-break:break-all">
+                <span class="text-muted">Empreinte SHA-256 :</span><br>
+                <code>{{ contract.termsDigest }}</code>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="card border-0 shadow-sm" style="border-radius:1rem">
+        <div class="card-body text-center p-5">
+            <div style="width:72px;height:72px;border-radius:50%;background:#fee2e2;display:inline-flex;align-items:center;justify-content:center;margin-bottom:1.2rem">
+                <i class="bi bi-x-lg" style="font-size:2rem;color:#dc2626"></i>
+            </div>
+            <h3 class="fw-bold mb-3">Verification echouee</h3>
+            <p class="text-muted mb-0">Ce contrat est introuvable ou n'a pas encore ete signe par les deux parties. Verifiez le lien ou contactez les parties prenantes.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="text-center mt-4">
+        <a href="{{ path('app_invest_opportunities') }}" class="btn btn-outline-secondary btn-sm">Retour aux opportunites</a>
+    </div>
+</div>
+{% endblock %}

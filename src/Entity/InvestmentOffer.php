@@ -51,6 +51,12 @@ class InvestmentOffer
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     private ?\DateTimeInterface $updatedAt = null;
 
+    #[ORM\Column(type: 'boolean', options: ['default' => false])]
+    private bool $riskAcknowledged = false;
+
+    #[ORM\OneToOne(mappedBy: 'offer', targetEntity: InvestmentContract::class, cascade: ['remove'])]
+    private ?InvestmentContract $contract = null;
+
     public function __construct()
     {
         $this->createdAt = new \DateTime();
@@ -77,4 +83,13 @@ class InvestmentOffer
     public function setPaidAt(?\DateTimeInterface $v): static { $this->paidAt = $v; return $this; }
     public function getCreatedAt(): ?\DateTimeInterface { return $this->createdAt; }
     public function getUpdatedAt(): ?\DateTimeInterface { return $this->updatedAt; }
+    public function getContract(): ?InvestmentContract { return $this->contract; }
+    public function setContract(?InvestmentContract $contract): static { $this->contract = $contract; return $this; }
+    public function isRiskAcknowledged(): bool { return $this->riskAcknowledged; }
+    public function setRiskAcknowledged(bool $v): static { $this->riskAcknowledged = $v; return $this; }
+
+    public function isContractReadyForPayment(): bool
+    {
+        return $this->contract?->isFullySigned() ?? false;
+    }
 }

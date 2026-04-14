@@ -10,6 +10,7 @@ use App\Repository\InvestmentOpportunityRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -44,6 +45,66 @@ class AdminInvestmentController extends AbstractController
             'pendingOffers' => $offerCounts['pending'],
             'totalRaised' => $totalRaised,
         ]);
+    }
+
+    #[Route('/ajax/opportunities', name: 'admin_invest_opportunities_ajax', methods: ['GET'])]
+    public function opportunitiesAjax(Request $request, InvestmentOpportunityRepository $repo): JsonResponse
+    {
+        $search = trim($request->query->get('q', ''));
+        $statusFilter = $request->query->get('status', '');
+
+        $qb = $repo->buildAdminQuery($search, $statusFilter);
+        $opportunities = $qb->getQuery()->getResult();
+
+        $data = [];
+        foreach ($opportunities as $opp) {
+            $data[] = [
+                'id' => $opp->getId(),
+                'projectTitle' => $opp->getProject() ? $opp->getProject()->getTitre() : 'N/A',
+                'targetAmount' => number_format((float) $opp->getTargetAmount(), 0, ',', ' '),
+                'fundingPercentage' => round($opp->getFundingPercentage(), 0),
+                'status' => $opp->getStatus(),
+                'deadline' => $opp->getDeadline() ? $opp->getDeadline()->format('d/m/Y') : '-',
+                'showUrl' => $this->generateUrl('admin_invest_show', ['id' => $opp->getId()]),
+            ];
+        }
+
+        return $this->json(['count' => count($data), 'opportunities' => $data]);
+    }
+
+    #[Route('/ajax/offers', name: 'admin_invest_offers_ajax', methods: ['GET'])]
+    public function offersAjax(Request $request, InvestmentOfferRepository $repo): JsonResponse
+    {
+        $statusFilter = $request->query->get('status', '');
+        $search = trim($request->query->get('q', ''));
+
+        $qb = $repo->buildFilteredQuery($statusFilter);
+
+        if ($search !== '') {
+            $qb->leftJoin('o.opportunity', 'opp')
+               ->leftJoin('opp.project', 'p')
+               ->leftJoin('o.investor', 'inv')
+               ->andWhere('p.titre LIKE :q OR CONCAT(inv.firstname, \' \', inv.lastname) LIKE :q')
+               ->setParameter('q', '%' . $search . '%');
+        }
+
+        $offers = $qb->getQuery()->getResult();
+
+        $data = [];
+        foreach ($offers as $offer) {
+            $data[] = [
+                'id' => $offer->getId(),
+                'investorName' => $offer->getInvestor()->getFirstname() . ' ' . $offer->getInvestor()->getLastname(),
+                'projectTitle' => $offer->getOpportunity()->getProject() ? $offer->getOpportunity()->getProject()->getTitre() : 'N/A',
+                'proposedAmount' => number_format((float) $offer->getProposedAmount(), 0, ',', ' '),
+                'status' => $offer->getStatus(),
+                'createdAt' => $offer->getCreatedAt()->format('d/m/Y H:i'),
+                'opportunityId' => $offer->getOpportunity()->getId(),
+                'showUrl' => $this->generateUrl('admin_invest_show', ['id' => $offer->getOpportunity()->getId()]),
+            ];
+        }
+
+        return $this->json(['count' => count($data), 'offers' => $data]);
     }
 
     #[Route('/create', name: 'admin_invest_create', methods: ['GET', 'POST'])]

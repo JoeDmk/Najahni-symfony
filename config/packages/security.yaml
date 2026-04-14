@@ -32,6 +32,7 @@ security:
         - { path: ^/profile, roles: ROLE_USER }
         - { path: ^/community, roles: ROLE_USER }
         - { path: ^/projets, roles: ROLE_USER }
+        - { path: ^/investissement/contrat/\d+/verifier$, roles: PUBLIC_ACCESS }
         - { path: ^/investissement, roles: ROLE_USER }
         - { path: ^/mentorat, roles: ROLE_USER }
         - { path: ^/apprentissage, roles: ROLE_USER }

@@ -28,6 +28,14 @@ class InvestmentOpportunityRepository extends ServiceEntityRepository
      */
     public function searchOpen(string $search = '', string $sort = 'recent'): array
     {
+        return $this->searchOpenQuery($search, $sort)->getQuery()->getResult();
+    }
+
+    /**
+     * Returns a QueryBuilder for open opportunities (paginatable).
+     */
+    public function searchOpenQuery(string $search = '', string $sort = 'recent'): QueryBuilder
+    {
         $qb = $this->createQueryBuilder('o')
             ->leftJoin('o.project', 'p')
             ->where('o.status = :status')
@@ -45,7 +53,7 @@ class InvestmentOpportunityRepository extends ServiceEntityRepository
             default => $qb->orderBy('o.createdAt', 'DESC'),
         };
 
-        return $qb->getQuery()->getResult();
+        return $qb;
     }
 
     /**
@@ -103,5 +111,73 @@ class InvestmentOpportunityRepository extends ServiceEntityRepository
             ->orderBy('o.deadline', 'ASC')
             ->getQuery()
             ->getResult();
+    }
+
+    /**
+     * Count open opportunities grouped by risk score bracket.
+     * @return array{total: int, low: int, medium: int, high: int}
+     */
+    public function countOpenByRiskBracket(): array
+    {
+        $rows = $this->createQueryBuilder('o')
+            ->select('o.riskScore')
+            ->where('o.status = :status')
+            ->setParameter('status', 'OPEN')
+            ->getQuery()
+            ->getResult();
+
+        $counts = ['total' => 0, 'low' => 0, 'medium' => 0, 'high' => 0];
+        foreach ($rows as $row) {
+            $score = (int) ($row['riskScore'] ?? 50);
+            $counts['total']++;
+            if ($score <= 33) {
+                $counts['low']++;
+            } elseif ($score <= 66) {
+                $counts['medium']++;
+            } else {
+                $counts['high']++;
+            }
+        }
+        return $counts;
+    }
+
+    /**
+     * Count open opportunities grouped by project sector.
+     * @return array<string, int>  sector => count
+     */
+    public function countOpenBySector(): array
+    {
+        $rows = $this->createQueryBuilder('o')
+            ->select('p.secteur AS sector, COUNT(o.id) AS cnt')
+            ->leftJoin('o.project', 'p')
+            ->where('o.status = :status')
+            ->setParameter('status', 'OPEN')
+            ->groupBy('p.secteur')
+            ->orderBy('cnt', 'DESC')
+            ->getQuery()
+            ->getResult();
+
+        $result = [];
+        foreach ($rows as $row) {
+            $sector = $row['sector'] ?: 'Non defini';
+            $result[$sector] = (int) $row['cnt'];
+        }
+        return $result;
+    }
+
+    /**
+     * Count open opportunities with short deadlines (< 6 months), useful as "cross-border" proxy.
+     */
+    public function countOpenShortDeadline(int $months = 6): int
+    {
+        return (int) $this->createQueryBuilder('o')
+            ->select('COUNT(o.id)')
+            ->where('o.status = :status')
+            ->andWhere('o.deadline IS NOT NULL')
+            ->andWhere('o.deadline <= :limit')
+            ->setParameter('status', 'OPEN')
+            ->setParameter('limit', new \DateTime("+{$months} months"))
+            ->getQuery()
+            ->getSingleScalarResult();
     }
 }
