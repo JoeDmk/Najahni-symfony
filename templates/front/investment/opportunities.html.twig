@@ -147,7 +147,9 @@
     <div class="alert alert-danger alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 {% endfor %}
 
-<p class="text-muted mb-3" id="oppCount">{{ opportunities|length }} opportunité{{ opportunities|length > 1 ? 's' }} trouvée{{ opportunities|length > 1 ? 's' }}</p>
+{% set _from = pagination.totalItemCount > 0 ? ((pagination.currentPageNumber - 1) * 9 + 1) : 0 %}
+{% set _to = pagination.totalItemCount < (_from + 9 - 1) ? pagination.totalItemCount : (_from + 9 - 1) %}
+<p class="text-muted mb-3" id="oppCount">{% if pagination.totalItemCount > 0 %}Affichage de {{ _from }} à {{ _to }} sur {{ pagination.totalItemCount }} opportunité{{ pagination.totalItemCount > 1 ? 's' : '' }}{% else %}0 opportunité trouvée{% endif %}</p>
 <div class="row g-4" id="oppResults">
     {% for opp in opportunities %}
     <div class="col-md-6 col-lg-4">
@@ -208,6 +210,23 @@
     </div>
     {% endfor %}
 </div>
+{% if pagination.pageCount > 1 %}
+<nav aria-label="Pagination des opportunités" class="mt-4" id="oppPagination">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {{ pagination.currentPageNumber <= 1 ? 'disabled' : '' }}">
+            <a class="page-link" href="{{ path('app_invest_opportunities', {page: pagination.currentPageNumber - 1, q: search, sort: sort}) }}">Précédent</a>
+        </li>
+        {% for p in 1..pagination.pageCount %}
+        <li class="page-item {{ p == pagination.currentPageNumber ? 'active' : '' }}">
+            <a class="page-link" href="{{ path('app_invest_opportunities', {page: p, q: search, sort: sort}) }}">{{ p }}</a>
+        </li>
+        {% endfor %}
+        <li class="page-item {{ pagination.currentPageNumber >= pagination.pageCount ? 'disabled' : '' }}">
+            <a class="page-link" href="{{ path('app_invest_opportunities', {page: pagination.currentPageNumber + 1, q: search, sort: sort}) }}">Suivant</a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
 <div class="text-center py-5 d-none" id="oppEmpty">
     <i class="bi bi-search" style="font-size:4rem;color:var(--nj-accent)"></i>
     <h4 class="fw-bold mt-3" id="oppEmptyTitle">Aucune opportunité disponible</h4>
@@ -227,6 +246,8 @@
     var timer = null;
     var ajaxUrl = '{{ path("app_invest_opportunities_ajax") }}';
     var feedStrip = document.getElementById('dealFeedStrip');
+    var paginationNav = document.getElementById('oppPagination');
+    var currentPage = 1;
 
     function renderFeed(feed) {
         if (!feed || !feed.length) return;
@@ -244,12 +265,13 @@
         }
     }
 
-    function doSearch() {
+    function doSearch(page) {
+        if (typeof page === 'number') currentPage = page;
         var q = searchInput.value.trim();
         var sort = sortSelect.value;
         spinner.classList.remove('d-none');
 
-        fetch(ajaxUrl + '?q=' + encodeURIComponent(q) + '&sort=' + encodeURIComponent(sort), {
+        fetch(ajaxUrl + '?q=' + encodeURIComponent(q) + '&sort=' + encodeURIComponent(sort) + '&page=' + currentPage, {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
         .then(function(r) { return r.json(); })
@@ -257,10 +279,20 @@
             spinner.classList.add('d-none');
             var opps = data.opportunities;
             if (data.dealFeed) renderFeed(data.dealFeed);
-            countEl.textContent = data.count + ' opportunité' + (data.count > 1 ? 's' : '') + ' trouvée' + (data.count > 1 ? 's' : '');
+
+            var total = data.count;
+            var perPage = data.perPage || 9;
+            var pg = data.page || 1;
+            var totalPages = data.totalPages || 1;
+            var from = total > 0 ? (pg - 1) * perPage + 1 : 0;
+            var to = Math.min(from + perPage - 1, total);
+            countEl.textContent = total > 0
+                ? 'Affichage de ' + from + ' à ' + to + ' sur ' + total + ' opportunité' + (total > 1 ? 's' : '')
+                : '0 opportunité trouvée';
 
             if (opps.length === 0) {
                 resultsContainer.innerHTML = '';
+                if (paginationNav) paginationNav.innerHTML = '';
                 emptyEl.classList.remove('d-none');
                 if (q !== '') {
                     emptyTitle.textContent = 'Aucun résultat pour "' + q + '"';
@@ -304,6 +336,34 @@
             });
             resultsContainer.innerHTML = html;
             initTiltCards();
+
+            // Render pagination
+            if (totalPages > 1) {
+                var pHtml = '<ul class="pagination justify-content-center">';
+                pHtml += '<li class="page-item ' + (pg <= 1 ? 'disabled' : '') + '"><a class="page-link" href="#" data-page="' + (pg - 1) + '">Précédent</a></li>';
+                for (var i = 1; i <= totalPages; i++) {
+                    pHtml += '<li class="page-item ' + (i === pg ? 'active' : '') + '"><a class="page-link" href="#" data-page="' + i + '">' + i + '</a></li>';
+                }
+                pHtml += '<li class="page-item ' + (pg >= totalPages ? 'disabled' : '') + '"><a class="page-link" href="#" data-page="' + (pg + 1) + '">Suivant</a></li>';
+                pHtml += '</ul>';
+                if (!paginationNav) {
+                    paginationNav = document.createElement('nav');
+                    paginationNav.id = 'oppPagination';
+                    paginationNav.className = 'mt-4';
+                    resultsContainer.parentNode.insertBefore(paginationNav, resultsContainer.nextSibling);
+                }
+                paginationNav.innerHTML = pHtml;
+                paginationNav.querySelectorAll('a[data-page]').forEach(function(a) {
+                    a.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        if (!this.closest('.page-item').classList.contains('disabled') && !this.closest('.page-item').classList.contains('active')) {
+                            doSearch(parseInt(this.getAttribute('data-page')));
+                        }
+                    });
+                });
+            } else if (paginationNav) {
+                paginationNav.innerHTML = '';
+            }
         })
         .catch(function() { spinner.classList.add('d-none'); });
     }
@@ -347,9 +407,10 @@
 
     searchInput.addEventListener('input', function() {
         clearTimeout(timer);
-        timer = setTimeout(doSearch, 300);
+        currentPage = 1;
+        timer = setTimeout(function() { doSearch(1); }, 300);
     });
-    sortSelect.addEventListener('change', function() { doSearch(); });
+    sortSelect.addEventListener('change', function() { doSearch(1); });
 })();
 </script>
 {% endblock %}

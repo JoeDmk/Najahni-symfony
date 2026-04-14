@@ -1187,6 +1187,27 @@
             </div>
         </div>
         {% endif %}
+
+        {% if contract.fullySigned and qrCodeUrl is defined and qrCodeUrl %}
+        <div class="card contract-card">
+            <div class="card-body p-4">
+                <h5 class="fw-bold mb-1">Verification QR</h5>
+                <div class="text-muted small mb-3">Scannez ce code QR pour verifier l'authenticite et la validite de ce contrat signe.</div>
+                <div class="d-flex align-items-start gap-4 flex-wrap">
+                    <div>
+                        <img src="{{ qrCodeUrl }}" alt="QR de verification" style="width:160px;height:160px;border-radius:.5rem;border:1px solid #e2e8f0">
+                    </div>
+                    <div class="flex-fill">
+                        <div class="small mb-2" style="background:#f1f5f9;border-radius:.5rem;padding:.6rem .8rem;word-break:break-all">
+                            <span class="text-muted">Empreinte SHA-256 :</span><br>
+                            <code>{{ contract.termsDigest }}</code>
+                        </div>
+                        <a href="{{ verifyUrl }}" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm">Ouvrir la page de verification</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
     </div>
 
     <div class="card contract-card chat-shell">

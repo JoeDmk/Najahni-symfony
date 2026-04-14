@@ -28,6 +28,14 @@ class InvestmentOpportunityRepository extends ServiceEntityRepository
      */
     public function searchOpen(string $search = '', string $sort = 'recent'): array
     {
+        return $this->searchOpenQuery($search, $sort)->getQuery()->getResult();
+    }
+
+    /**
+     * Returns a QueryBuilder for open opportunities (paginatable).
+     */
+    public function searchOpenQuery(string $search = '', string $sort = 'recent'): QueryBuilder
+    {
         $qb = $this->createQueryBuilder('o')
             ->leftJoin('o.project', 'p')
             ->where('o.status = :status')
@@ -45,7 +53,7 @@ class InvestmentOpportunityRepository extends ServiceEntityRepository
             default => $qb->orderBy('o.createdAt', 'DESC'),
         };
 
-        return $qb->getQuery()->getResult();
+        return $qb;
     }
 
     /**

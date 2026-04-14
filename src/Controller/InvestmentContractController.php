@@ -14,6 +14,9 @@ use App\Service\Investment\ContractSignatureService;
 use App\Service\Investment\InvestmentChatbotService;
 use App\Service\Investment\StripePaymentService;
 use App\Service\NotificationService;
+use Endroid\QrCode\Builder\Builder;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\Writer\PngWriter;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Doctrine\ORM\EntityManagerInterface;
@@ -22,6 +25,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/investissement/offers/{id}/contract')]
@@ -62,6 +66,8 @@ class InvestmentContractController extends AbstractController
             'dealTemperature' => $dealTemperature,
             'dealTemperatureLabel' => $dealTemperatureLabel,
             'lastMessageAt' => $lastMessageAt,
+            'qrCodeUrl' => $contract->isFullySigned() ? $this->generateUrl('app_invest_contract_qr', ['contractId' => $contract->getId()]) : null,
+            'verifyUrl' => $contract->isFullySigned() ? $this->generateUrl('app_invest_contract_verify', ['contractId' => $contract->getId()]) : null,
         ]);
     }
 
@@ -82,6 +88,7 @@ class InvestmentContractController extends AbstractController
             'offer' => $offer,
             'contract' => $contract,
             'generatedAt' => new \DateTime(),
+            'qrCodeDataUri' => $this->buildQrBase64($contract->getId()),
         ]);
 
         $options = new Options();
@@ -119,6 +126,7 @@ class InvestmentContractController extends AbstractController
             'offer' => $offer,
             'contract' => $contract,
             'generatedAt' => new \DateTime(),
+            'qrCodeDataUri' => $this->buildQrBase64($contract->getId()),
         ]);
     }
 
@@ -952,6 +960,21 @@ class InvestmentContractController extends AbstractController
      * Compute deal temperature from behavioral signals already in the database.
      * @return array{int, string, ?\DateTimeInterface} [score 0-100, label, lastMessageAt]
      */
+    private function buildQrBase64(int $contractId): string
+    {
+        $verifyUrl = $this->generateUrl('app_invest_contract_verify', ['contractId' => $contractId], UrlGeneratorInterface::ABSOLUTE_URL);
+
+        $result = Builder::create()
+            ->writer(new PngWriter())
+            ->data($verifyUrl)
+            ->encoding(new Encoding('UTF-8'))
+            ->size(200)
+            ->margin(6)
+            ->build();
+
+        return $result->getDataUri();
+    }
+
     private function computeDealTemperature(InvestmentContract $contract, array $messages): array
     {
         $now = new \DateTimeImmutable();

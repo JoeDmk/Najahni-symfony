@@ -85,7 +85,12 @@
 
     <div class="section">
         <h2>Empreinte du contrat</h2>
-        <div class="terms">{{ contract.termsDigest }}</div>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">
+            <div class="terms" style="flex:1">{{ contract.termsDigest }}</div>
+            {% if qrCodeDataUri is defined and qrCodeDataUri %}
+            <img src="{{ qrCodeDataUri }}" style="width:120px;height:120px;border:1px solid #d1d5db;border-radius:8px" alt="QR verification">
+            {% endif %}
+        </div>
     </div>
 
     <script>

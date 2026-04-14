@@ -15,6 +15,7 @@ use App\Service\Investment\StripePaymentService;
 use App\Service\Investment\EconomicApiService;
 use App\Service\Investment\EconomicRiskEngine;
 use Doctrine\ORM\EntityManagerInterface;
+use Knp\Component\Pager\PaginatorInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -28,12 +29,16 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 class InvestmentController extends AbstractController
 {
     #[Route('/opportunities', name: 'app_invest_opportunities')]
-    public function opportunities(Request $request, InvestmentOpportunityRepository $repo, InvestmentOfferRepository $offerRepo, InvestmentContractRepository $contractRepo, InvestorProfileRepository $profileRepo, ContractMilestoneRepository $milestoneRepo, EconomicApiService $ecoApi): Response
+    public function opportunities(Request $request, InvestmentOpportunityRepository $repo, InvestmentOfferRepository $offerRepo, InvestmentContractRepository $contractRepo, InvestorProfileRepository $profileRepo, ContractMilestoneRepository $milestoneRepo, EconomicApiService $ecoApi, PaginatorInterface $paginator): Response
     {
         $search = trim($request->query->get('q', ''));
         $sort = $request->query->get('sort', 'recent');
+        $page = $request->query->getInt('page', 1);
 
-        $opportunities = $repo->searchOpen($search, $sort);
+        $qb = $repo->searchOpenQuery($search, $sort);
+        $pagination = $paginator->paginate($qb, $page, 9);
+
+        $opportunities = iterator_to_array($pagination);
 
         // Fetch economic indicators once for the whole page
         $ecoData = [];
@@ -140,6 +145,7 @@ class InvestmentController extends AbstractController
 
         return $this->render('front/investment/opportunities.html.twig', [
             'opportunities' => $opportunities,
+            'pagination' => $pagination,
             'search' => $search,
             'sort' => $sort,
             'ecoData' => $ecoData,
@@ -352,12 +358,15 @@ class InvestmentController extends AbstractController
     }
 
     #[Route('/opportunities/ajax', name: 'app_invest_opportunities_ajax', methods: ['GET'])]
-    public function opportunitiesAjax(Request $request, InvestmentOpportunityRepository $repo, InvestmentOfferRepository $offerRepo, InvestmentContractRepository $contractRepo, EconomicApiService $ecoApi): JsonResponse
+    public function opportunitiesAjax(Request $request, InvestmentOpportunityRepository $repo, InvestmentOfferRepository $offerRepo, InvestmentContractRepository $contractRepo, EconomicApiService $ecoApi, PaginatorInterface $paginator): JsonResponse
     {
         $search = trim($request->query->get('q', ''));
         $sort = $request->query->get('sort', 'recent');
+        $page = $request->query->getInt('page', 1);
 
-        $opportunities = $repo->searchOpen($search, $sort);
+        $qb = $repo->searchOpenQuery($search, $sort);
+        $pagination = $paginator->paginate($qb, $page, 9);
+        $opportunities = iterator_to_array($pagination);
 
         $ecoData = [];
         try {
@@ -387,7 +396,14 @@ class InvestmentController extends AbstractController
             ];
         }
 
-        return $this->json(['count' => count($data), 'opportunities' => $data, 'dealFeed' => $this->buildDealFeed($repo, $offerRepo, $contractRepo)]);
+        return $this->json([
+            'count' => $pagination->getTotalItemCount(),
+            'page' => $pagination->getCurrentPageNumber(),
+            'totalPages' => (int) ceil($pagination->getTotalItemCount() / $pagination->getItemNumberPerPage()),
+            'perPage' => $pagination->getItemNumberPerPage(),
+            'opportunities' => $data,
+            'dealFeed' => $this->buildDealFeed($repo, $offerRepo, $contractRepo),
+        ]);
     }
 
     private function buildEcoBadge(float $inflation, ?int $monthsLeft): string
@@ -778,9 +794,12 @@ class InvestmentController extends AbstractController
 
     #[Route('/my-offers', name: 'app_invest_my_offers')]
     #[IsGranted('ROLE_INVESTISSEUR')]
-    public function myOffers(InvestmentOfferRepository $repo, InvestmentContractRepository $contractRepo): Response
+    public function myOffers(Request $request, InvestmentOfferRepository $repo, InvestmentContractRepository $contractRepo, PaginatorInterface $paginator): Response
     {
-        $offers = $repo->findUnpaidByInvestor($this->getUser());
+        $page = $request->query->getInt('page', 1);
+        $qb = $repo->findUnpaidByInvestorQuery($this->getUser());
+        $pagination = $paginator->paginate($qb, $page, 6);
+        $offers = iterator_to_array($pagination);
 
         // ── Compute nudge ──
         $nudge = ['message' => 'Toutes vos offres sont en bonne voie. Aucune action immediate requise.', 'link' => null, 'type' => 'success'];
@@ -853,6 +872,7 @@ class InvestmentController extends AbstractController
 
         return $this->render('front/investment/my_offers.html.twig', [
             'offers' => $offers,
+            'pagination' => $pagination,
             'nudge' => $nudge,
         ]);
     }
@@ -1007,26 +1027,26 @@ class InvestmentController extends AbstractController
 
     #[Route('/my-offers/ajax', name: 'app_invest_my_offers_ajax', methods: ['GET'])]
     #[IsGranted('ROLE_INVESTISSEUR')]
-    public function myOffersAjax(Request $request, InvestmentOfferRepository $repo): JsonResponse
+    public function myOffersAjax(Request $request, InvestmentOfferRepository $repo, PaginatorInterface $paginator): JsonResponse
     {
         $search = trim($request->query->get('q', ''));
         $statusFilter = $request->query->get('status', '');
+        $page = $request->query->getInt('page', 1);
 
-        $offers = $repo->findUnpaidByInvestor($this->getUser());
+        $qb = $repo->findUnpaidByInvestorQuery($this->getUser());
 
-        // Client-side-style filtering in PHP for this simple list
-        $filtered = array_filter($offers, function (InvestmentOffer $offer) use ($search, $statusFilter) {
-            if ($statusFilter !== '' && $offer->getStatus() !== $statusFilter) {
-                return false;
-            }
-            if ($search !== '') {
-                $haystack = strtolower(($offer->getOpportunity()->getProject() ? $offer->getOpportunity()->getProject()->getTitre() : '') . ' ' . $offer->getProposedAmount());
-                if (strpos($haystack, strtolower($search)) === false) {
-                    return false;
-                }
-            }
-            return true;
-        });
+        if ($statusFilter !== '') {
+            $qb->andWhere('o.status = :status')->setParameter('status', $statusFilter);
+        }
+        if ($search !== '') {
+            $qb->leftJoin('o.opportunity', 'opp')
+               ->leftJoin('opp.project', 'proj')
+               ->andWhere('LOWER(proj.titre) LIKE :q OR CAST(o.proposedAmount AS string) LIKE :q')
+               ->setParameter('q', '%' . strtolower($search) . '%');
+        }
+
+        $pagination = $paginator->paginate($qb, $page, 6);
+        $filtered = iterator_to_array($pagination);
 
         $data = [];
         foreach ($filtered as $offer) {
@@ -1052,7 +1072,13 @@ class InvestmentController extends AbstractController
             ];
         }
 
-        return $this->json(['count' => count($data), 'offers' => $data]);
+        return $this->json([
+            'count' => $pagination->getTotalItemCount(),
+            'page' => $pagination->getCurrentPageNumber(),
+            'totalPages' => (int) ceil($pagination->getTotalItemCount() / $pagination->getItemNumberPerPage()),
+            'perPage' => $pagination->getItemNumberPerPage(),
+            'offers' => $data,
+        ]);
     }
 
     #[Route('/my-offers/{id}/pay', name: 'app_invest_offer_pay', requirements: ['id' => '\d+'], methods: ['POST'])]

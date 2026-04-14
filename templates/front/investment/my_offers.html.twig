@@ -230,7 +230,9 @@
     </div>
 </div>
 
-<p class="text-muted mb-3" id="myOffersCount">{{ offers|length }} offre{{ offers|length > 1 ? 's' : '' }} active{{ offers|length > 1 ? 's' : '' }}</p>
+{% set _from = pagination.totalItemCount > 0 ? ((pagination.currentPageNumber - 1) * 6 + 1) : 0 %}
+{% set _to = pagination.totalItemCount < (_from + 6 - 1) ? pagination.totalItemCount : (_from + 6 - 1) %}
+<p class="text-muted mb-3" id="myOffersCount">{% if pagination.totalItemCount > 0 %}Affichage de {{ _from }} à {{ _to }} sur {{ pagination.totalItemCount }} offre{{ pagination.totalItemCount > 1 ? 's' : '' }} active{{ pagination.totalItemCount > 1 ? 's' : '' }}{% else %}0 offre active{% endif %}</p>
 
 <div id="myOffersTableWrap">
 {% if offers|length > 0 %}
@@ -313,6 +315,24 @@
 </div>
 {% endif %}
 </div>
+
+{% if pagination.pageCount > 1 %}
+<nav aria-label="Pagination des offres" class="mt-4" id="myOffersPagination">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {{ pagination.currentPageNumber <= 1 ? 'disabled' : '' }}">
+            <a class="page-link" href="{{ path('app_invest_my_offers', {page: pagination.currentPageNumber - 1}) }}">Précédent</a>
+        </li>
+        {% for p in 1..pagination.pageCount %}
+        <li class="page-item {{ p == pagination.currentPageNumber ? 'active' : '' }}">
+            <a class="page-link" href="{{ path('app_invest_my_offers', {page: p}) }}">{{ p }}</a>
+        </li>
+        {% endfor %}
+        <li class="page-item {{ pagination.currentPageNumber >= pagination.pageCount ? 'disabled' : '' }}">
+            <a class="page-link" href="{{ path('app_invest_my_offers', {page: pagination.currentPageNumber + 1}) }}">Suivant</a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
 
 <div class="text-center py-5 d-none" id="myOffersEmpty">
     <div class="text-center"><i class="bi bi-bar-chart-line" style="font-size:4rem;color:var(--nj-primary)"></i></div>
@@ -424,6 +444,8 @@
     var timer = null;
     var ajaxUrl = '{{ path("app_invest_my_offers_ajax") }}';
     var currentPayment = null;
+    var myOffersPaginationNav = document.getElementById('myOffersPagination');
+    var currentPage = 1;
 
     function offerStatusMeta(s) {
         if (s === 'ACCEPTED') return { stripe: '#16a34a', bg: '#dcfce7', color: '#166534' };
@@ -550,22 +572,32 @@
         return null;
     }
 
-    function doSearch() {
+    function doSearch(page) {
+        if (typeof page === 'number') currentPage = page;
         var q = searchInput.value.trim();
         var status = statusSelect.value;
         spinner.classList.remove('d-none');
 
-        fetch(ajaxUrl + '?q=' + encodeURIComponent(q) + '&status=' + encodeURIComponent(status), {
+        fetch(ajaxUrl + '?q=' + encodeURIComponent(q) + '&status=' + encodeURIComponent(status) + '&page=' + currentPage, {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
         .then(function(r) { return r.json(); })
         .then(function(data) {
             spinner.classList.add('d-none');
             var offers = data.offers;
-            countEl.textContent = data.count + ' offre' + (data.count > 1 ? 's' : '') + ' active' + (data.count > 1 ? 's' : '');
+            var total = data.count;
+            var perPage = data.perPage || 6;
+            var pg = data.page || 1;
+            var totalPages = data.totalPages || 1;
+            var from = total > 0 ? (pg - 1) * perPage + 1 : 0;
+            var to = Math.min(from + perPage - 1, total);
+            countEl.textContent = total > 0
+                ? 'Affichage de ' + from + ' à ' + to + ' sur ' + total + ' offre' + (total > 1 ? 's' : '') + ' active' + (total > 1 ? 's' : '')
+                : '0 offre active';
 
             if (offers.length === 0) {
                 tableWrap.innerHTML = '';
+                if (myOffersPaginationNav) myOffersPaginationNav.innerHTML = '';
                 emptyEl.classList.remove('d-none');
                 return;
             }
@@ -573,6 +605,34 @@
             emptyEl.classList.add('d-none');
             tableWrap.innerHTML = '<div class="offer-shell">' + offers.map(renderOfferCard).join('') + '</div>';
             bindPaymentButtons();
+
+            // Render pagination
+            if (totalPages > 1) {
+                var pHtml = '<ul class="pagination justify-content-center">';
+                pHtml += '<li class="page-item ' + (pg <= 1 ? 'disabled' : '') + '"><a class="page-link" href="#" data-page="' + (pg - 1) + '">Précédent</a></li>';
+                for (var i = 1; i <= totalPages; i++) {
+                    pHtml += '<li class="page-item ' + (i === pg ? 'active' : '') + '"><a class="page-link" href="#" data-page="' + i + '">' + i + '</a></li>';
+                }
+                pHtml += '<li class="page-item ' + (pg >= totalPages ? 'disabled' : '') + '"><a class="page-link" href="#" data-page="' + (pg + 1) + '">Suivant</a></li>';
+                pHtml += '</ul>';
+                if (!myOffersPaginationNav) {
+                    myOffersPaginationNav = document.createElement('nav');
+                    myOffersPaginationNav.id = 'myOffersPagination';
+                    myOffersPaginationNav.className = 'mt-4';
+                    tableWrap.parentNode.insertBefore(myOffersPaginationNav, tableWrap.nextSibling);
+                }
+                myOffersPaginationNav.innerHTML = pHtml;
+                myOffersPaginationNav.querySelectorAll('a[data-page]').forEach(function(a) {
+                    a.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        if (!this.closest('.page-item').classList.contains('disabled') && !this.closest('.page-item').classList.contains('active')) {
+                            doSearch(parseInt(this.getAttribute('data-page')));
+                        }
+                    });
+                });
+            } else if (myOffersPaginationNav) {
+                myOffersPaginationNav.innerHTML = '';
+            }
         })
         .catch(function() { spinner.classList.add('d-none'); });
     }
@@ -653,9 +713,10 @@
 
     searchInput.addEventListener('input', function() {
         clearTimeout(timer);
-        timer = setTimeout(doSearch, 300);
+        currentPage = 1;
+        timer = setTimeout(function() { doSearch(1); }, 300);
     });
-    statusSelect.addEventListener('change', function() { doSearch(); });
+    statusSelect.addEventListener('change', function() { doSearch(1); });
     bindPaymentButtons();
 
     // Counter-up animation

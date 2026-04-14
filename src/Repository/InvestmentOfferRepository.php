@@ -20,14 +20,19 @@ class InvestmentOfferRepository extends ServiceEntityRepository
         return $this->findBy(['investor' => $user], ['id' => 'DESC']);
     }
 
-    public function findUnpaidByInvestor(User $user): array
+    public function findUnpaidByInvestorQuery(User $user): QueryBuilder
     {
         return $this->createQueryBuilder('o')
             ->where('o.investor = :investor')
             ->andWhere('o.paid = :paid')
             ->setParameter('investor', $user)
             ->setParameter('paid', false)
-            ->orderBy('o.id', 'DESC')
+            ->orderBy('o.id', 'DESC');
+    }
+
+    public function findUnpaidByInvestor(User $user): array
+    {
+        return $this->findUnpaidByInvestorQuery($user)
             ->getQuery()
             ->getResult();
     }
