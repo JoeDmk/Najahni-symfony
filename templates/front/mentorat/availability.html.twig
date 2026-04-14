@@ -31,7 +31,7 @@
                 <input type="hidden" name="_token" value="{{ csrf_token('mentorat_availability') }}">
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Date</label>
-                    <input type="date" name="date" class="form-control" required>
+                    <input type="date" name="date" class="form-control" required min="{{ 'now'|date('Y-m-d') }}">
                 </div>
                 <div class="row g-3">
                     <div class="col-6">

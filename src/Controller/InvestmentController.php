@@ -134,27 +134,30 @@ class InvestmentController extends AbstractController
                 return $this->render('front/investment/create_opportunity.html.twig', ['projets' => $projets]);
             }
 
+            $fieldErrors = [];
             $targetAmount = $request->request->get('target_amount');
             if (!is_numeric($targetAmount) || (float) $targetAmount < 100) {
-                $this->addFlash('danger', 'Le montant cible doit être au minimum 100 DT.');
-                return $this->render('front/investment/create_opportunity.html.twig', ['projets' => $projets]);
+                $fieldErrors['target_amount'] = 'Le montant cible doit être au minimum 100 DT.';
             }
 
             $deadlineStr = $request->request->get('deadline');
+            $deadline = null;
             if (!$deadlineStr || strtotime($deadlineStr) === false) {
-                $this->addFlash('danger', 'La date limite est invalide.');
-                return $this->render('front/investment/create_opportunity.html.twig', ['projets' => $projets]);
-            }
-            $deadline = new \DateTime($deadlineStr);
-            if ($deadline <= new \DateTime('today')) {
-                $this->addFlash('danger', 'La date limite doit être dans le futur.');
-                return $this->render('front/investment/create_opportunity.html.twig', ['projets' => $projets]);
+                $fieldErrors['deadline'] = 'La date limite est invalide.';
+            } else {
+                $deadline = new \DateTime($deadlineStr);
+                if ($deadline <= new \DateTime('today')) {
+                    $fieldErrors['deadline'] = 'La date limite doit être dans le futur.';
+                }
             }
 
             $description = trim($request->request->get('description', ''));
             if (mb_strlen($description) < 10) {
-                $this->addFlash('danger', 'La description doit contenir au moins 10 caractères.');
-                return $this->render('front/investment/create_opportunity.html.twig', ['projets' => $projets]);
+                $fieldErrors['description'] = 'La description doit contenir au moins 10 caractères.';
+            }
+
+            if (!empty($fieldErrors)) {
+                return $this->render('front/investment/create_opportunity.html.twig', ['projets' => $projets, 'fieldErrors' => $fieldErrors]);
             }
 
             $opp = new InvestmentOpportunity();
@@ -166,8 +169,14 @@ class InvestmentController extends AbstractController
 
             $errors = $validator->validate($opp);
             if (count($errors) > 0) {
-                $this->addFlash('danger', (string) $errors->get(0)->getMessage());
-                return $this->render('front/investment/create_opportunity.html.twig', ['projets' => $projets]);
+                $fieldErrors = [];
+                foreach ($errors as $error) {
+                    $field = $error->getPropertyPath();
+                    if (!isset($fieldErrors[$field])) {
+                        $fieldErrors[$field] = $error->getMessage();
+                    }
+                }
+                return $this->render('front/investment/create_opportunity.html.twig', ['projets' => $projets, 'fieldErrors' => $fieldErrors]);
             }
 
             $em->persist($opp);

@@ -225,6 +225,7 @@
         </div>
 
         {# Posts Feed #}
+        <div id="liveResults">
         {% for post in posts %}
         {% set myReaction = post.getReactionTypeForUser(app.user) %}
         {% set summary = post.reactionSummary %}
@@ -334,6 +335,7 @@
             <p class="text-muted mt-2">Aucune publication. Soyez le premier à partager !</p>
         </div>
         {% endfor %}
+        </div>
     </div>
 
     {# Sidebar #}
@@ -562,6 +564,30 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+    // Live search for posts
+    (function(){
+        const form = document.querySelector('.community-feed-toolbar');
+        if (!form) return;
+        const inputs = form.querySelectorAll('input[name="q"], select[name="sort"]');
+        let timer;
+        function liveSearch() {
+            clearTimeout(timer);
+            timer = setTimeout(function() {
+                const params = new URLSearchParams(new FormData(form)).toString();
+                fetch(form.action + '?' + params, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function(r) { return r.text(); })
+                    .then(function(html) {
+                        const doc = new DOMParser().parseFromString(html, 'text/html');
+                        const newResults = doc.getElementById('liveResults');
+                        if (newResults) document.getElementById('liveResults').innerHTML = newResults.innerHTML;
+                    });
+            }, 300);
+        }
+        inputs.forEach(function(el) {
+            el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', liveSearch);
+        });
+        form.addEventListener('submit', function(e) { e.preventDefault(); liveSearch(); });
+    })();
 });
 </script>
 {% endblock %}

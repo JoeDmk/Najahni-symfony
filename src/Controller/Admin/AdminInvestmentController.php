@@ -64,22 +64,24 @@ class AdminInvestmentController extends AbstractController
                 return $this->render('admin/investment/create.html.twig', ['projets' => $projets]);
             }
 
+            $fieldErrors = [];
             $targetAmount = $request->request->get('target_amount');
             if (!is_numeric($targetAmount) || (float) $targetAmount < 100) {
-                $this->addFlash('danger', 'Le montant cible doit être au minimum 100 DT.');
-                return $this->render('admin/investment/create.html.twig', ['projets' => $projets]);
+                $fieldErrors['target_amount'] = 'Le montant cible doit être au minimum 100 DT.';
             }
 
             $deadlineStr = $request->request->get('deadline');
             if (!$deadlineStr || strtotime($deadlineStr) === false) {
-                $this->addFlash('danger', 'La date limite est invalide.');
-                return $this->render('admin/investment/create.html.twig', ['projets' => $projets]);
+                $fieldErrors['deadline'] = 'La date limite est invalide.';
             }
 
             $description = trim($request->request->get('description', ''));
             if (mb_strlen($description) < 10) {
-                $this->addFlash('danger', 'La description doit contenir au moins 10 caractères.');
-                return $this->render('admin/investment/create.html.twig', ['projets' => $projets]);
+                $fieldErrors['description'] = 'La description doit contenir au moins 10 caractères.';
+            }
+
+            if (!empty($fieldErrors)) {
+                return $this->render('admin/investment/create.html.twig', ['projets' => $projets, 'fieldErrors' => $fieldErrors]);
             }
 
             $opp = new InvestmentOpportunity();
@@ -115,16 +117,19 @@ class AdminInvestmentController extends AbstractController
                 return $this->render('admin/investment/edit.html.twig', ['opportunity' => $opp]);
             }
 
+            $fieldErrors = [];
             $targetAmount = $request->request->get('target_amount');
             if (!is_numeric($targetAmount) || (float) $targetAmount < 100) {
-                $this->addFlash('danger', 'Le montant cible doit être au minimum 100 DT.');
-                return $this->render('admin/investment/edit.html.twig', ['opportunity' => $opp]);
+                $fieldErrors['target_amount'] = 'Le montant cible doit être au minimum 100 DT.';
             }
 
             $description = trim($request->request->get('description', ''));
             if (mb_strlen($description) < 10) {
-                $this->addFlash('danger', 'La description doit contenir au moins 10 caractères.');
-                return $this->render('admin/investment/edit.html.twig', ['opportunity' => $opp]);
+                $fieldErrors['description'] = 'La description doit contenir au moins 10 caractères.';
+            }
+
+            if (!empty($fieldErrors)) {
+                return $this->render('admin/investment/edit.html.twig', ['opportunity' => $opp, 'fieldErrors' => $fieldErrors]);
             }
 
             $opp->setTargetAmount((string) (float) $targetAmount);

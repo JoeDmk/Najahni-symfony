@@ -24,25 +24,32 @@ class Cours
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
-    #[Assert\NotBlank]
+    #[Assert\NotBlank(message: 'Le titre est obligatoire.')]
+    #[Assert\Length(min: 3, max: 255, minMessage: 'Le titre doit contenir au moins {{ limit }} caractères.', maxMessage: 'Le titre ne peut pas dépasser {{ limit }} caractères.')]
     private ?string $titre = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Assert\Length(max: 5000, maxMessage: 'La description ne peut pas dépasser {{ limit }} caractères.')]
     private ?string $description = null;
 
     #[ORM\Column(length: 100)]
+    #[Assert\NotBlank(message: 'La catégorie est obligatoire.')]
+    #[Assert\Length(max: 100)]
     private string $categorie = 'Général';
 
     #[ORM\Column(length: 20, columnDefinition: "ENUM('DEBUTANT','INTERMEDIAIRE','AVANCE','EXPERT') NOT NULL DEFAULT 'DEBUTANT'")]
     private string $niveauDifficulte = self::NIVEAU_DEBUTANT;
 
     #[ORM\Column]
+    #[Assert\PositiveOrZero(message: 'Les points XP doivent être positifs ou nuls.')]
     private int $pointsXp = 100;
 
     #[ORM\Column(nullable: true)]
+    #[Assert\PositiveOrZero(message: 'La durée doit être positive ou nulle.')]
     private ?int $dureeEstimee = 60;
 
     #[ORM\Column(length: 500, nullable: true)]
+    #[Assert\Url(message: 'L\'URL de l\'image n\'est pas valide.')]
     private ?string $imageUrl = null;
 
     #[ORM\Column]
@@ -55,6 +62,7 @@ class Cours
     private ?string $documentPath = null;
 
     #[ORM\Column(length: 500, nullable: true)]
+    #[Assert\Url(message: 'L\'URL de la vidéo n\'est pas valide.')]
     private ?string $videoUrl = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]

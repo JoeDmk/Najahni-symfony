@@ -10,19 +10,23 @@
 
 <div class="card border-0 shadow-sm" style="border-radius:1rem">
     <div class="card-body p-4">
-        <form method="post">
+        <form method="post" novalidate>
+            {% set e = fieldErrors|default({}) %}
             <div class="row g-3">
                 <div class="col-md-8">
                     <label class="form-label fw-semibold">Titre</label>
-                    <input type="text" name="titre" class="form-control" value="{{ cours ? cours.titre }}" required>
+                    <input type="text" name="titre" class="form-control {{ e.titre is defined ? 'is-invalid' }}" value="{{ cours ? cours.titre }}" required minlength="3" maxlength="255">
+                    {% if e.titre is defined %}<div class="invalid-feedback d-block">{{ e.titre }}</div>{% endif %}
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">Catégorie</label>
-                    <input type="text" name="categorie" class="form-control" value="{{ cours ? cours.categorie }}">
+                    <input type="text" name="categorie" class="form-control {{ e.categorie is defined ? 'is-invalid' }}" value="{{ cours ? cours.categorie }}" required maxlength="100">
+                    {% if e.categorie is defined %}<div class="invalid-feedback d-block">{{ e.categorie }}</div>{% endif %}
                 </div>
                 <div class="col-12">
                     <label class="form-label fw-semibold">Description</label>
-                    <textarea name="description" class="form-control" rows="4">{{ cours ? cours.description }}</textarea>
+                    <textarea name="description" class="form-control {{ e.description is defined ? 'is-invalid' }}" rows="4" maxlength="5000">{{ cours ? cours.description }}</textarea>
+                    {% if e.description is defined %}<div class="invalid-feedback d-block">{{ e.description }}</div>{% endif %}
                 </div>
                 <div class="col-md-3">
                     <label class="form-label fw-semibold">Niveau</label>
@@ -34,11 +38,13 @@
                 </div>
                 <div class="col-md-3">
                     <label class="form-label fw-semibold">Points XP</label>
-                    <input type="number" name="points_xp" class="form-control" value="{{ cours ? cours.pointsXp : 0 }}">
+                    <input type="number" name="points_xp" class="form-control {{ e.pointsXp is defined ? 'is-invalid' }}" value="{{ cours ? cours.pointsXp : 0 }}" min="0" required>
+                    {% if e.pointsXp is defined %}<div class="invalid-feedback d-block">{{ e.pointsXp }}</div>{% endif %}
                 </div>
                 <div class="col-md-3">
                     <label class="form-label fw-semibold">Durée (min)</label>
-                    <input type="number" name="duree_estimee" class="form-control" value="{{ cours ? cours.dureeEstimee : 0 }}">
+                    <input type="number" name="duree_estimee" class="form-control {{ e.dureeEstimee is defined ? 'is-invalid' }}" value="{{ cours ? cours.dureeEstimee : 0 }}" min="0" required>
+                    {% if e.dureeEstimee is defined %}<div class="invalid-feedback d-block">{{ e.dureeEstimee }}</div>{% endif %}
                 </div>
                 <div class="col-md-3">
                     <div class="mt-4 pt-2">
@@ -54,11 +60,13 @@
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Image URL</label>
-                    <input type="url" name="image_url" class="form-control" value="{{ cours ? cours.imageUrl }}">
+                    <input type="url" name="image_url" class="form-control {{ e.imageUrl is defined ? 'is-invalid' }}" value="{{ cours ? cours.imageUrl }}">
+                    {% if e.imageUrl is defined %}<div class="invalid-feedback d-block">{{ e.imageUrl }}</div>{% endif %}
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Vidéo URL</label>
-                    <input type="url" name="video_url" class="form-control" value="{{ cours ? cours.videoUrl }}">
+                    <input type="url" name="video_url" class="form-control {{ e.videoUrl is defined ? 'is-invalid' }}" value="{{ cours ? cours.videoUrl }}">
+                    {% if e.videoUrl is defined %}<div class="invalid-feedback d-block">{{ e.videoUrl }}</div>{% endif %}
                 </div>
             </div>
             <button type="submit" class="btn btn-nj mt-4"><i class="bi bi-check-lg me-2"></i>{{ cours ? 'Enregistrer' : 'Créer' }}</button>

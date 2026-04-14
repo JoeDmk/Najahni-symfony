@@ -50,6 +50,7 @@
 {% endfor %}
 
 {% if opportunities|length > 0 %}
+<div id="liveResults">
 <p class="text-muted mb-3">{{ opportunities|length }} opportunité{{ opportunities|length > 1 ? 's' }} trouvée{{ opportunities|length > 1 ? 's' }}</p>
 <div class="row g-4">
     {% for opp in opportunities %}
@@ -98,4 +99,33 @@
     {% endif %}
 </div>
 {% endif %}
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+(function(){
+    const form = document.querySelector('form[action*="opportunit"]');
+    if (!form) return;
+    let timer;
+    function liveSearch() {
+        clearTimeout(timer);
+        timer = setTimeout(function() {
+            const params = new URLSearchParams(new FormData(form)).toString();
+            fetch(form.action + '?' + params, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function(r) { return r.text(); })
+                .then(function(html) {
+                    const doc = new DOMParser().parseFromString(html, 'text/html');
+                    const nr = doc.getElementById('liveResults');
+                    const cur = document.getElementById('liveResults');
+                    if (nr && cur) cur.innerHTML = nr.innerHTML;
+                });
+        }, 300);
+    }
+    form.querySelectorAll('input[name="q"], select').forEach(function(el) {
+        el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', liveSearch);
+    });
+    form.addEventListener('submit', function(e) { e.preventDefault(); liveSearch(); });
+})();
+</script>
 {% endblock %}

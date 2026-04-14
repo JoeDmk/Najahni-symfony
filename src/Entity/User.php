@@ -54,12 +54,14 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private string $role = self::ROLE_ENTREPRENEUR;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Assert\Length(max: 1000, maxMessage: 'La bio ne peut pas dépasser {{ limit }} caractères.')]
     private ?string $bio = null;
 
     #[ORM\Column(length: 500, nullable: true)]
     private ?string $profilePicture = null;
 
     #[ORM\Column(length: 200, nullable: true)]
+    #[Assert\Length(max: 200, maxMessage: 'Le nom de l\'entreprise ne peut pas dépasser {{ limit }} caractères.')]
     private ?string $companyName = null;
 
     #[ORM\Column(length: 500, nullable: true)]
@@ -67,9 +69,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private ?string $linkedinUrl = null;
 
     #[ORM\Column(length: 300, nullable: true)]
+    #[Assert\Length(max: 300, maxMessage: 'L\'adresse ne peut pas dépasser {{ limit }} caractères.')]
     private ?string $address = null;
 
     #[ORM\Column(type: Types::DATE_MUTABLE, nullable: true)]
+    #[Assert\LessThan('today', message: 'La date de naissance doit être dans le passé.')]
     private ?\DateTimeInterface $dateOfBirth = null;
 
     #[ORM\Column]
@@ -89,6 +93,9 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
 
     #[ORM\Column]
     private bool $faceRegistered = false;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $faceEncoding = null;
 
     #[ORM\Column(length: 10, options: ['default' => 'light'])]
     private string $preferredTheme = 'light';
@@ -185,6 +192,8 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function setGoogleProviderId(?string $googleProviderId): static { $this->googleProviderId = $googleProviderId; return $this; }
     public function isFaceRegistered(): bool { return $this->faceRegistered; }
     public function setFaceRegistered(bool $faceRegistered): static { $this->faceRegistered = $faceRegistered; return $this; }
+    public function getFaceEncoding(): ?string { return $this->faceEncoding; }
+    public function setFaceEncoding(?string $faceEncoding): static { $this->faceEncoding = $faceEncoding; return $this; }
     public function getPreferredTheme(): string { return $this->preferredTheme; }
     public function setPreferredTheme(string $preferredTheme): static { $this->preferredTheme = $preferredTheme; return $this; }
     public function getPreferredLanguage(): string { return $this->preferredLanguage; }

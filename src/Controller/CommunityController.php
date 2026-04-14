@@ -30,6 +30,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 use Throwable;
 
 #[Route('/community')]
@@ -779,6 +780,7 @@ class CommunityController extends AbstractController
         Request $request,
         EntityManagerInterface $em,
         CommunityTextModerationService $textModerationService,
+        ValidatorInterface $validator,
     ): Response
     {
         if ($request->isMethod('POST')) {
@@ -800,6 +802,14 @@ class CommunityController extends AbstractController
             $event->setEventDate($eventDate);
             $event->setCapacity($capacity);
             $event->setCreatedBy($this->currentUser());
+
+            $errors = $validator->validate($event);
+            if (count($errors) > 0) {
+                foreach ($errors as $error) {
+                    $this->addFlash('danger', $error->getMessage());
+                }
+                return $this->render('front/community/event_form.html.twig');
+            }
 
             $em->persist($event);
             $participant = new EventParticipant();

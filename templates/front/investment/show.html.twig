@@ -103,22 +103,6 @@
                     </div>
                     <button type="submit" class="btn btn-nj w-100 btn-lg"><i class="bi bi-send me-2"></i>Soumettre l'offre</button>
                 </form>
-                <script>
-                document.getElementById('offerForm').addEventListener('submit', function(e) {
-                    var amount = document.getElementById('offerAmount');
-                    var val = parseFloat(amount.value);
-                    var max = parseFloat(amount.getAttribute('max')) || Infinity;
-                    var errEl = document.getElementById('offerAmountError');
-                    amount.classList.remove('is-invalid');
-                    if (isNaN(val) || val <= 0) {
-                        e.preventDefault(); amount.classList.add('is-invalid');
-                        errEl.textContent = 'Le montant doit être un nombre positif.';
-                    } else if (val > max) {
-                        e.preventDefault(); amount.classList.add('is-invalid');
-                        errEl.textContent = 'Le montant ne peut pas dépasser ' + max.toLocaleString('fr') + ' DT.';
-                    }
-                });
-                </script>
             {% endif %}
         </div>
         {% endif %}

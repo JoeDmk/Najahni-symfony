@@ -10,15 +10,18 @@
 
 <div class="card border-0 shadow-sm" style="border-radius:1rem">
     <div class="card-body p-4">
-        <form method="post">
+        <form method="post" novalidate>
+            {% set e = fieldErrors|default({}) %}
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Nom</label>
-                    <input type="text" name="nom" class="form-control" value="{{ badge ? badge.nom }}" required>
+                    <input type="text" name="nom" class="form-control {{ e.nom is defined ? 'is-invalid' }}" value="{{ badge ? badge.nom }}" required minlength="2" maxlength="100">
+                    {% if e.nom is defined %}<div class="invalid-feedback d-block">{{ e.nom }}</div>{% endif %}
                 </div>
                 <div class="col-md-3">
                     <label class="form-label fw-semibold">Icône (emoji)</label>
-                    <input type="text" name="icone" class="form-control" value="{{ badge ? badge.icone : '' }}">
+                    <input type="text" name="icone" class="form-control {{ e.icone is defined ? 'is-invalid' }}" value="{{ badge ? badge.icone : '' }}">
+                    {% if e.icone is defined %}<div class="invalid-feedback d-block">{{ e.icone }}</div>{% endif %}
                 </div>
                 <div class="col-md-3">
                     <label class="form-label fw-semibold">Rareté</label>
@@ -30,27 +33,33 @@
                 </div>
                 <div class="col-12">
                     <label class="form-label fw-semibold">Description</label>
-                    <textarea name="description" class="form-control" rows="3">{{ badge ? badge.description }}</textarea>
+                    <textarea name="description" class="form-control {{ e.description is defined ? 'is-invalid' }}" rows="3" maxlength="1000">{{ badge ? badge.description }}</textarea>
+                    {% if e.description is defined %}<div class="invalid-feedback d-block">{{ e.description }}</div>{% endif %}
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Condition d'obtention</label>
-                    <input type="text" name="condition_obtention" class="form-control" value="{{ badge ? badge.conditionObtention }}">
+                    <input type="text" name="condition_obtention" class="form-control {{ e.conditionObtention is defined ? 'is-invalid' }}" value="{{ badge ? badge.conditionObtention }}" required>
+                    {% if e.conditionObtention is defined %}<div class="invalid-feedback d-block">{{ e.conditionObtention }}</div>{% endif %}
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Catégorie</label>
-                    <input type="text" name="categorie" class="form-control" value="{{ badge ? badge.categorie }}">
+                    <input type="text" name="categorie" class="form-control {{ e.categorie is defined ? 'is-invalid' }}" value="{{ badge ? badge.categorie }}">
+                    {% if e.categorie is defined %}<div class="invalid-feedback d-block">{{ e.categorie }}</div>{% endif %}
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">Points XP requis</label>
-                    <input type="number" name="points_requis" class="form-control" value="{{ badge ? badge.pointsRequis : 0 }}">
+                    <input type="number" name="points_requis" class="form-control {{ e.pointsRequis is defined ? 'is-invalid' }}" value="{{ badge ? badge.pointsRequis : 0 }}" min="0" required>
+                    {% if e.pointsRequis is defined %}<div class="invalid-feedback d-block">{{ e.pointsRequis }}</div>{% endif %}
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">Cours requis</label>
-                    <input type="number" name="cours_requis" class="form-control" value="{{ badge ? badge.coursRequis : 0 }}">
+                    <input type="number" name="cours_requis" class="form-control {{ e.coursRequis is defined ? 'is-invalid' }}" value="{{ badge ? badge.coursRequis : 0 }}" min="0" required>
+                    {% if e.coursRequis is defined %}<div class="invalid-feedback d-block">{{ e.coursRequis }}</div>{% endif %}
                 </div>
                 <div class="col-md-4">
                     <label class="form-label fw-semibold">Niveau requis</label>
-                    <input type="number" name="niveau_requis" class="form-control" value="{{ badge ? badge.niveauRequis : 0 }}">
+                    <input type="number" name="niveau_requis" class="form-control {{ e.niveauRequis is defined ? 'is-invalid' }}" value="{{ badge ? badge.niveauRequis : 0 }}" min="0" required>
+                    {% if e.niveauRequis is defined %}<div class="invalid-feedback d-block">{{ e.niveauRequis }}</div>{% endif %}
                 </div>
                 <div class="col-12">
                     <div class="form-check">

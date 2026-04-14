@@ -14,6 +14,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[Route('/admin/apprentissage')]
 #[IsGranted('ROLE_ADMIN')]
@@ -29,11 +30,24 @@ class AdminApprentissageController extends AbstractController
     }
 
     #[Route('/cours/new', name: 'admin_cours_new', methods: ['GET', 'POST'])]
-    public function newCours(Request $request, EntityManagerInterface $em): Response
+    public function newCours(Request $request, EntityManagerInterface $em, ValidatorInterface $validator): Response
     {
         if ($request->isMethod('POST')) {
             $cours = new Cours();
             $this->hydrateCours($cours, $request);
+
+            $errors = $validator->validate($cours);
+            if (count($errors) > 0) {
+                $fieldErrors = [];
+                foreach ($errors as $error) {
+                    $field = $error->getPropertyPath();
+                    if (!isset($fieldErrors[$field])) {
+                        $fieldErrors[$field] = $error->getMessage();
+                    }
+                }
+                return $this->render('admin/apprentissage/cours_form.html.twig', ['cours' => $cours, 'fieldErrors' => $fieldErrors]);
+            }
+
             $em->persist($cours);
             $em->flush();
             $this->addFlash('success', 'Cours créé !');
@@ -43,10 +57,23 @@ class AdminApprentissageController extends AbstractController
     }
 
     #[Route('/cours/{id}/edit', name: 'admin_cours_edit', methods: ['GET', 'POST'])]
-    public function editCours(Cours $cours, Request $request, EntityManagerInterface $em): Response
+    public function editCours(Cours $cours, Request $request, EntityManagerInterface $em, ValidatorInterface $validator): Response
     {
         if ($request->isMethod('POST')) {
             $this->hydrateCours($cours, $request);
+
+            $errors = $validator->validate($cours);
+            if (count($errors) > 0) {
+                $fieldErrors = [];
+                foreach ($errors as $error) {
+                    $field = $error->getPropertyPath();
+                    if (!isset($fieldErrors[$field])) {
+                        $fieldErrors[$field] = $error->getMessage();
+                    }
+                }
+                return $this->render('admin/apprentissage/cours_form.html.twig', ['cours' => $cours, 'fieldErrors' => $fieldErrors]);
+            }
+
             $em->flush();
             $this->addFlash('success', 'Cours modifié !');
             return $this->redirectToRoute('admin_cours');
@@ -87,11 +114,24 @@ class AdminApprentissageController extends AbstractController
     }
 
     #[Route('/badges/new', name: 'admin_badges_new', methods: ['GET', 'POST'])]
-    public function newBadge(Request $request, EntityManagerInterface $em): Response
+    public function newBadge(Request $request, EntityManagerInterface $em, ValidatorInterface $validator): Response
     {
         if ($request->isMethod('POST')) {
             $badge = new Badge();
             $this->hydrateBadge($badge, $request);
+
+            $errors = $validator->validate($badge);
+            if (count($errors) > 0) {
+                $fieldErrors = [];
+                foreach ($errors as $error) {
+                    $field = $error->getPropertyPath();
+                    if (!isset($fieldErrors[$field])) {
+                        $fieldErrors[$field] = $error->getMessage();
+                    }
+                }
+                return $this->render('admin/apprentissage/badge_form.html.twig', ['badge' => $badge, 'fieldErrors' => $fieldErrors]);
+            }
+
             $em->persist($badge);
             $em->flush();
             $this->addFlash('success', 'Badge créé !');
@@ -101,10 +141,23 @@ class AdminApprentissageController extends AbstractController
     }
 
     #[Route('/badges/{id}/edit', name: 'admin_badges_edit', methods: ['GET', 'POST'])]
-    public function editBadge(Badge $badge, Request $request, EntityManagerInterface $em): Response
+    public function editBadge(Badge $badge, Request $request, EntityManagerInterface $em, ValidatorInterface $validator): Response
     {
         if ($request->isMethod('POST')) {
             $this->hydrateBadge($badge, $request);
+
+            $errors = $validator->validate($badge);
+            if (count($errors) > 0) {
+                $fieldErrors = [];
+                foreach ($errors as $error) {
+                    $field = $error->getPropertyPath();
+                    if (!isset($fieldErrors[$field])) {
+                        $fieldErrors[$field] = $error->getMessage();
+                    }
+                }
+                return $this->render('admin/apprentissage/badge_form.html.twig', ['badge' => $badge, 'fieldErrors' => $fieldErrors]);
+            }
+
             $em->flush();
             $this->addFlash('success', 'Badge modifié !');
             return $this->redirectToRoute('admin_badges');

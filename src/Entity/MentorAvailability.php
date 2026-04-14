@@ -20,15 +20,16 @@ class MentorAvailability
     private ?User $mentor = null;
 
     #[ORM\Column(type: Types::DATE_MUTABLE)]
-    #[Assert\NotBlank]
+    #[Assert\NotBlank(message: 'La date est obligatoire.')]
+    #[Assert\GreaterThanOrEqual('today', message: 'La date doit être aujourd\'hui ou dans le futur.')]
     private ?\DateTimeInterface $date = null;
 
     #[ORM\Column(type: Types::TIME_MUTABLE)]
-    #[Assert\NotBlank]
+    #[Assert\NotBlank(message: 'L\'heure de début est obligatoire.')]
     private ?\DateTimeInterface $startTime = null;
 
     #[ORM\Column(type: Types::TIME_MUTABLE)]
-    #[Assert\NotBlank]
+    #[Assert\NotBlank(message: 'L\'heure de fin est obligatoire.')]
     private ?\DateTimeInterface $endTime = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]

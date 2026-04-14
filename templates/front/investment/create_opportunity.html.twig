@@ -18,34 +18,35 @@
 <div class="card border-0 shadow-sm" style="border-radius:1rem">
     <div class="card-body p-4">
         <form method="post" id="createOpportunityForm" novalidate>
+            {% set e = fieldErrors|default({}) %}
             <input type="hidden" name="_token" value="{{ csrf_token('create_opportunity') }}">
             <div class="mb-3">
                 <label for="project_id" class="form-label fw-semibold">Projet <span class="text-danger">*</span></label>
-                <select name="project_id" id="project_id" class="form-select" required>
+                <select name="project_id" id="project_id" class="form-select {{ e.project_id is defined ? 'is-invalid' }}" required>
                     <option value="">Sélectionnez un projet</option>
                     {% for p in projets %}
                         <option value="{{ p.id }}">{{ p.titre }}</option>
                     {% endfor %}
                 </select>
-                <div class="invalid-feedback">Veuillez sélectionner un projet.</div>
+                <div class="invalid-feedback {{ e.project_id is defined ? 'd-block' }}">{{ e.project_id|default('Veuillez sélectionner un projet.') }}</div>
             </div>
             <div class="row g-3">
                 <div class="col-md-6">
                     <label for="target_amount" class="form-label fw-semibold">Montant cible (DT) <span class="text-danger">*</span></label>
-                    <input type="number" step="0.01" min="100" name="target_amount" id="target_amount" class="form-control" placeholder="Min: 100 DT" required>
-                    <div class="invalid-feedback">Le montant doit être au minimum 100 DT.</div>
+                    <input type="number" step="0.01" min="100" name="target_amount" id="target_amount" class="form-control {{ e.target_amount is defined ? 'is-invalid' }}" placeholder="Min: 100 DT" required>
+                    <div class="invalid-feedback {{ e.target_amount is defined ? 'd-block' }}">{{ e.target_amount|default('Le montant doit être au minimum 100 DT.') }}</div>
                 </div>
                 <div class="col-md-6">
                     <label for="deadline" class="form-label fw-semibold">Deadline <span class="text-danger">*</span></label>
-                    <input type="date" name="deadline" id="deadline" class="form-control" min="{{ 'now'|date('Y-m-d') }}" required>
-                    <div class="invalid-feedback">La date doit être dans le futur.</div>
+                    <input type="date" name="deadline" id="deadline" class="form-control {{ e.deadline is defined ? 'is-invalid' }}" min="{{ 'now'|date('Y-m-d') }}" required>
+                    <div class="invalid-feedback {{ e.deadline is defined ? 'd-block' }}">{{ e.deadline|default('La date doit être dans le futur.') }}</div>
                 </div>
             </div>
             <div class="mb-3 mt-3">
                 <label for="description" class="form-label fw-semibold">Description <span class="text-danger">*</span></label>
-                <textarea name="description" id="description" class="form-control" rows="4" minlength="10" maxlength="2000" placeholder="Décrivez votre opportunité d'investissement (min. 10 caractères)" required></textarea>
+                <textarea name="description" id="description" class="form-control {{ e.description is defined ? 'is-invalid' }}" rows="4" minlength="10" maxlength="2000" placeholder="Décrivez votre opportunité d'investissement (min. 10 caractères)" required></textarea>
                 <div class="d-flex justify-content-between">
-                    <div class="invalid-feedback">La description doit contenir au moins 10 caractères.</div>
+                    <div class="invalid-feedback {{ e.description is defined ? 'd-block' }}">{{ e.description|default('La description doit contenir au moins 10 caractères.') }}</div>
                     <small class="text-muted mt-1" id="descCharCount">0 / 2000</small>
                 </div>
             </div>
@@ -55,24 +56,11 @@
         (function() {
             var desc = document.getElementById('description');
             var counter = document.getElementById('descCharCount');
-            desc.addEventListener('input', function() {
-                counter.textContent = desc.value.length + ' / 2000';
-            });
-            document.getElementById('createOpportunityForm').addEventListener('submit', function(e) {
-                var valid = true;
-                var fields = this.querySelectorAll('[required]');
-                fields.forEach(function(f) { f.classList.remove('is-invalid'); });
-                fields.forEach(function(f) {
-                    if (!f.value.trim()) { f.classList.add('is-invalid'); valid = false; }
+            if (desc && counter) {
+                desc.addEventListener('input', function() {
+                    counter.textContent = desc.value.length + ' / 2000';
                 });
-                var amt = document.getElementById('target_amount');
-                if (parseFloat(amt.value) < 100) { amt.classList.add('is-invalid'); valid = false; }
-                var dl = document.getElementById('deadline');
-                if (dl.value && dl.value < new Date().toISOString().split('T')[0]) { dl.classList.add('is-invalid'); valid = false; }
-                var d = document.getElementById('description');
-                if (d.value.trim().length < 10) { d.classList.add('is-invalid'); valid = false; }
-                if (!valid) e.preventDefault();
-            });
+            }
         })();
         </script>
     </div>

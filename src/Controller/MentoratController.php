@@ -21,6 +21,7 @@ use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[Route('/mentorat')]
 #[IsGranted('ROLE_USER')]
@@ -478,7 +479,7 @@ class MentoratController extends AbstractController
     }
 
     #[Route('/availability/new', name: 'app_mentorat_availability_new', methods: ['POST'])]
-    public function newAvailability(Request $request): Response
+    public function newAvailability(Request $request, ValidatorInterface $validator): Response
     {
         if (!$this->isCsrfTokenValid('mentorat_availability', $request->request->get('_token'))) {
             throw $this->createAccessDeniedException('Jeton CSRF invalide.');
@@ -490,6 +491,14 @@ class MentoratController extends AbstractController
         $avail->setStartTime(new \DateTime($request->request->get('start_time')));
         $avail->setEndTime(new \DateTime($request->request->get('end_time')));
 
+        $errors = $validator->validate($avail);
+        if (count($errors) > 0) {
+            foreach ($errors as $error) {
+                $this->addFlash('danger', $error->getMessage());
+            }
+            return $this->redirectToRoute('app_mentorat_availability');
+        }
+
         $this->em->persist($avail);
         $this->em->flush();
         $this->addFlash('success', 'Disponibilité ajoutée !');
@@ -497,7 +506,7 @@ class MentoratController extends AbstractController
     }
 
     #[Route('/availability/{id}/edit', name: 'app_mentorat_availability_edit', methods: ['POST'])]
-    public function editAvailability(MentorAvailability $avail, Request $request): Response
+    public function editAvailability(MentorAvailability $avail, Request $request, ValidatorInterface $validator): Response
     {
         if ($avail->getMentor() !== $this->getUser()) {
             throw $this->createAccessDeniedException();
@@ -509,6 +518,14 @@ class MentoratController extends AbstractController
         $avail->setDate(new \DateTime($request->request->get('date')));
         $avail->setStartTime(new \DateTime($request->request->get('start_time')));
         $avail->setEndTime(new \DateTime($request->request->get('end_time')));
+
+        $errors = $validator->validate($avail);
+        if (count($errors) > 0) {
+            foreach ($errors as $error) {
+                $this->addFlash('danger', $error->getMessage());
+            }
+            return $this->redirectToRoute('app_mentorat_availability');
+        }
 
         $this->em->flush();
         $this->addFlash('success', 'Disponibilité modifiée.');

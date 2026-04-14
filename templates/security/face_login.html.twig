@@ -17,13 +17,19 @@
             {# Camera Preview #}
             <div class="position-relative mb-4" id="cameraContainer">
                 <div class="rounded-4 overflow-hidden bg-dark d-flex align-items-center justify-content-center" style="height:300px" id="videoContainer">
-                    <video id="video" autoplay playsinline muted class="w-100 h-100 d-none" style="object-fit:cover"></video>
+                    <video id="video" autoplay playsinline muted class="w-100 h-100 d-none" style="object-fit:cover;transform:scaleX(-1)"></video>
                     <div id="cameraPlaceholder" class="text-center text-white">
                         <i class="bi bi-camera-video" style="font-size:4rem;opacity:.5"></i>
                         <p class="mt-2 mb-0 opacity-75">Cliquez pour activer la caméra</p>
                     </div>
                 </div>
-                <canvas id="overlay" class="position-absolute top-0 start-0 w-100 h-100 d-none" style="pointer-events:none"></canvas>
+                <canvas id="overlay" class="position-absolute top-0 start-0 w-100 h-100 d-none" style="pointer-events:none;transform:scaleX(-1)"></canvas>
+            </div>
+
+            {# Loading indicator for models #}
+            <div class="text-center mb-3 d-none" id="modelLoading">
+                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                <small class="text-muted">Chargement des modèles de reconnaissance faciale...</small>
             </div>
 
             {# Status #}
@@ -33,10 +39,10 @@
 
             {# Controls #}
             <div class="d-grid gap-2">
-                <button class="btn btn-nj py-2" id="startBtn" onclick="startCamera()">
+                <button class="btn btn-nj py-2" id="startBtn">
                     <i class="bi bi-camera-video me-2"></i>Activer la caméra
                 </button>
-                <button class="btn btn-outline-nj py-2 d-none" id="captureBtn" onclick="captureAndLogin()">
+                <button class="btn btn-outline-nj py-2 d-none" id="captureBtn">
                     <i class="bi bi-person-check me-2"></i>Scanner mon visage
                 </button>
             </div>
@@ -54,74 +60,133 @@
 {% endblock %}
 
 {% block javascripts %}
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 <script>
-let stream = null;
-const video = document.getElementById('video');
-const placeholder = document.getElementById('cameraPlaceholder');
-const startBtn = document.getElementById('startBtn');
-const captureBtn = document.getElementById('captureBtn');
-const statusMsg = document.getElementById('statusMsg');
+(function () {
+    const MODEL_URL = '/models';
+    const video       = document.getElementById('video');
+    const placeholder  = document.getElementById('cameraPlaceholder');
+    const overlay      = document.getElementById('overlay');
+    const startBtn     = document.getElementById('startBtn');
+    const captureBtn   = document.getElementById('captureBtn');
+    const statusMsg    = document.getElementById('statusMsg');
+    const modelLoading = document.getElementById('modelLoading');
+    let stream = null;
+    let modelsLoaded = false;
 
-function showStatus(msg, type) {
-    statusMsg.className = 'alert alert-' + type;
-    statusMsg.innerHTML = msg;
-    statusMsg.classList.remove('d-none');
-}
-
-async function startCamera() {
-    try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } });
-        video.srcObject = stream;
-        video.classList.remove('d-none');
-        placeholder.classList.add('d-none');
-        startBtn.classList.add('d-none');
-        captureBtn.classList.remove('d-none');
-        showStatus('<i class="bi bi-camera-video-fill me-2"></i>Caméra activée. Cliquez sur "Scanner mon visage".', 'info');
-    } catch (err) {
-        showStatus('<i class="bi bi-exclamation-triangle me-2"></i>Impossible d\'accéder à la caméra. Vérifiez les permissions.', 'danger');
+    function showStatus(msg, type) {
+        statusMsg.className = 'alert alert-' + type;
+        statusMsg.innerHTML = msg;
+        statusMsg.classList.remove('d-none');
     }
-}
 
-async function captureAndLogin() {
-    captureBtn.disabled = true;
-    captureBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Analyse en cours...';
-    showStatus('<i class="bi bi-hourglass-split me-2"></i>Analyse du visage en cours...', 'warning');
-
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext('2d').drawImage(video, 0, 0);
-
-    try {
-        const blob = await new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.8));
-        const formData = new FormData();
-        formData.append('face_image', blob, 'face.jpg');
-
-        const response = await fetch('/api/face-login', {
-            method: 'POST',
-            body: formData
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            showStatus('<i class="bi bi-check-circle me-2"></i>Visage reconnu ! Redirection...', 'success');
-            setTimeout(() => { window.location.href = data.redirect || '/'; }, 1000);
-        } else {
-            showStatus('<i class="bi bi-x-circle me-2"></i>' + (data.message || 'Visage non reconnu. Réessayez.'), 'danger');
-            captureBtn.disabled = false;
-            captureBtn.innerHTML = '<i class="bi bi-person-check me-2"></i>Scanner mon visage';
+    async function loadModels() {
+        if (modelsLoaded) return;
+        modelLoading.classList.remove('d-none');
+        try {
+            await Promise.all([
+                faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+                faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+                faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+            ]);
+            modelsLoaded = true;
+        } catch (err) {
+            showStatus('<i class="bi bi-exclamation-triangle me-2"></i>Impossible de charger les modèles. Vérifiez votre connexion.', 'danger');
+            throw err;
+        } finally {
+            modelLoading.classList.add('d-none');
         }
-    } catch (err) {
-        showStatus('<i class="bi bi-x-circle me-2"></i>Erreur de connexion. Réessayez.', 'danger');
+    }
+
+    startBtn.addEventListener('click', async function () {
+        try {
+            startBtn.disabled = true;
+            startBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Initialisation...';
+
+            // Load models and camera in parallel
+            const [, mediaStream] = await Promise.all([
+                loadModels(),
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: 640, height: 480 } })
+            ]);
+
+            stream = mediaStream;
+            video.srcObject = stream;
+            video.classList.remove('d-none');
+            placeholder.classList.add('d-none');
+            startBtn.classList.add('d-none');
+            captureBtn.classList.remove('d-none');
+            showStatus('<i class="bi bi-camera-video-fill me-2"></i>Caméra activée. Cliquez sur "Scanner mon visage".', 'info');
+        } catch (err) {
+            startBtn.disabled = false;
+            startBtn.innerHTML = '<i class="bi bi-camera-video me-2"></i>Activer la caméra';
+            if (!modelsLoaded) return; // model error already shown
+            var msg = 'Impossible d\'accéder à la caméra.';
+            if (err.name === 'NotAllowedError') msg += ' Autorisez l\'accès dans votre navigateur.';
+            else if (err.name === 'NotFoundError') msg += ' Aucune caméra détectée.';
+            else if (err.name === 'NotReadableError') msg += ' La caméra est utilisée par une autre application.';
+            showStatus('<i class="bi bi-exclamation-triangle me-2"></i>' + msg, 'danger');
+        }
+    });
+
+    captureBtn.addEventListener('click', async function () {
+        captureBtn.disabled = true;
+        captureBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Analyse en cours...';
+        showStatus('<i class="bi bi-hourglass-split me-2"></i>Détection du visage...', 'warning');
+
+        try {
+            // Detect face and extract descriptor
+            const detection = await faceapi
+                .detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.5 }))
+                .withFaceLandmarks()
+                .withFaceDescriptor();
+
+            if (!detection) {
+                showStatus('<i class="bi bi-x-circle me-2"></i>Aucun visage détecté. Placez votre visage bien en face de la caméra.', 'danger');
+                resetCapture();
+                return;
+            }
+
+            // Draw detection on overlay
+            const dims = faceapi.matchDimensions(overlay, video, true);
+            overlay.classList.remove('d-none');
+            const resized = faceapi.resizeResults(detection, dims);
+            faceapi.draw.drawDetections(overlay, resized);
+            faceapi.draw.drawFaceLandmarks(overlay, resized);
+
+            showStatus('<i class="bi bi-hourglass-split me-2"></i>Vérification de l\'identité...', 'warning');
+
+            // Send descriptor to server
+            const descriptor = Array.from(detection.descriptor);
+            const response = await fetch('/api/face-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ descriptor: descriptor })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                showStatus('<i class="bi bi-check-circle me-2"></i>' + data.message + ' Redirection...', 'success');
+                setTimeout(function () { window.location.href = data.redirect || '/'; }, 1200);
+            } else {
+                showStatus('<i class="bi bi-x-circle me-2"></i>' + (data.message || 'Visage non reconnu.'), 'danger');
+                resetCapture();
+            }
+        } catch (err) {
+            showStatus('<i class="bi bi-x-circle me-2"></i>Erreur lors de l\'analyse. Réessayez.', 'danger');
+            resetCapture();
+        }
+    });
+
+    function resetCapture() {
         captureBtn.disabled = false;
         captureBtn.innerHTML = '<i class="bi bi-person-check me-2"></i>Scanner mon visage';
+        setTimeout(function () { overlay.classList.add('d-none'); }, 2000);
     }
-}
 
-// Stop camera on page leave
-window.addEventListener('beforeunload', () => {
-    if (stream) stream.getTracks().forEach(t => t.stop());
-});
+    window.addEventListener('beforeunload', function () {
+        if (stream) stream.getTracks().forEach(function (t) { t.stop(); });
+    });
+})();
 </script>
 {% endblock %}

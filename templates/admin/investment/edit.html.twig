@@ -16,17 +16,18 @@
 <div class="card border-0 shadow-sm" style="border-radius:1rem">
     <div class="card-body p-4">
         <form method="post" id="adminEditForm" novalidate>
+            {% set e = fieldErrors|default({}) %}
             <input type="hidden" name="_token" value="{{ csrf_token('admin_edit_opportunity_' ~ opportunity.id) }}">
             <div class="row g-3">
                 <div class="col-md-4">
                     <label for="target_amount" class="form-label fw-semibold">Montant cible (DT) <span class="text-danger">*</span></label>
-                    <input type="number" step="0.01" min="100" name="target_amount" id="target_amount" class="form-control" value="{{ opportunity.targetAmount }}" required>
-                    <div class="invalid-feedback">Le montant doit être au minimum 100 DT.</div>
+                    <input type="number" step="0.01" min="100" name="target_amount" id="target_amount" class="form-control {{ e.target_amount is defined ? 'is-invalid' }}" value="{{ opportunity.targetAmount }}" required>
+                    <div class="invalid-feedback {{ e.target_amount is defined ? 'd-block' }}">{{ e.target_amount|default('Le montant doit être au minimum 100 DT.') }}</div>
                 </div>
                 <div class="col-md-4">
                     <label for="deadline" class="form-label fw-semibold">Deadline <span class="text-danger">*</span></label>
-                    <input type="date" name="deadline" id="deadline" class="form-control" value="{{ opportunity.deadline ? opportunity.deadline|date('Y-m-d') : '' }}" required>
-                    <div class="invalid-feedback">La date est obligatoire.</div>
+                    <input type="date" name="deadline" id="deadline" class="form-control {{ e.deadline is defined ? 'is-invalid' }}" value="{{ opportunity.deadline ? opportunity.deadline|date('Y-m-d') : '' }}" required>
+                    <div class="invalid-feedback {{ e.deadline is defined ? 'd-block' }}">{{ e.deadline|default('La date est obligatoire.') }}</div>
                 </div>
                 <div class="col-md-4">
                     <label for="status" class="form-label fw-semibold">Statut</label>
@@ -39,9 +40,9 @@
             </div>
             <div class="mb-3 mt-3">
                 <label for="description" class="form-label fw-semibold">Description <span class="text-danger">*</span></label>
-                <textarea name="description" id="description" class="form-control" rows="4" minlength="10" maxlength="2000" required>{{ opportunity.description }}</textarea>
+                <textarea name="description" id="description" class="form-control {{ e.description is defined ? 'is-invalid' }}" rows="4" minlength="10" maxlength="2000" required>{{ opportunity.description }}</textarea>
                 <div class="d-flex justify-content-between">
-                    <div class="invalid-feedback">La description doit contenir au moins 10 caractères.</div>
+                    <div class="invalid-feedback {{ e.description is defined ? 'd-block' }}">{{ e.description|default('La description doit contenir au moins 10 caractères.') }}</div>
                     <small class="text-muted mt-1" id="editCharCount">{{ opportunity.description|length }} / 2000</small>
                 </div>
             </div>
@@ -51,17 +52,9 @@
         (function() {
             var desc = document.getElementById('description');
             var counter = document.getElementById('editCharCount');
-            desc.addEventListener('input', function() { counter.textContent = desc.value.length + ' / 2000'; });
-            document.getElementById('adminEditForm').addEventListener('submit', function(e) {
-                var valid = true;
-                this.querySelectorAll('[required]').forEach(function(f) {
-                    f.classList.remove('is-invalid');
-                    if (!f.value.trim()) { f.classList.add('is-invalid'); valid = false; }
-                });
-                if (parseFloat(document.getElementById('target_amount').value) < 100) { document.getElementById('target_amount').classList.add('is-invalid'); valid = false; }
-                if (desc.value.trim().length < 10) { desc.classList.add('is-invalid'); valid = false; }
-                if (!valid) e.preventDefault();
-            });
+            if (desc && counter) {
+                desc.addEventListener('input', function() { counter.textContent = desc.value.length + ' / 2000'; });
+            }
         })();
         </script>
     </div>

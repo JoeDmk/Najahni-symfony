@@ -61,13 +61,20 @@ class ProjetController extends AbstractController
             $errors = $validator->validate($projet);
             $erreursDonnees = $validator->validate($donnees);
             if (count($errors) > 0 || count($erreursDonnees) > 0) {
+                $fieldErrors = [];
                 foreach ($errors as $error) {
-                    $this->addFlash('error', $error->getMessage());
+                    $field = $error->getPropertyPath();
+                    if (!isset($fieldErrors[$field])) {
+                        $fieldErrors[$field] = $error->getMessage();
+                    }
                 }
                 foreach ($erreursDonnees as $error) {
-                    $this->addFlash('error', $error->getMessage());
+                    $field = $error->getPropertyPath();
+                    if (!isset($fieldErrors[$field])) {
+                        $fieldErrors[$field] = $error->getMessage();
+                    }
                 }
-                return $this->render('front/projet/form.html.twig', ['projet' => $projet]);
+                return $this->render('front/projet/form.html.twig', ['projet' => $projet, 'fieldErrors' => $fieldErrors]);
             }
 
             $em->persist($projet);
@@ -104,13 +111,20 @@ class ProjetController extends AbstractController
             $errors = $validator->validate($projet);
             $erreursDonnees = $donnees ? $validator->validate($donnees) : [];
             if (count($errors) > 0 || count($erreursDonnees) > 0) {
+                $fieldErrors = [];
                 foreach ($errors as $error) {
-                    $this->addFlash('error', $error->getMessage());
+                    $field = $error->getPropertyPath();
+                    if (!isset($fieldErrors[$field])) {
+                        $fieldErrors[$field] = $error->getMessage();
+                    }
                 }
                 foreach ($erreursDonnees as $error) {
-                    $this->addFlash('error', $error->getMessage());
+                    $field = $error->getPropertyPath();
+                    if (!isset($fieldErrors[$field])) {
+                        $fieldErrors[$field] = $error->getMessage();
+                    }
                 }
-                return $this->render('front/projet/form.html.twig', ['projet' => $projet]);
+                return $this->render('front/projet/form.html.twig', ['projet' => $projet, 'fieldErrors' => $fieldErrors]);
             }
 
             $em->flush();

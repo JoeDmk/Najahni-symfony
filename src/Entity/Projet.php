@@ -27,10 +27,12 @@ class Projet
 
     #[ORM\Column(length: 255, nullable: true)]
     #[Assert\NotBlank(message: 'Le titre est obligatoire.')]
+    #[Assert\Length(min: 3, max: 255, minMessage: 'Le titre doit contenir au moins {{ limit }} caractères.', maxMessage: 'Le titre ne peut pas dépasser {{ limit }} caractères.')]
     private ?string $titre = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     #[Assert\NotBlank(message: 'La description est obligatoire.')]
+    #[Assert\Length(min: 10, max: 5000, minMessage: 'La description doit contenir au moins {{ limit }} caractères.', maxMessage: 'La description ne peut pas dépasser {{ limit }} caractères.')]
     private ?string $description = null;
 
     #[ORM\Column(length: 100, nullable: true)]

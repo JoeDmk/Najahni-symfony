@@ -18,18 +18,22 @@ class Event
     private ?int $id = null;
 
     #[ORM\Column(length: 150)]
-    #[Assert\NotBlank]
+    #[Assert\NotBlank(message: 'Le titre est obligatoire.')]
+    #[Assert\Length(min: 3, max: 150, minMessage: 'Le titre doit contenir au moins {{ limit }} caractères.', maxMessage: 'Le titre ne peut pas dépasser {{ limit }} caractères.')]
     private ?string $title = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Assert\NotBlank(message: 'La description est obligatoire.')]
+    #[Assert\Length(min: 10, max: 2000, minMessage: 'La description doit contenir au moins {{ limit }} caractères.', maxMessage: 'La description ne peut pas dépasser {{ limit }} caractères.')]
     private ?string $description = null;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
-    #[Assert\NotBlank]
+    #[Assert\NotBlank(message: 'La date est obligatoire.')]
+    #[Assert\GreaterThan('now', message: 'La date doit être dans le futur.')]
     private ?\DateTimeInterface $eventDate = null;
 
     #[ORM\Column]
-    #[Assert\PositiveOrZero]
+    #[Assert\Positive(message: 'La capacité doit être supérieure à 0.')]
     private int $capacity = 0;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
