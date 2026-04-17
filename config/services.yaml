@@ -29,10 +29,9 @@ services:
             $scoreThreshold: 0.5
             $enabled: true
 
-    App\Service\Investment\InvestmentChatbotService:
+    App\Service\GeminiService:
         arguments:
-            $hfToken: '%env(HF_TOKEN)%'
+            $geminiApiKey: '%env(GEMINI_API_KEY)%'
+            $groqApiKey: '%env(GROQ_API_KEY)%'
 
-    App\Service\Investment\StripePaymentService:
-        arguments:
-            $stripeSecretKey: '%env(STRIPE_SECRET_KEY)%'
+    App\Service\NewsApiService: ~
