@@ -1,0 +1,94 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}QR Code - {{ projet.titre }} - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{{ path('app_projet_show', {id: projet.id}) }}" class="text-decoration-none text-muted"><i class="bi bi-arrow-left me-1"></i>Retour au projet</a>
+        <h2 class="fw-bold mt-2 mb-0"><i class="bi bi-qr-code me-2"></i>QR Code du Projet</h2>
+        <p class="text-muted mb-0">{{ projet.titre }}</p>
+    </div>
+</div>
+
+<div class="row g-4 justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm p-5 text-center" style="border-radius:1rem">
+            <div class="mb-4">
+                <img src="{{ qrCodeUrl }}" alt="QR Code - {{ projet.titre }}" class="img-fluid rounded-3 shadow" style="max-width:300px">
+            </div>
+            <h5 class="fw-bold mb-2">{{ projet.titre }}</h5>
+            <p class="text-muted small mb-3">Scannez ce QR code pour accéder directement à la fiche du projet</p>
+
+            <div class="p-3 rounded-3 mb-4" style="background:rgba(67,97,238,.05)">
+                <small class="text-muted d-block mb-1">Lien du projet :</small>
+                <code class="small text-break">{{ projectUrl }}</code>
+            </div>
+
+            <div class="d-flex gap-2 justify-content-center">
+                <a href="{{ qrCodeUrl }}" download="qrcode-{{ projet.titre|lower|replace({' ': '-'}) }}.png" class="btn btn-nj">
+                    <i class="bi bi-download me-1"></i>Télécharger PNG
+                </a>
+                <button class="btn btn-outline-primary" onclick="copyToClipboard('{{ projectUrl }}')">
+                    <i class="bi bi-clipboard me-1"></i>Copier le lien
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
+            <h6 class="fw-bold mb-3"><i class="bi bi-info-circle me-2"></i>Détails du Projet</h6>
+            <ul class="list-unstyled mb-0">
+                <li class="mb-2">
+                    <small class="text-muted d-block">Secteur</small>
+                    <span class="badge bg-primary bg-opacity-10 text-primary">{{ projet.secteur ?? 'Non défini' }}</span>
+                </li>
+                <li class="mb-2">
+                    <small class="text-muted d-block">Étape</small>
+                    <span class="badge bg-info bg-opacity-10 text-info">{{ projet.etape ?? 'Non définie' }}</span>
+                </li>
+                <li class="mb-2">
+                    <small class="text-muted d-block">Statut</small>
+                    <span class="badge {{ projet.statutProjet == 'EVALUE' ? 'bg-success' : (projet.statutProjet == 'SOUMIS' ? 'bg-warning text-dark' : 'bg-secondary') }}">{{ projet.statutProjet }}</span>
+                </li>
+                {% if projet.scoreGlobal %}
+                <li>
+                    <small class="text-muted d-block">Score Global</small>
+                    <span class="fw-bold" style="color:var(--nj-primary)">{{ projet.scoreGlobal|number_format(1) }}/100</span>
+                </li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h6 class="fw-bold mb-3"><i class="bi bi-lightbulb me-2"></i>Utilisations</h6>
+            <ul class="small text-muted mb-0">
+                <li class="mb-2"><i class="bi bi-check2 text-success me-1"></i>Partagez avec des investisseurs</li>
+                <li class="mb-2"><i class="bi bi-check2 text-success me-1"></i>Présentations et pitch decks</li>
+                <li class="mb-2"><i class="bi bi-check2 text-success me-1"></i>Cartes de visite professionnelles</li>
+                <li><i class="bi bi-check2 text-success me-1"></i>Documents imprimés et flyers</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        const btn = event.target.closest('button');
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check2 me-1"></i>Copié !';
+        btn.classList.add('btn-success');
+        btn.classList.remove('btn-outline-primary');
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-primary');
+        }, 2000);
+    });
+}
+</script>
+{% endblock %}

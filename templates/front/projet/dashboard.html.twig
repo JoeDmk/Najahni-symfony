@@ -1,0 +1,255 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Dashboard Projets - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0"><i class="bi bi-speedometer2 me-2"></i>Dashboard Projets</h2>
+    <div class="d-flex gap-2">
+        <a href="{{ path('app_projet_export_csv') }}" class="btn btn-outline-success"><i class="bi bi-file-earmark-excel me-1"></i>Export CSV</a>
+        <a href="{{ path('app_projet_index') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Mes Projets</a>
+    </div>
+</div>
+
+{# KPI Cards #}
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3" style="border-radius:1rem">
+            <div class="display-5 fw-bold" style="color:var(--nj-primary)">{{ stats.total }}</div>
+            <p class="text-muted mb-0 small">Projets Total</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3" style="border-radius:1rem">
+            <div class="display-5 fw-bold text-success">{{ stats.evalue }}</div>
+            <p class="text-muted mb-0 small">Évalués</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3" style="border-radius:1rem">
+            <div class="display-5 fw-bold text-warning">{{ stats.score_moyen }}</div>
+            <p class="text-muted mb-0 small">Score Moyen /100</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm text-center p-3" style="border-radius:1rem">
+            <div class="display-5 fw-bold" style="color:{{ stats.marge_totale >= 0 ? '#10b981' : '#ef4444' }}">
+                {{ stats.marge_totale|number_format(0, ',', ' ') }}
+            </div>
+            <p class="text-muted mb-0 small">Marge Totale (DT)</p>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    {# Left Column: Charts #}
+    <div class="col-md-8">
+        {# Statut Distribution - Chart.js Doughnut #}
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
+            <h5 class="fw-bold mb-3"><i class="bi bi-pie-chart me-2"></i>Répartition par Statut</h5>
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <canvas id="statusChart" height="220"></canvas>
+                </div>
+                <div class="col-md-6">
+                    <div class="row g-3">
+                        <div class="col-12">
+                            <div class="p-3 rounded-3 text-center" style="background:rgba(108,117,125,.08)">
+                                <h3 class="fw-bold mb-1">{{ stats.brouillon }}</h3>
+                                <span class="badge bg-secondary">Brouillon</span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="p-3 rounded-3 text-center" style="background:rgba(255,193,7,.08)">
+                                <h3 class="fw-bold mb-1">{{ stats.soumis }}</h3>
+                                <span class="badge bg-warning text-dark">Soumis</span>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="p-3 rounded-3 text-center" style="background:rgba(25,135,84,.08)">
+                                <h3 class="fw-bold mb-1">{{ stats.evalue }}</h3>
+                                <span class="badge bg-success">Évalué</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# Financial Overview - Chart.js Bar #}
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
+            <h5 class="fw-bold mb-3"><i class="bi bi-cash-stack me-2"></i>Aperçu Financier</h5>
+            <canvas id="financialChart" height="200"></canvas>
+        </div>
+
+        {# Sector Distribution - Chart.js Horizontal Bar #}
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h5 class="fw-bold mb-3"><i class="bi bi-bar-chart me-2"></i>Répartition par Secteur</h5>
+            <canvas id="sectorChart" height="{{ stats.par_secteur|length * 40 + 60 }}"></canvas>
+        </div>
+    </div>
+
+    {# Right Column: Top Projects & Stage #}
+    <div class="col-md-4">
+        {# Top Projects - with Chart #}
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
+            <h5 class="fw-bold mb-3"><i class="bi bi-trophy me-2"></i>Top Projets</h5>
+            {% if stats.projets_top|length > 0 %}
+                <canvas id="topProjectsChart" height="{{ stats.projets_top|length * 35 + 40 }}"></canvas>
+            {% else %}
+                <p class="text-muted small">Aucun projet évalué</p>
+            {% endif %}
+        </div>
+
+        {# Stage Distribution #}
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
+            <h5 class="fw-bold mb-3"><i class="bi bi-signpost-split me-2"></i>Par Étape</h5>
+            {% for etape, count in stats.par_etape %}
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <span class="badge bg-info bg-opacity-10 text-info">{{ etape }}</span>
+                <span class="fw-bold">{{ count }}</span>
+            </div>
+            {% endfor %}
+        </div>
+
+        {# Quick Actions #}
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h5 class="fw-bold mb-3"><i class="bi bi-lightning me-2"></i>Actions Rapides</h5>
+            <div class="d-grid gap-2">
+                <a href="{{ path('app_projet_new') }}" class="btn btn-nj btn-sm"><i class="bi bi-plus-lg me-1"></i>Nouveau Projet</a>
+                <a href="{{ path('app_projet_export_csv') }}" class="btn btn-outline-success btn-sm"><i class="bi bi-download me-1"></i>Exporter CSV</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Status Doughnut Chart
+    const statusCtx = document.getElementById('statusChart');
+    if (statusCtx) {
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Brouillon', 'Soumis', 'Évalué'],
+                datasets: [{
+                    data: [{{ stats.brouillon }}, {{ stats.soumis }}, {{ stats.evalue }}],
+                    backgroundColor: ['#6c757d', '#ffc107', '#198754'],
+                    borderWidth: 3,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                responsive: true,
+                cutout: '60%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { padding: 15, usePointStyle: true, font: { size: 12 } } }
+                }
+            }
+        });
+    }
+
+    // Financial Bar Chart
+    const finCtx = document.getElementById('financialChart');
+    if (finCtx) {
+        new Chart(finCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Revenus Attendus', 'Coûts Estimés', 'Marge'],
+                datasets: [{
+                    label: 'Montant (DT)',
+                    data: [{{ stats.revenus_total }}, {{ stats.couts_total }}, {{ stats.marge_totale }}],
+                    backgroundColor: [
+                        'rgba(67, 97, 238, 0.8)',
+                        'rgba(247, 37, 133, 0.8)',
+                        {{ stats.marge_totale >= 0 ? "'rgba(16, 185, 129, 0.8)'" : "'rgba(239, 68, 68, 0.8)'" }}
+                    ],
+                    borderRadius: 8,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => new Intl.NumberFormat('fr-TN').format(ctx.raw) + ' DT'
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: v => new Intl.NumberFormat('fr-TN', { notation: 'compact' }).format(v) + ' DT'
+                        },
+                        grid: { color: 'rgba(0,0,0,.04)' }
+                    },
+                    x: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    // Sector Horizontal Bar Chart
+    const sectorCtx = document.getElementById('sectorChart');
+    if (sectorCtx) {
+        new Chart(sectorCtx, {
+            type: 'bar',
+            data: {
+                labels: [{% for s, c in stats.par_secteur %}'{{ s }}'{{ not loop.last ? ',' }}{% endfor %}],
+                datasets: [{
+                    label: 'Projets',
+                    data: [{% for s, c in stats.par_secteur %}{{ c }}{{ not loop.last ? ',' }}{% endfor %}],
+                    backgroundColor: 'rgba(67, 97, 238, 0.7)',
+                    borderRadius: 6,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { beginAtZero: true, ticks: { stepSize: 1 }, grid: { color: 'rgba(0,0,0,.04)' } },
+                    y: { grid: { display: false } }
+                }
+            }
+        });
+    }
+
+    // Top Projects Horizontal Bar
+    const topCtx = document.getElementById('topProjectsChart');
+    if (topCtx) {
+        new Chart(topCtx, {
+            type: 'bar',
+            data: {
+                labels: [{% for item in stats.projets_top %}'{{ item.titre|length > 20 ? item.titre|slice(0,20) ~ '...' : item.titre }}'{{ not loop.last ? ',' }}{% endfor %}],
+                datasets: [{
+                    label: 'Score',
+                    data: [{% for item in stats.projets_top %}{{ item.score }}{{ not loop.last ? ',' }}{% endfor %}],
+                    backgroundColor: [
+                        'rgba(67,97,238,.8)', 'rgba(114,9,183,.8)', 'rgba(247,37,133,.8)',
+                        'rgba(6,214,160,.8)', 'rgba(255,209,102,.8)'
+                    ],
+                    borderRadius: 6,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { beginAtZero: true, max: 100, grid: { color: 'rgba(0,0,0,.04)' } },
+                    y: { grid: { display: false } }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,181 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Analyse de Sentiment - {{ projet.titre }} - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{{ path('app_projet_show', {id: projet.id}) }}" class="text-decoration-none text-muted"><i class="bi bi-arrow-left me-1"></i>Retour au projet</a>
+        <h2 class="fw-bold mt-2 mb-0"><i class="bi bi-emoji-smile me-2"></i>Analyse de Sentiment IA</h2>
+        <p class="text-muted mb-0">{{ projet.titre }}</p>
+    </div>
+</div>
+
+{% if sentiment %}
+<div class="row g-4">
+    {# Main Sentiment Card #}
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
+            <div class="text-center mb-4">
+                {% set sentimentColor = sentiment.sentiment == 'positif' ? '#10b981' : (sentiment.sentiment == 'négatif' ? '#ef4444' : '#f59e0b') %}
+                {% set sentimentIcon = sentiment.sentiment == 'positif' ? 'emoji-smile' : (sentiment.sentiment == 'négatif' ? 'emoji-frown' : 'emoji-neutral') %}
+                {% set sentimentEmoji = sentiment.sentiment == 'positif' ? '😊' : (sentiment.sentiment == 'négatif' ? '😟' : '😐') %}
+
+                <div class="display-1 mb-2">{{ sentimentEmoji }}</div>
+                <h3 class="fw-bold mb-1" style="color:{{ sentimentColor }}">Sentiment {{ sentiment.sentiment|capitalize }}</h3>
+
+                {# Score Bar #}
+                <div class="mx-auto" style="max-width:400px">
+                    <div class="d-flex justify-content-between small text-muted mb-1">
+                        <span>Très Négatif</span>
+                        <span>Neutre</span>
+                        <span>Très Positif</span>
+                    </div>
+                    <div class="position-relative" style="height:16px;background:#e9ecef;border-radius:8px;overflow:hidden">
+                        <div style="position:absolute;left:50%;top:0;width:2px;height:100%;background:#999;z-index:1"></div>
+                        {% set scorePercent = ((sentiment.score|default(0) + 1) / 2 * 100) %}
+                        <div style="position:absolute;left:{{ scorePercent }}%;top:50%;transform:translate(-50%,-50%);width:20px;height:20px;border-radius:50%;background:{{ sentimentColor }};border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.2);z-index:2"></div>
+                        <div class="h-100" style="width:{{ scorePercent }}%;background:linear-gradient(90deg,#ef4444,#f59e0b,#10b981);opacity:.3;border-radius:8px"></div>
+                    </div>
+                    <div class="text-center mt-2">
+                        <span class="badge fs-6" style="background:{{ sentimentColor }};color:#fff">Score: {{ sentiment.score|default(0)|number_format(2) }}</span>
+                        <span class="badge bg-secondary bg-opacity-10 text-secondary ms-2">Confiance: {{ (sentiment.confiance|default(0) * 100)|number_format(0) }}%</span>
+                    </div>
+                </div>
+            </div>
+
+            {# Tonalité #}
+            {% if sentiment.tonalite is defined and sentiment.tonalite %}
+            <div class="p-3 rounded-3 mb-4" style="background:rgba(67,97,238,.05)">
+                <h6 class="fw-bold mb-1"><i class="bi bi-chat-quote me-2"></i>Tonalité Générale</h6>
+                <p class="mb-0">{{ sentiment.tonalite }}</p>
+            </div>
+            {% endif %}
+
+            {# Keywords #}
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <h6 class="fw-bold text-success"><i class="bi bi-plus-circle me-1"></i>Mots-clés Positifs</h6>
+                    {% if sentiment.mots_cles_positifs is defined and sentiment.mots_cles_positifs|length > 0 %}
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for mot in sentiment.mots_cles_positifs %}
+                        <span class="badge bg-success bg-opacity-10 text-success">{{ mot }}</span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted small">Aucun détecté</p>
+                    {% endif %}
+                </div>
+                <div class="col-md-6">
+                    <h6 class="fw-bold text-danger"><i class="bi bi-dash-circle me-1"></i>Mots-clés Négatifs</h6>
+                    {% if sentiment.mots_cles_negatifs is defined and sentiment.mots_cles_negatifs|length > 0 %}
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for mot in sentiment.mots_cles_negatifs %}
+                        <span class="badge bg-danger bg-opacity-10 text-danger">{{ mot }}</span>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <p class="text-muted small">Aucun détecté</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# Sidebar: Emotions #}
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
+            <h6 class="fw-bold mb-3"><i class="bi bi-heart me-2"></i>Émotions Détectées</h6>
+            {% if sentiment.emotions is defined and sentiment.emotions|length > 0 %}
+            <div class="d-flex flex-wrap gap-2">
+                {% set emotionEmojis = {
+                    'optimisme': '🌟',
+                    'ambition': '🚀',
+                    'prudence': '⚠️',
+                    'inquiétude': '😰',
+                    'confiance': '💪',
+                    'enthousiasme': '🎉',
+                    'détermination': '🎯',
+                    'créativité': '💡',
+                    'innovation': '⚡',
+                    'passion': '❤️'
+                } %}
+                {% for emotion in sentiment.emotions %}
+                <div class="p-2 rounded-3 text-center" style="background:rgba(67,97,238,.05);min-width:100px">
+                    <div class="fs-4">{{ emotionEmojis[emotion|lower] ?? '🔹' }}</div>
+                    <small class="fw-semibold">{{ emotion|capitalize }}</small>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted small">Aucune émotion détectée</p>
+            {% endif %}
+        </div>
+
+        {# Sentiment Gauge Chart #}
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h6 class="fw-bold mb-3"><i class="bi bi-speedometer me-2"></i>Jauge de Sentiment</h6>
+            <canvas id="sentimentGauge" width="250" height="200"></canvas>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="card border-0 shadow-sm p-5 text-center" style="border-radius:1rem">
+    <i class="bi bi-emoji-neutral display-3 text-muted mb-3"></i>
+    <h5 class="fw-bold text-muted">Analyse non disponible</h5>
+    <p class="text-muted">L'analyse de sentiment nécessite une clé API Groq configurée.</p>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block javascripts %}
+{% if sentiment %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const score = {{ sentiment.score|default(0) }};
+    const ctx = document.getElementById('sentimentGauge').getContext('2d');
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Score', ''],
+            datasets: [{
+                data: [((score + 1) / 2 * 100).toFixed(1), (100 - (score + 1) / 2 * 100).toFixed(1)],
+                backgroundColor: [
+                    score > 0.3 ? '#10b981' : (score < -0.3 ? '#ef4444' : '#f59e0b'),
+                    '#e9ecef'
+                ],
+                borderWidth: 0,
+                circumference: 180,
+                rotation: 270
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '75%',
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            }
+        },
+        plugins: [{
+            id: 'centerText',
+            afterDraw(chart) {
+                const {ctx, width, height} = chart;
+                ctx.save();
+                ctx.font = 'bold 28px Inter';
+                ctx.fillStyle = score > 0.3 ? '#10b981' : (score < -0.3 ? '#ef4444' : '#f59e0b');
+                ctx.textAlign = 'center';
+                ctx.fillText(score.toFixed(2), width / 2, height / 2 + 10);
+                ctx.font = '12px Inter';
+                ctx.fillStyle = '#999';
+                ctx.fillText('Score', width / 2, height / 2 + 30);
+                ctx.restore();
+            }
+        }]
+    });
+});
+</script>
+{% endif %}
+{% endblock %}
