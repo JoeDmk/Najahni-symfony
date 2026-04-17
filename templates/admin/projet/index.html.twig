@@ -35,7 +35,13 @@
                     {% for projet in pagination %}
                     <tr>
                         <td class="fw-semibold">{{ projet.titre }}</td>
-                        <td>{{ projet.user ? projet.user.firstname ~ ' ' ~ projet.user.lastname : 'N/A' }}</td>
+                                                <td>
+                                                    {% if projet.user is defined and projet.user %}
+                                                        {{ projet.user.firstname ~ ' ' ~ projet.user.lastname }}
+                                                    {% else %}
+                                                        <span class="text-muted">Utilisateur supprimé</span>
+                                                    {% endif %}
+                                                </td>
                         <td><span class="badge bg-primary bg-opacity-10 text-primary">{{ projet.secteur }}</span></td>
                         <td>
                             <span class="badge {{ projet.statutProjet == 'EVALUE' ? 'bg-success' : (projet.statutProjet == 'SOUMIS' ? 'bg-warning text-dark' : 'bg-secondary') }}">

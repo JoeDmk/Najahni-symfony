@@ -20,7 +20,12 @@ class AdminProjetController extends AbstractController
     public function index(Request $request, ProjetRepository $repo, PaginatorInterface $paginator): Response
     {
         $search = $request->query->get('q', '');
-        $qb = $search ? $repo->findBySearch($search) : $repo->createQueryBuilder('p')->orderBy('p.dateCreation', 'DESC');
+        if ($search) {
+            $qb = $repo->findBySearch($search);
+            $qb->andWhere('p.user IS NOT NULL');
+        } else {
+            $qb = $repo->createQueryBuilderWithUser()->orderBy('p.dateCreation', 'DESC');
+        }
 
         $pagination = $paginator->paginate($qb, $request->query->getInt('page', 1), 15);
 

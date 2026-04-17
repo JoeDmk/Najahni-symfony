@@ -9,17 +9,13 @@ class ProjetRepository extends ServiceEntityRepository
 {
     public function __construct(ManagerRegistry $registry) { parent::__construct($registry, Projet::class); }
 
-    public function findByUser($user): array
-    {
-        return $this->findBy(['user' => $user], ['dateCreation' => 'DESC']);
-    }
-
-    public function findBySearch(string $search): \Doctrine\ORM\QueryBuilder
+    /**
+     * Retourne un QueryBuilder pour tous les projets dont l'utilisateur existe encore (user IS NOT NULL).
+     */
+    public function createQueryBuilderWithUser(): \Doctrine\ORM\QueryBuilder
     {
         return $this->createQueryBuilder('p')
-            ->where('p.titre LIKE :q OR p.description LIKE :q OR p.secteur LIKE :q')
-            ->setParameter('q', '%'.$search.'%')
-            ->orderBy('p.dateCreation', 'DESC');
+            ->where('p.user IS NOT NULL');
     }
 
     public function findByUserWithFilters($user, ?string $search = null, ?string $secteur = null, string $sort = 'dateCreation', string $direction = 'DESC'): array

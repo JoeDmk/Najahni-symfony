@@ -1,0 +1,295 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Assistant IA — Gestion de Projets - Najahni{% endblock %}
+
+{% block main %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <a href="{{ path('app_projet_index') }}" class="text-decoration-none text-muted"><i class="bi bi-arrow-left me-1"></i>Mes Projets</a>
+        <h2 class="fw-bold mt-2 mb-0"><i class="bi bi-robot me-2"></i>Najahni AI — Assistant Projets</h2>
+        <p class="text-muted mb-0">Votre assistant IA pour la gestion de tous vos projets</p>
+    </div>
+</div>
+
+<div class="row g-4">
+    {# Chat Area #}
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm" style="border-radius:1rem;overflow:hidden;height:620px;display:flex;flex-direction:column">
+            {# Chat Header #}
+            <div class="px-4 py-3 border-bottom" style="background:linear-gradient(135deg,rgba(67,97,238,.06),rgba(114,9,183,.06))">
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width:40px;height:40px;border-radius:50%;background:linear-gradient(135deg,#4361ee,#7209b7);display:flex;align-items:center;justify-content:center">
+                        <i class="bi bi-robot text-white fs-5"></i>
+                    </div>
+                    <div>
+                        <strong class="d-block" style="font-size:.95rem">Najahni AI</strong>
+                        <small class="text-success"><i class="bi bi-circle-fill me-1" style="font-size:.5rem"></i>En ligne — {{ projets|length }} projet{{ projets|length > 1 ? 's' : '' }} chargé{{ projets|length > 1 ? 's' : '' }}</small>
+                    </div>
+                </div>
+            </div>
+
+            {# Messages Area #}
+            <div id="chatMessages" class="flex-grow-1 p-4" style="overflow-y:auto;background:#fafbfc">
+                <div class="d-flex gap-3 mb-4">
+                    <div style="width:36px;height:36px;min-width:36px;border-radius:50%;background:linear-gradient(135deg,#4361ee,#7209b7);display:flex;align-items:center;justify-content:center">
+                        <i class="bi bi-robot text-white"></i>
+                    </div>
+                    <div class="p-3 rounded-3" style="background:#fff;border:1px solid #e9ecef;max-width:80%">
+                        <p class="mb-2">Bonjour ! 👋 Je suis <strong>Najahni AI</strong>, votre assistant pour la gestion de projets.</p>
+                        <p class="mb-0 text-muted small">J'ai accès à vos <strong>{{ projets|length }} projet{{ projets|length > 1 ? 's' : '' }}</strong>. Posez-moi des questions : comparaison, stratégie, finances, risques, priorisation, conseils sectoriels en Tunisie...</p>
+                    </div>
+                </div>
+            </div>
+
+            {# Input Area #}
+            <div class="p-3 border-top" style="background:#fff">
+                <form id="chatForm" class="d-flex gap-2 align-items-center">
+                    <input type="text" id="chatInput" class="form-control" placeholder="Posez votre question..." autocomplete="off" style="border-radius:1.5rem;padding:.6rem 1.25rem">
+                    <button type="button" id="voiceBtn" class="btn btn-outline-secondary d-flex align-items-center" style="border-radius:50%;width:44px;height:44px" title="Parler">
+                        <i class="bi bi-mic-fill"></i>
+                    </button>
+                    <button type="submit" id="chatSend" class="btn btn-nj d-flex align-items-center gap-1" style="border-radius:1.5rem;padding:.6rem 1.25rem">
+                        <i class="bi bi-send-fill"></i>
+                    </button>
+                    <div class="form-check form-switch ms-2">
+                        <input class="form-check-input" type="checkbox" id="ttsToggle">
+                        <label class="form-check-label small" for="ttsToggle" style="user-select:none">Voix</label>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {# Sidebar #}
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
+            <h6 class="fw-bold mb-3"><i class="bi bi-lightning-charge me-2"></i>Questions rapides</h6>
+            <div class="d-grid gap-2">
+                <button class="btn btn-outline-primary btn-sm text-start quick-q" data-q="Fais moi un résumé de l'état de tous mes projets.">
+                    <i class="bi bi-clipboard-data me-2"></i>Résumé global
+                </button>
+                <button class="btn btn-outline-primary btn-sm text-start quick-q" data-q="Compare mes projets : lequel a le plus de potentiel et pourquoi ?">
+                    <i class="bi bi-bar-chart me-2"></i>Comparer mes projets
+                </button>
+                <button class="btn btn-outline-primary btn-sm text-start quick-q" data-q="Quels sont les risques principaux dans mon portefeuille de projets ?">
+                    <i class="bi bi-shield-exclamation me-2"></i>Analyse des risques
+                </button>
+                <button class="btn btn-outline-primary btn-sm text-start quick-q" data-q="Sur quel projet devrais-je me concentrer en priorité ?">
+                    <i class="bi bi-bullseye me-2"></i>Priorisation
+                </button>
+                <button class="btn btn-outline-primary btn-sm text-start quick-q" data-q="Quelles sont les opportunités de financement en Tunisie pour mes projets ?">
+                    <i class="bi bi-cash-coin me-2"></i>Financement Tunisie
+                </button>
+                <button class="btn btn-outline-primary btn-sm text-start quick-q" data-q="Propose moi des actions concrètes pour améliorer la rentabilité de mes projets.">
+                    <i class="bi bi-graph-up-arrow me-2"></i>Améliorer la rentabilité
+                </button>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
+            <h6 class="fw-bold mb-3"><i class="bi bi-folder2-open me-2"></i>Mes Projets ({{ projets|length }})</h6>
+            {% if projets|length > 0 %}
+            <div class="list-group list-group-flush">
+                {% for p in projets %}
+                <div class="list-group-item px-0 border-start-0 border-end-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong class="d-block small">{{ p.titre }}</strong>
+                            <small class="text-muted">{{ p.secteur ?? '—' }}</small>
+                        </div>
+                        <div class="text-end">
+                            <span class="badge {{ p.statutProjet == 'EVALUE' ? 'bg-success' : (p.statutProjet == 'SOUMIS' ? 'bg-warning text-dark' : 'bg-secondary') }}" style="font-size:.7rem">{{ p.statutProjet }}</span>
+                            {% if p.scoreGlobal > 0 %}
+                            <br><small class="fw-bold {{ p.scoreGlobal >= 70 ? 'text-success' : (p.scoreGlobal >= 40 ? 'text-warning' : 'text-danger') }}">{{ p.scoreGlobal|number_format(0) }}/100</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p class="text-muted small mb-0">Aucun projet. Créez votre premier projet !</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block javascripts %}
+<script>
+(function(){
+    const chatUrl = '{{ path("app_projet_chatbot_ask") }}';
+    const messages = document.getElementById('chatMessages');
+    const form = document.getElementById('chatForm');
+    const input = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('chatSend');
+    const voiceBtn = document.getElementById('voiceBtn');
+    let recognizing = false;
+    let recognition;
+    let ttsEnabled = false;
+
+    // --- Vocal Recognition (Web Speech API) ---
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.lang = 'fr-FR';
+        recognition.interimResults = false;
+        recognition.maxAlternatives = 1;
+
+        recognition.onstart = function() {
+            recognizing = true;
+            voiceBtn.classList.add('active');
+            voiceBtn.innerHTML = '<i class="bi bi-mic-mute-fill"></i>';
+        };
+        recognition.onend = function() {
+            recognizing = false;
+            voiceBtn.classList.remove('active');
+            voiceBtn.innerHTML = '<i class="bi bi-mic-fill"></i>';
+        };
+        recognition.onerror = function(e) {
+            recognizing = false;
+            voiceBtn.classList.remove('active');
+            voiceBtn.innerHTML = '<i class="bi bi-mic-fill"></i>';
+        };
+        recognition.onresult = function(event) {
+            const transcript = event.results[0][0].transcript;
+            input.value = transcript;
+            input.focus();
+        };
+
+        voiceBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (recognizing) {
+                recognition.stop();
+            } else {
+                recognition.start();
+            }
+        });
+    } else {
+        voiceBtn.style.display = 'none';
+    }
+
+    // --- Text-to-Speech for bot responses ---
+    function speakText(text) {
+        if (ttsEnabled && 'speechSynthesis' in window) {
+            const utter = new window.SpeechSynthesisUtterance(text);
+            utter.lang = 'fr-FR';
+            window.speechSynthesis.speak(utter);
+        }
+    }
+
+    // Contrôle utilisateur pour activer/désactiver la voix
+    const ttsToggle = document.getElementById('ttsToggle');
+    ttsToggle.addEventListener('change', function() {
+        ttsEnabled = ttsToggle.checked;
+    });
+
+    function scrollBottom(){ messages.scrollTop = messages.scrollHeight; }
+
+    function addUserMsg(text){
+        const d = document.createElement('div');
+        d.className = 'd-flex gap-3 mb-4 justify-content-end';
+        d.innerHTML = `
+            <div class="p-3 rounded-3 text-white" style="background:linear-gradient(135deg,#4361ee,#7209b7);max-width:80%">
+                <p class="mb-0">${escapeHtml(text)}</p>
+            </div>
+            <div style="width:36px;height:36px;min-width:36px;border-radius:50%;background:#e9ecef;display:flex;align-items:center;justify-content:center">
+                <i class="bi bi-person-fill text-muted"></i>
+            </div>`;
+        messages.appendChild(d);
+        scrollBottom();
+    }
+
+    function addBotMsg(text){
+        const d = document.createElement('div');
+        d.className = 'd-flex gap-3 mb-4';
+        d.innerHTML = `
+            <div style="width:36px;height:36px;min-width:36px;border-radius:50%;background:linear-gradient(135deg,#4361ee,#7209b7);display:flex;align-items:center;justify-content:center">
+                <i class="bi bi-robot text-white"></i>
+            </div>
+            <div class="p-3 rounded-3" style="background:#fff;border:1px solid #e9ecef;max-width:80%">
+                <div class="mb-0 chat-response">${formatResponse(text)}</div>
+            </div>`;
+        messages.appendChild(d);
+        scrollBottom();
+        // Lecture vocale automatique de la réponse IA si activée
+        speakText(text.replace(/<[^>]*>?/gm, ''));
+    }
+
+    function addTyping(){
+        const d = document.createElement('div');
+        d.id = 'typing';
+        d.className = 'd-flex gap-3 mb-4';
+        d.innerHTML = `
+            <div style="width:36px;height:36px;min-width:36px;border-radius:50%;background:linear-gradient(135deg,#4361ee,#7209b7);display:flex;align-items:center;justify-content:center">
+                <i class="bi bi-robot text-white"></i>
+            </div>
+            <div class="p-3 rounded-3" style="background:#fff;border:1px solid #e9ecef">
+                <div class="d-flex gap-1">
+                    <div class="spinner-grow spinner-grow-sm text-primary" style="width:.5rem;height:.5rem"></div>
+                    <div class="spinner-grow spinner-grow-sm text-primary" style="width:.5rem;height:.5rem;animation-delay:.15s"></div>
+                    <div class="spinner-grow spinner-grow-sm text-primary" style="width:.5rem;height:.5rem;animation-delay:.3s"></div>
+                </div>
+            </div>`;
+        messages.appendChild(d);
+        scrollBottom();
+    }
+
+    function removeTyping(){
+        const t = document.getElementById('typing');
+        if(t) t.remove();
+    }
+
+    function escapeHtml(s){
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+    }
+
+    function formatResponse(text){
+        text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        text = text.replace(/\n/g, '<br>');
+        text = text.replace(/<br>- /g, '<br>• ');
+        return text;
+    }
+
+    async function sendMessage(msg){
+        if(!msg.trim()) return;
+        addUserMsg(msg);
+        input.value = '';
+        input.disabled = true;
+        sendBtn.disabled = true;
+        addTyping();
+
+        try {
+            const res = await fetch(chatUrl, {
+                method: 'POST',
+                headers: {'Content-Type':'application/json','X-Requested-With':'XMLHttpRequest'},
+                body: JSON.stringify({message: msg})
+            });
+            removeTyping();
+            if(res.ok){
+                const data = await res.json();
+                addBotMsg(data.response);
+            } else {
+                addBotMsg("Désolé, une erreur est survenue. Réessayez dans un instant.");
+            }
+        } catch(e){
+            removeTyping();
+            addBotMsg("Erreur de connexion. Vérifiez votre connexion internet.");
+        }
+        input.disabled = false;
+        sendBtn.disabled = false;
+        input.focus();
+    }
+
+    form.addEventListener('submit', e => { e.preventDefault(); sendMessage(input.value); });
+
+    document.querySelectorAll('.quick-q').forEach(btn => {
+        btn.addEventListener('click', () => sendMessage(btn.dataset.q));
+    });
+
+    input.focus();
+})();
+</script>
+{% endblock %}
