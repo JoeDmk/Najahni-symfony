@@ -11,15 +11,12 @@ class GeminiService
     private const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
     private ?string $groqApiKey;
-    private ?string $geminiApiKey;
 
     public function __construct(
         private readonly HttpClientInterface $httpClient,
         private readonly LoggerInterface $logger,
-        string $geminiApiKey,
         string $groqApiKey,
     ) {
-        $this->geminiApiKey = $geminiApiKey ?: null;
         $this->groqApiKey = $groqApiKey ?: null;
     }
 
