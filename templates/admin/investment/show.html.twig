@@ -83,10 +83,41 @@
     </div>
 
     <div class="col-md-4">
+        {% if opportunity.project and opportunity.project.user %}
+        {% set entrepreneur = opportunity.project.user %}
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
+            <div class="d-flex gap-3 align-items-start">
+                {% if entrepreneur.profilePicture %}
+                    <img src="{{ entrepreneur.profilePicture }}" alt="{{ entrepreneur.firstname }} {{ entrepreneur.lastname }}" class="rounded-circle" width="58" height="58" style="object-fit:cover">
+                {% else %}
+                    <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style="width:58px;height:58px;background:linear-gradient(135deg, #0d6efd, #198754)">
+                        {{ entrepreneur.firstname|first|upper }}{{ entrepreneur.lastname|first|upper }}
+                    </div>
+                {% endif %}
+                <div class="flex-grow-1">
+                    <div class="small text-uppercase fw-semibold text-primary mb-1">Entrepreneur</div>
+                    <h6 class="fw-bold mb-1">{{ entrepreneur.firstname }} {{ entrepreneur.lastname }}</h6>
+                    <div class="small text-muted mb-2">
+                        {% if entrepreneur.companyName %}<div>{{ entrepreneur.companyName }}</div>{% endif %}
+                        <div>{{ entrepreneur.email }}</div>
+                        {% if entrepreneur.phone %}<div>{{ entrepreneur.phone }}</div>{% endif %}
+                    </div>
+                    {% if entrepreneur.bio %}
+                        <p class="text-muted small mb-3">{{ entrepreneur.bio|slice(0, 180) }}{% if entrepreneur.bio|length > 180 %}...{% endif %}</p>
+                    {% endif %}
+                    <a href="{{ path('app_user_profile', {id: entrepreneur.id}) }}" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-person-vcard me-1"></i>Voir le profil public
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
         <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
             <h6 class="fw-bold mb-3">Informations</h6>
             <ul class="list-unstyled">
                 <li class="mb-2"><strong>Projet:</strong> {{ opportunity.project ? opportunity.project.titre : 'N/A' }}</li>
+                <li class="mb-2"><strong>Entrepreneur:</strong> {{ opportunity.project and opportunity.project.user ? opportunity.project.user.firstname ~ ' ' ~ opportunity.project.user.lastname : 'N/A' }}</li>
                 <li class="mb-2"><strong>Deadline:</strong> {{ opportunity.deadline ? opportunity.deadline|date('d/m/Y') : '-' }}
                     {% if opportunity.deadline %}
                         {% set days_left = (opportunity.deadline|date('U') - 'now'|date('U')) / 86400 %}

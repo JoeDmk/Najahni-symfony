@@ -5,6 +5,7 @@ namespace App\Entity;
 use App\Repository\InvestorProfileRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: InvestorProfileRepository::class)]
 #[ORM\Table(name: 'investor_profile')]
@@ -27,6 +28,7 @@ class InvestorProfile
     private int $riskTolerance = 5;
 
     #[ORM\Column(type: Types::DECIMAL, precision: 15, scale: 2, options: ['default' => 0])]
+    #[Assert\LessThan(propertyPath: 'budgetMax', message: 'Le budget minimum doit etre strictement inferieur au budget maximum.')]
     private string $budgetMin = '0';
 
     #[ORM\Column(type: Types::DECIMAL, precision: 15, scale: 2, options: ['default' => 10000000])]

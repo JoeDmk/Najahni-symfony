@@ -1,0 +1,60 @@
+<div class="card border-0 shadow-sm" style="border-radius:1rem">
+    <div class="card-body p-0">
+        <div class="d-flex justify-content-between align-items-center px-4 pt-4 pb-2">
+            <div>
+                <div class="fw-semibold">Résultats</div>
+                <div class="small text-muted">{{ pagination.getTotalItemCount }} offre{{ pagination.getTotalItemCount > 1 ? 's' : '' }}</div>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-nj mb-0">
+                <thead>
+                    <tr><th>Investisseur</th><th>Entrepreneur</th><th>Projet</th><th>Montant</th><th>Paiement</th><th>Statut</th><th>Date</th><th class="text-end">Actions</th></tr>
+                </thead>
+                <tbody>
+                    {% for offer in pagination %}
+                    <tr>
+                        <td>
+                            <div>{{ offer.investor.firstname }} {{ offer.investor.lastname }}</div>
+                            <div class="small text-muted">{{ offer.investor.email }}</div>
+                        </td>
+                        <td>
+                            {% if offer.opportunity.project and offer.opportunity.project.user %}
+                                <div>{{ offer.opportunity.project.user.firstname }} {{ offer.opportunity.project.user.lastname }}</div>
+                                <div class="small text-muted">{{ offer.opportunity.project.user.email }}</div>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ offer.opportunity.project ? offer.opportunity.project.titre : 'N/A' }}</td>
+                        <td class="fw-semibold">{{ offer.proposedAmount|number_format(0, ',', ' ') }} DT</td>
+                        <td>
+                            <span class="badge bg-{{ offer.paid ? 'success' : 'secondary' }}">{{ offer.paid ? 'Payée' : 'Non payée' }}</span>
+                        </td>
+                        <td><span class="badge bg-{{ offer.status == 'ACCEPTED' ? 'success' : (offer.status == 'REJECTED' ? 'danger' : 'warning text-dark') }}">{{ offer.status }}</span></td>
+                        <td class="text-muted small">{{ offer.createdAt|date('d/m/Y H:i') }}</td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ path('admin_invest_show', {id: offer.opportunity.id}) }}" class="btn btn-outline-primary" title="Voir opportunité"><i class="bi bi-eye"></i></a>
+                                {% if offer.status == 'PENDING' %}
+                                <form method="post" action="{{ path('admin_invest_offer_accept', {id: offer.id}) }}" class="d-inline">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('offer_action_' ~ offer.id) }}">
+                                    <button class="btn btn-sm btn-outline-success" title="Accepter"><i class="bi bi-check-lg"></i></button>
+                                </form>
+                                <form method="post" action="{{ path('admin_invest_offer_reject', {id: offer.id}) }}" class="d-inline">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('offer_action_' ~ offer.id) }}">
+                                    <button class="btn btn-sm btn-outline-danger" title="Rejeter"><i class="bi bi-x-lg"></i></button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="8" class="text-center text-muted py-4">Aucune offre trouvée.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div class="d-flex justify-content-center mt-4">{{ knp_pagination_render(pagination) }}</div>

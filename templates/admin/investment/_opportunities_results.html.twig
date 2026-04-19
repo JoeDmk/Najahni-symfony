@@ -1,0 +1,63 @@
+<div class="card border-0 shadow-sm" style="border-radius:1rem">
+    <div class="card-body p-0">
+        <div class="d-flex justify-content-between align-items-center px-4 pt-4 pb-2">
+            <div>
+                <div class="fw-semibold">Résultats</div>
+                <div class="small text-muted">{{ pagination.getTotalItemCount }} opportunité{{ pagination.getTotalItemCount > 1 ? 's' : '' }}</div>
+            </div>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-nj mb-0">
+                <thead>
+                    <tr><th>Projet</th><th>Entrepreneur</th><th>Secteur</th><th>Montant cible</th><th>Financé</th><th>Statut</th><th>Deadline</th><th class="text-end">Actions</th></tr>
+                </thead>
+                <tbody>
+                    {% for opp in pagination %}
+                    <tr>
+                        <td>
+                            <div class="fw-semibold">{{ opp.project ? opp.project.titre : 'N/A' }}</div>
+                            <div class="small text-muted">#{{ opp.id }}</div>
+                        </td>
+                        <td>
+                            {% if opp.project and opp.project.user %}
+                                <div>{{ opp.project.user.firstname }} {{ opp.project.user.lastname }}</div>
+                                <div class="small text-muted">{{ opp.project.user.email }}</div>
+                            {% else %}
+                                <span class="text-muted">N/A</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ opp.project and opp.project.secteur ? opp.project.secteur : '-' }}</td>
+                        <td>{{ opp.targetAmount|number_format(0, ',', ' ') }} DT</td>
+                        <td>
+                            <div class="progress" style="height:6px;width:80px;display:inline-block;vertical-align:middle">
+                                <div class="progress-bar" style="width:{{ opp.fundingPercentage }}%;background:var(--nj-gradient)"></div>
+                            </div>
+                            <small class="ms-1">{{ opp.fundingPercentage|number_format(0) }}%</small>
+                        </td>
+                        <td><span class="badge bg-{{ opp.status == 'OPEN' ? 'success' : (opp.status == 'FUNDED' ? 'primary' : 'secondary') }}">{{ opp.status }}</span></td>
+                        <td>{{ opp.deadline ? opp.deadline|date('d/m/Y') : '-' }}</td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ path('admin_invest_show', {id: opp.id}) }}" class="btn btn-outline-primary"><i class="bi bi-eye"></i></a>
+                                {% if opp.status == 'OPEN' %}
+                                <form method="post" action="{{ path('admin_invest_close', {id: opp.id}) }}" class="d-inline">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('close_opportunity_' ~ opp.id) }}">
+                                    <button class="btn btn-outline-warning" title="Fermer"><i class="bi bi-x-circle"></i></button>
+                                </form>
+                                {% endif %}
+                                <form method="post" action="{{ path('admin_invest_delete', {id: opp.id}) }}" class="d-inline" onsubmit="return confirm('Supprimer cette opportunité ?')">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('delete_opportunity_' ~ opp.id) }}">
+                                    <button class="btn btn-outline-danger"><i class="bi bi-trash"></i></button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="8" class="text-center text-muted py-4">Aucune opportunité trouvée.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<div class="d-flex justify-content-center mt-4">{{ knp_pagination_render(pagination) }}</div>

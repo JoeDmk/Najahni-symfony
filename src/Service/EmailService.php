@@ -100,4 +100,33 @@ class EmailService
         }
         return $sent;
     }
+
+    public function sendInvestmentPaymentConfirmation(
+        string $to,
+        string $firstname,
+        string $projectTitle,
+        string $amountLabel,
+        string $paidAtLabel,
+        ?string $paymentReference = null,
+        ?string $contractUrl = null,
+        ?string $paymentLabel = null,
+    ): void {
+        $html = $this->twig->render('emails/payment_confirmation.html.twig', [
+            'firstname' => $firstname,
+            'projectTitle' => $projectTitle,
+            'amountLabel' => $amountLabel,
+            'paidAtLabel' => $paidAtLabel,
+            'paymentReference' => $paymentReference,
+            'contractUrl' => $contractUrl,
+            'paymentLabel' => $paymentLabel ?? 'Paiement d\'investissement confirme',
+        ]);
+
+        $email = (new Email())
+            ->from(new Address(self::SENDER_EMAIL, self::SENDER_NAME))
+            ->to($to)
+            ->subject('Confirmation de paiement - Najahni')
+            ->html($html);
+
+        $this->mailer->send($email);
+    }
 }

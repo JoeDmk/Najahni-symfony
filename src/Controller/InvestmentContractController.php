@@ -6,13 +6,16 @@ use App\Entity\ContractMilestone;
 use App\Entity\InvestmentContract;
 use App\Entity\InvestmentContractMessage;
 use App\Entity\InvestmentOffer;
+use App\Entity\InvestmentOpportunity;
 use App\Entity\User;
 use App\Repository\ContractMilestoneRepository;
 use App\Repository\InvestmentContractMessageRepository;
 use App\Repository\InvestmentContractRepository;
 use App\Service\Investment\ContractSignatureService;
+use App\Service\Investment\ContractQrCodeService;
 use App\Service\Investment\InvestmentChatbotService;
 use App\Service\Investment\StripePaymentService;
+use App\Service\EmailService;
 use App\Service\NotificationService;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Encoding\Encoding;
@@ -20,6 +23,7 @@ use Endroid\QrCode\Writer\PngWriter;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -77,6 +81,7 @@ class InvestmentContractController extends AbstractController
         Request $request,
         EntityManagerInterface $em,
         ContractSignatureService $signatureService,
+        ContractQrCodeService $contractQrCodeService,
     ): Response {
         $user = $this->requireUser();
         $this->assertContractAccess($offer, $user);
@@ -88,7 +93,7 @@ class InvestmentContractController extends AbstractController
             'offer' => $offer,
             'contract' => $contract,
             'generatedAt' => new \DateTime(),
-            'qrCodeDataUri' => $this->buildQrBase64($contract->getId()),
+            'qrCodeDataUri' => $this->buildQrBase64($contract, $contractQrCodeService),
         ]);
 
         $options = new Options();
@@ -115,6 +120,7 @@ class InvestmentContractController extends AbstractController
         InvestmentOffer $offer,
         EntityManagerInterface $em,
         ContractSignatureService $signatureService,
+        ContractQrCodeService $contractQrCodeService,
     ): Response {
         $user = $this->requireUser();
         $this->assertContractAccess($offer, $user);
@@ -126,7 +132,7 @@ class InvestmentContractController extends AbstractController
             'offer' => $offer,
             'contract' => $contract,
             'generatedAt' => new \DateTime(),
-            'qrCodeDataUri' => $this->buildQrBase64($contract->getId()),
+            'qrCodeDataUri' => $this->buildQrBase64($contract, $contractQrCodeService),
         ]);
     }
 
@@ -386,12 +392,15 @@ class InvestmentContractController extends AbstractController
         $user = $this->requireUser();
         $this->assertContractAccess($offer, $user);
 
+        $contract = $this->getOrCreateContract($offer, $em, $signatureService);
+        if ($contract->getInvestor()?->getId() !== $user->getId()) {
+            return $this->json(['success' => false, 'message' => 'Seul l\'investisseur peut définir les jalons.'], 403);
+        }
+
         if (!$this->isCsrfTokenValid('milestones_' . $offer->getId(), $request->request->get('_token'))) {
             $this->addFlash('danger', 'Jeton de securite invalide.');
             return $this->redirectToRoute('app_invest_contract_show', ['id' => $offer->getId()]);
         }
-
-        $contract = $this->getOrCreateContract($offer, $em, $signatureService);
 
         // Only allow milestone editing before any milestone is released
         foreach ($contract->getFundingMilestones() as $existing) {
@@ -616,6 +625,8 @@ class InvestmentContractController extends AbstractController
         ContractMilestoneRepository $milestoneRepo,
         StripePaymentService $paymentService,
         NotificationService $notificationService,
+        EmailService $emailService,
+        LoggerInterface $logger,
     ): Response {
         $user = $this->requireUser();
         $this->assertContractAccess($offer, $user);
@@ -673,6 +684,7 @@ class InvestmentContractController extends AbstractController
             $offer->setPaidAt(new \DateTime());
             $offer->setPaymentIntentId('milestones_complete');
             $contract->setStatus(InvestmentContract::STATUS_FUNDED);
+            $this->markOpportunityFundedIfPaidOut($offer->getOpportunity());
         }
 
         $msg = new InvestmentContractMessage();
@@ -709,8 +721,40 @@ class InvestmentContractController extends AbstractController
         }
 
         $em->flush();
+
+        try {
+            if ($user->getEmail()) {
+                $emailService->sendInvestmentPaymentConfirmation(
+                    $user->getEmail(),
+                    $user->getFirstname() ?? 'Utilisateur',
+                    $offer->getOpportunity()->getProject()?->getTitre() ?? 'Projet',
+                    number_format((float) $milestone->getAmount(), 0, ',', ' ') . ' DT',
+                    $milestone->getReleasedAt()?->format('d/m/Y H:i') ?? (new \DateTime())->format('d/m/Y H:i'),
+                    $milestone->getPaymentIntentId(),
+                    $this->generateUrl('app_invest_contract_show', ['id' => $offer->getId()], UrlGeneratorInterface::ABSOLUTE_URL),
+                    $allReleased
+                        ? 'Dernier paiement de jalon - contrat entierement finance'
+                        : 'Paiement de jalon confirme - ' . $milestone->getLabel()
+                );
+            }
+        } catch (\Throwable $exception) {
+            $logger->error('Unable to send milestone payment confirmation email.', [
+                'offerId' => $offer->getId(),
+                'milestoneId' => $milestone->getId(),
+                'paymentIntentId' => $milestone->getPaymentIntentId(),
+                'exception' => $exception,
+            ]);
+        }
+
         $this->addFlash('success', 'Paiement de ' . number_format((float) $milestone->getAmount(), 0, ',', ' ') . ' DT libere.');
         return $this->redirectToRoute('app_invest_contract_show', ['id' => $offer->getId()]);
+    }
+
+    private function markOpportunityFundedIfPaidOut(?InvestmentOpportunity $opportunity): void
+    {
+        if ($opportunity && $opportunity->getTotalFunded() >= (float) $opportunity->getTargetAmount()) {
+            $opportunity->setStatus(InvestmentOpportunity::STATUS_FUNDED);
+        }
     }
 
     #[Route('/advisor', name: 'app_invest_contract_advisor', requirements: ['id' => '\d+'], methods: ['POST'])]
@@ -960,19 +1004,11 @@ class InvestmentContractController extends AbstractController
      * Compute deal temperature from behavioral signals already in the database.
      * @return array{int, string, ?\DateTimeInterface} [score 0-100, label, lastMessageAt]
      */
-    private function buildQrBase64(int $contractId): string
+    private function buildQrBase64(InvestmentContract $contract, ContractQrCodeService $contractQrCodeService): string
     {
-        $verifyUrl = $this->generateUrl('app_invest_contract_verify', ['contractId' => $contractId], UrlGeneratorInterface::ABSOLUTE_URL);
+        $verifyUrl = $this->generateUrl('app_invest_contract_verify', ['contractId' => $contract->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
 
-        $result = Builder::create()
-            ->writer(new PngWriter())
-            ->data($verifyUrl)
-            ->encoding(new Encoding('UTF-8'))
-            ->size(200)
-            ->margin(6)
-            ->build();
-
-        return $result->getDataUri();
+        return $contractQrCodeService->buildDataUri($contract, $verifyUrl, 200, 6);
     }
 
     private function computeDealTemperature(InvestmentContract $contract, array $messages): array

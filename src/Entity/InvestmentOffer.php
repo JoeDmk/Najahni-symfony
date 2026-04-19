@@ -8,6 +8,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: InvestmentOfferRepository::class)]
 #[ORM\Table(name: 'investment_offer')]
+#[ORM\UniqueConstraint(name: 'unique_investment_offer_investor_opportunity', columns: ['investor_id', 'opportunity_id'])]
 #[ORM\HasLifecycleCallbacks]
 class InvestmentOffer
 {

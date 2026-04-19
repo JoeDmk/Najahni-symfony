@@ -101,15 +101,29 @@ class InvestmentOfferRepository extends ServiceEntityRepository
             ->getOneOrNullResult();
     }
 
+    public function sumAcceptedAmountsForOpportunity(InvestmentOpportunity $opportunity): float
+    {
+        $result = $this->createQueryBuilder('o')
+            ->select('COALESCE(SUM(o.proposedAmount), 0)')
+            ->where('o.opportunity = :opportunity')
+            ->andWhere('o.status = :status')
+            ->setParameter('opportunity', $opportunity)
+            ->setParameter('status', InvestmentOffer::STATUS_ACCEPTED)
+            ->getQuery()
+            ->getSingleScalarResult();
+
+        return (float) $result;
+    }
+
     /**
-     * DQL: Sum of all accepted offers (total raised).
+     * DQL: Sum of all paid offers (total raised).
      */
     public function sumAcceptedAmounts(): float
     {
         $result = $this->createQueryBuilder('o')
             ->select('COALESCE(SUM(o.proposedAmount), 0)')
-            ->where('o.status = :s')
-            ->setParameter('s', 'ACCEPTED')
+            ->where('o.paid = :paid')
+            ->setParameter('paid', true)
             ->getQuery()
             ->getSingleScalarResult();
 
@@ -119,14 +133,81 @@ class InvestmentOfferRepository extends ServiceEntityRepository
     /**
      * DQL: Build a filterable query for admin offers list.
      */
-    public function buildFilteredQuery(string $statusFilter = ''): QueryBuilder
+    public function buildFilteredQuery(array|string $filters = ''): QueryBuilder
     {
+        if (!is_array($filters)) {
+            $filters = ['status' => $filters];
+        }
+
+        $statusFilter = (string) ($filters['status'] ?? '');
+        $search = trim((string) ($filters['q'] ?? ''));
+        $investorFilter = trim((string) ($filters['investor'] ?? ''));
+        $entrepreneurFilter = trim((string) ($filters['entrepreneur'] ?? ''));
+        $paidFilter = (string) ($filters['paid'] ?? '');
+        $sort = (string) ($filters['order'] ?? 'recent');
+        $amountMin = is_numeric($filters['amount_min'] ?? null) ? (float) $filters['amount_min'] : null;
+        $amountMax = is_numeric($filters['amount_max'] ?? null) ? (float) $filters['amount_max'] : null;
+        $createdFrom = $filters['created_from'] ?? null;
+        $createdTo = $filters['created_to'] ?? null;
+
         $qb = $this->createQueryBuilder('o')
-            ->orderBy('o.createdAt', 'DESC');
+            ->leftJoin('o.opportunity', 'opp')
+            ->leftJoin('opp.project', 'p')
+            ->leftJoin('p.user', 'ent')
+            ->leftJoin('o.investor', 'inv')
+            ->addSelect('opp', 'p', 'ent', 'inv');
 
         if ($statusFilter !== '' && in_array($statusFilter, ['PENDING', 'ACCEPTED', 'REJECTED'])) {
             $qb->andWhere('o.status = :st')->setParameter('st', $statusFilter);
         }
+
+        if ($search !== '') {
+            $needle = '%' . mb_strtolower($search) . '%';
+            $qb->andWhere('LOWER(COALESCE(p.titre, \'\')) LIKE :q OR LOWER(CONCAT(COALESCE(inv.firstname, \'\'), \' \', COALESCE(inv.lastname, \'\'))) LIKE :q OR LOWER(COALESCE(inv.email, \'\')) LIKE :q OR LOWER(CONCAT(COALESCE(ent.firstname, \'\'), \' \', COALESCE(ent.lastname, \'\'))) LIKE :q OR LOWER(COALESCE(ent.email, \'\')) LIKE :q OR LOWER(COALESCE(ent.companyName, \'\')) LIKE :q')
+                ->setParameter('q', $needle);
+        }
+
+        if ($investorFilter !== '') {
+            $qb->andWhere('LOWER(CONCAT(COALESCE(inv.firstname, \'\'), \' \', COALESCE(inv.lastname, \'\'))) LIKE :investor OR LOWER(COALESCE(inv.email, \'\')) LIKE :investor OR LOWER(COALESCE(inv.companyName, \'\')) LIKE :investor')
+                ->setParameter('investor', '%' . mb_strtolower($investorFilter) . '%');
+        }
+
+        if ($entrepreneurFilter !== '') {
+            $qb->andWhere('LOWER(CONCAT(COALESCE(ent.firstname, \'\'), \' \', COALESCE(ent.lastname, \'\'))) LIKE :entrepreneur OR LOWER(COALESCE(ent.email, \'\')) LIKE :entrepreneur OR LOWER(COALESCE(ent.companyName, \'\')) LIKE :entrepreneur')
+                ->setParameter('entrepreneur', '%' . mb_strtolower($entrepreneurFilter) . '%');
+        }
+
+        if ($paidFilter === 'paid') {
+            $qb->andWhere('o.paid = :paid')->setParameter('paid', true);
+        } elseif ($paidFilter === 'unpaid') {
+            $qb->andWhere('o.paid = :paid')->setParameter('paid', false);
+        }
+
+        if ($amountMin !== null) {
+            $qb->andWhere('o.proposedAmount >= :amountMin')->setParameter('amountMin', $amountMin);
+        }
+
+        if ($amountMax !== null) {
+            $qb->andWhere('o.proposedAmount <= :amountMax')->setParameter('amountMax', $amountMax);
+        }
+
+        if (is_string($createdFrom) && $createdFrom !== '') {
+            $qb->andWhere('o.createdAt >= :createdFrom')
+                ->setParameter('createdFrom', new \DateTimeImmutable($createdFrom . ' 00:00:00'));
+        }
+
+        if (is_string($createdTo) && $createdTo !== '') {
+            $qb->andWhere('o.createdAt <= :createdTo')
+                ->setParameter('createdTo', new \DateTimeImmutable($createdTo . ' 23:59:59'));
+        }
+
+        match ($sort) {
+            'oldest' => $qb->orderBy('o.createdAt', 'ASC'),
+            'amount_asc' => $qb->orderBy('o.proposedAmount', 'ASC'),
+            'amount_desc' => $qb->orderBy('o.proposedAmount', 'DESC'),
+            'investor_asc' => $qb->orderBy('inv.firstname', 'ASC')->addOrderBy('inv.lastname', 'ASC'),
+            default => $qb->orderBy('o.createdAt', 'DESC'),
+        };
 
         return $qb;
     }

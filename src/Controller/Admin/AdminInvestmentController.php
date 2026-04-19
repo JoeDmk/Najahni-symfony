@@ -23,11 +23,15 @@ class AdminInvestmentController extends AbstractController
     #[Route('', name: 'admin_invest_opportunities')]
     public function index(Request $request, InvestmentOpportunityRepository $repo, InvestmentOfferRepository $offerRepo, PaginatorInterface $paginator): Response
     {
-        $search = trim($request->query->get('q', ''));
-        $statusFilter = $request->query->get('status', '');
-
-        $qb = $repo->buildAdminQuery($search, $statusFilter);
+        $filters = $this->getOpportunityFilters($request);
+        $qb = $repo->buildAdminQuery($filters);
         $pagination = $paginator->paginate($qb, $request->query->getInt('page', 1), 15);
+
+        if ($request->isXmlHttpRequest()) {
+            return $this->render('admin/investment/_opportunities_results.html.twig', [
+                'pagination' => $pagination,
+            ]);
+        }
 
         // Statistics via DQL repository methods
         $oppCounts = $repo->countByStatus();
@@ -36,8 +40,7 @@ class AdminInvestmentController extends AbstractController
 
         return $this->render('admin/investment/index.html.twig', [
             'pagination' => $pagination,
-            'search' => $search,
-            'statusFilter' => $statusFilter,
+            'filters' => $filters,
             'totalOpportunities' => $oppCounts['total'],
             'openCount' => $oppCounts['open'],
             'fundedCount' => $oppCounts['funded'],
@@ -48,63 +51,23 @@ class AdminInvestmentController extends AbstractController
     }
 
     #[Route('/ajax/opportunities', name: 'admin_invest_opportunities_ajax', methods: ['GET'])]
-    public function opportunitiesAjax(Request $request, InvestmentOpportunityRepository $repo): JsonResponse
+    public function opportunitiesAjax(Request $request, InvestmentOpportunityRepository $repo, PaginatorInterface $paginator): Response
     {
-        $search = trim($request->query->get('q', ''));
-        $statusFilter = $request->query->get('status', '');
+        $pagination = $paginator->paginate($repo->buildAdminQuery($this->getOpportunityFilters($request)), $request->query->getInt('page', 1), 15);
 
-        $qb = $repo->buildAdminQuery($search, $statusFilter);
-        $opportunities = $qb->getQuery()->getResult();
-
-        $data = [];
-        foreach ($opportunities as $opp) {
-            $data[] = [
-                'id' => $opp->getId(),
-                'projectTitle' => $opp->getProject() ? $opp->getProject()->getTitre() : 'N/A',
-                'targetAmount' => number_format((float) $opp->getTargetAmount(), 0, ',', ' '),
-                'fundingPercentage' => round($opp->getFundingPercentage(), 0),
-                'status' => $opp->getStatus(),
-                'deadline' => $opp->getDeadline() ? $opp->getDeadline()->format('d/m/Y') : '-',
-                'showUrl' => $this->generateUrl('admin_invest_show', ['id' => $opp->getId()]),
-            ];
-        }
-
-        return $this->json(['count' => count($data), 'opportunities' => $data]);
+        return $this->render('admin/investment/_opportunities_results.html.twig', [
+            'pagination' => $pagination,
+        ]);
     }
 
     #[Route('/ajax/offers', name: 'admin_invest_offers_ajax', methods: ['GET'])]
-    public function offersAjax(Request $request, InvestmentOfferRepository $repo): JsonResponse
+    public function offersAjax(Request $request, InvestmentOfferRepository $repo, PaginatorInterface $paginator): Response
     {
-        $statusFilter = $request->query->get('status', '');
-        $search = trim($request->query->get('q', ''));
+        $pagination = $paginator->paginate($repo->buildFilteredQuery($this->getOfferFilters($request)), $request->query->getInt('page', 1), 15);
 
-        $qb = $repo->buildFilteredQuery($statusFilter);
-
-        if ($search !== '') {
-            $qb->leftJoin('o.opportunity', 'opp')
-               ->leftJoin('opp.project', 'p')
-               ->leftJoin('o.investor', 'inv')
-               ->andWhere('p.titre LIKE :q OR CONCAT(inv.firstname, \' \', inv.lastname) LIKE :q')
-               ->setParameter('q', '%' . $search . '%');
-        }
-
-        $offers = $qb->getQuery()->getResult();
-
-        $data = [];
-        foreach ($offers as $offer) {
-            $data[] = [
-                'id' => $offer->getId(),
-                'investorName' => $offer->getInvestor()->getFirstname() . ' ' . $offer->getInvestor()->getLastname(),
-                'projectTitle' => $offer->getOpportunity()->getProject() ? $offer->getOpportunity()->getProject()->getTitre() : 'N/A',
-                'proposedAmount' => number_format((float) $offer->getProposedAmount(), 0, ',', ' '),
-                'status' => $offer->getStatus(),
-                'createdAt' => $offer->getCreatedAt()->format('d/m/Y H:i'),
-                'opportunityId' => $offer->getOpportunity()->getId(),
-                'showUrl' => $this->generateUrl('admin_invest_show', ['id' => $offer->getOpportunity()->getId()]),
-            ];
-        }
-
-        return $this->json(['count' => count($data), 'offers' => $data]);
+        return $this->render('admin/investment/_offers_results.html.twig', [
+            'pagination' => $pagination,
+        ]);
     }
 
     #[Route('/create', name: 'admin_invest_create', methods: ['GET', 'POST'])]
@@ -137,6 +100,12 @@ class AdminInvestmentController extends AbstractController
                 return $this->render('admin/investment/create.html.twig', ['projets' => $projets]);
             }
 
+            $deadline = new \DateTime($deadlineStr);
+            if ($deadline <= new \DateTime('today')) {
+                $this->addFlash('danger', 'La date limite doit être dans le futur.');
+                return $this->render('admin/investment/create.html.twig', ['projets' => $projets]);
+            }
+
             $description = trim($request->request->get('description', ''));
             if (mb_strlen($description) < 10) {
                 $this->addFlash('danger', 'La description doit contenir au moins 10 caractères.');
@@ -147,7 +116,7 @@ class AdminInvestmentController extends AbstractController
             $opp->setProject($project);
             $opp->setTargetAmount((string) (float) $targetAmount);
             $opp->setDescription($description);
-            $opp->setDeadline(new \DateTime($deadlineStr));
+            $opp->setDeadline($deadline);
             $opp->setStatus('OPEN');
 
             $em->persist($opp);
@@ -188,9 +157,21 @@ class AdminInvestmentController extends AbstractController
                 return $this->render('admin/investment/edit.html.twig', ['opportunity' => $opp]);
             }
 
+            $deadlineStr = $request->request->get('deadline');
+            if (!$deadlineStr || strtotime($deadlineStr) === false) {
+                $this->addFlash('danger', 'La date limite est invalide.');
+                return $this->render('admin/investment/edit.html.twig', ['opportunity' => $opp]);
+            }
+
+            $deadline = new \DateTime($deadlineStr);
+            if ($deadline <= new \DateTime('today')) {
+                $this->addFlash('danger', 'La date limite doit être dans le futur.');
+                return $this->render('admin/investment/edit.html.twig', ['opportunity' => $opp]);
+            }
+
             $opp->setTargetAmount((string) (float) $targetAmount);
             $opp->setDescription($description);
-            $opp->setDeadline(new \DateTime($request->request->get('deadline')));
+            $opp->setDeadline($deadline);
 
             $status = $request->request->get('status', $opp->getStatus());
             if (in_array($status, ['OPEN', 'CLOSED', 'FUNDED'])) {
@@ -235,15 +216,65 @@ class AdminInvestmentController extends AbstractController
     #[Route('/offers', name: 'admin_invest_offers')]
     public function offers(Request $request, InvestmentOfferRepository $repo, PaginatorInterface $paginator): Response
     {
-        $statusFilter = $request->query->get('status', '');
-
-        $qb = $repo->buildFilteredQuery($statusFilter);
+        $filters = $this->getOfferFilters($request);
+        $qb = $repo->buildFilteredQuery($filters);
         $pagination = $paginator->paginate($qb, $request->query->getInt('page', 1), 15);
+
+        if ($request->isXmlHttpRequest()) {
+            return $this->render('admin/investment/_offers_results.html.twig', [
+                'pagination' => $pagination,
+            ]);
+        }
 
         return $this->render('admin/investment/offers.html.twig', [
             'pagination' => $pagination,
-            'statusFilter' => $statusFilter,
+            'filters' => $filters,
         ]);
+    }
+
+    private function getOpportunityFilters(Request $request): array
+    {
+        $this->normalizeLegacySortQuery($request);
+
+        return [
+            'q' => trim((string) $request->query->get('q', '')),
+            'status' => (string) $request->query->get('status', ''),
+            'entrepreneur' => trim((string) $request->query->get('entrepreneur', '')),
+            'sector' => trim((string) $request->query->get('sector', '')),
+            'deadline_state' => (string) $request->query->get('deadline_state', ''),
+            'amount_min' => $request->query->get('amount_min', ''),
+            'amount_max' => $request->query->get('amount_max', ''),
+            'order' => (string) $request->query->get('order', 'recent'),
+        ];
+    }
+
+    private function getOfferFilters(Request $request): array
+    {
+        $this->normalizeLegacySortQuery($request);
+
+        return [
+            'q' => trim((string) $request->query->get('q', '')),
+            'status' => (string) $request->query->get('status', ''),
+            'investor' => trim((string) $request->query->get('investor', '')),
+            'entrepreneur' => trim((string) $request->query->get('entrepreneur', '')),
+            'paid' => (string) $request->query->get('paid', ''),
+            'amount_min' => $request->query->get('amount_min', ''),
+            'amount_max' => $request->query->get('amount_max', ''),
+            'created_from' => (string) $request->query->get('created_from', ''),
+            'created_to' => (string) $request->query->get('created_to', ''),
+            'order' => (string) $request->query->get('order', 'recent'),
+        ];
+    }
+
+    private function normalizeLegacySortQuery(Request $request): void
+    {
+        if ($request->query->has('sort') && !$request->query->has('order')) {
+            $request->query->set('order', (string) $request->query->get('sort', 'recent'));
+        }
+
+        if ($request->query->has('sort')) {
+            $request->query->remove('sort');
+        }
     }
 
     #[Route('/offers/{id}/accept', name: 'admin_invest_offer_accept', requirements: ['id' => '\d+'], methods: ['POST'])]
@@ -253,6 +284,11 @@ class AdminInvestmentController extends AbstractController
             $this->addFlash('danger', 'Jeton de sécurité invalide.');
             return $this->redirectToRoute('admin_invest_show', ['id' => $offer->getOpportunity()->getId()]);
         }
+
+        if ($offer->getStatus() !== InvestmentOffer::STATUS_PENDING) {
+            return $this->json(['success' => false, 'message' => 'Cette offre a déjà été traitée.'], 409);
+        }
+
         $offer->setStatus('ACCEPTED');
         $em->flush();
         $this->addFlash('success', 'Offre acceptée.');
@@ -266,6 +302,11 @@ class AdminInvestmentController extends AbstractController
             $this->addFlash('danger', 'Jeton de sécurité invalide.');
             return $this->redirectToRoute('admin_invest_show', ['id' => $offer->getOpportunity()->getId()]);
         }
+
+        if ($offer->getStatus() !== InvestmentOffer::STATUS_PENDING) {
+            return $this->json(['success' => false, 'message' => 'Cette offre a déjà été traitée.'], 409);
+        }
+
         $offer->setStatus('REJECTED');
         $em->flush();
         $this->addFlash('success', 'Offre rejetée.');
