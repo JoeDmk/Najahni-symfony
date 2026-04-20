@@ -91,6 +91,8 @@ class EconomicApiService
     {
         $response = $this->httpClient->request('GET', self::EXCHANGE_RATE_URL, [
             'timeout' => self::TIMEOUT,
+            'verify_peer' => false,
+            'verify_host' => false,
         ]);
 
         $json = $response->toArray();
@@ -102,6 +104,8 @@ class EconomicApiService
     {
         $response = $this->httpClient->request('GET', $url, [
             'timeout' => self::TIMEOUT,
+            'verify_peer' => false,
+            'verify_host' => false,
         ]);
 
         $json = $response->toArray();

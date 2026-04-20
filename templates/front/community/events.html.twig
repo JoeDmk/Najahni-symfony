@@ -134,10 +134,6 @@
     form.addEventListener('submit', function(e) { e.preventDefault(); liveSearch(); });
 })();
 </script>
-{% endblock %}
-
-{% block javascripts %}
-{{ parent() }}
 <script>
 document.addEventListener('DOMContentLoaded', () => {
     const liveEventSearch = document.querySelector('[data-live-event-search]');

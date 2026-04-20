@@ -6,6 +6,7 @@ use App\Entity\InvestmentContract;
 use Endroid\QrCode\Builder\Builder;
 use Endroid\QrCode\Encoding\Encoding;
 use Endroid\QrCode\Writer\PngWriter;
+use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelLow;
 
 class ContractQrCodeService
 {
@@ -16,13 +17,14 @@ class ContractQrCodeService
 
     public function buildResult(InvestmentContract $contract, string $verifyUrl, int $size = 300, int $margin = 10): object
     {
-        return (new Builder(
-            writer: new PngWriter(),
-            data: $this->buildPayload($contract, $verifyUrl),
-            encoding: new Encoding('UTF-8'),
-            size: $size,
-            margin: $margin,
-        ))->build();
+        return Builder::create()
+            ->writer(new PngWriter())
+            ->data($this->buildPayload($contract, $verifyUrl))
+            ->encoding(new Encoding('UTF-8'))
+            ->size($size)
+            ->margin($margin)
+            ->errorCorrectionLevel(new ErrorCorrectionLevelLow())
+            ->build();
     }
 
     public function buildDataUri(InvestmentContract $contract, string $verifyUrl, int $size = 200, int $margin = 6): string

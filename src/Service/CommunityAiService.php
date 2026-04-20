@@ -94,7 +94,9 @@ final class CommunityAiService
             $user,
             0.45,
         );
+        error_log('[CommunityAI] suggestThreadReplies chat returned: '.($content !== null ? mb_substr($content, 0, 300) : 'NULL'));
         $suggestions = $content !== null ? $this->extractStructuredSuggestions($content) : [];
+        error_log('[CommunityAI] extracted suggestions count: '.count($suggestions).' weak: '.($this->suggestionsLookWeak($suggestions, $thread, $comments) ? 'YES' : 'NO'));
 
         if ($this->suggestionsLookWeak($suggestions, $thread, $comments) && $configured) {
             $retry = $this->chat(
@@ -401,39 +403,51 @@ final class CommunityAiService
         }
 
         try {
-            $options = [
-                'headers' => [
-                    'Authorization' => 'Bearer '.$apiKey,
-                    'Accept' => 'application/json',
-                    'Content-Type' => 'application/json',
+            $body = json_encode([
+                'model' => $this->model(),
+                'temperature' => $temperature,
+                'messages' => [
+                    ['role' => 'system', 'content' => $system],
+                    ['role' => 'user', 'content' => $user],
                 ],
-                'json' => [
-                    'model' => $this->model(),
-                    'temperature' => $temperature,
-                    'messages' => [
-                        ['role' => 'system', 'content' => $system],
-                        ['role' => 'user', 'content' => $user],
-                    ],
+            ], JSON_THROW_ON_ERROR);
+
+            $ch = curl_init($this->endpoint());
+            curl_setopt_array($ch, [
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_POST => true,
+                CURLOPT_HTTPHEADER => [
+                    'Authorization: Bearer '.$apiKey,
+                    'Content-Type: application/json',
+                    'Accept: application/json',
                 ],
-                'timeout' => $this->timeout(),
-            ];
+                CURLOPT_POSTFIELDS => $body,
+                CURLOPT_TIMEOUT => (int) $this->timeout(),
+                CURLOPT_SSL_VERIFYPEER => false,
+                CURLOPT_SSL_VERIFYHOST => false,
+            ]);
 
-            if ($this->allowInsecureTls()) {
-                $options['verify_peer'] = false;
-                $options['verify_host'] = false;
-            }
+            $response = curl_exec($ch);
+            $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
 
-            $response = $this->httpClient->request('POST', $this->endpoint(), $options);
-
-            if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 300) {
+            if ($response === false || $curlError !== '') {
+                error_log('[CommunityAI] cURL error: '.$curlError);
                 return null;
             }
 
-            $payload = json_decode($response->getContent(false), true, 512, JSON_THROW_ON_ERROR);
+            if ($httpCode < 200 || $httpCode >= 300) {
+                error_log('[CommunityAI] HTTP '.$httpCode.': '.mb_substr((string) $response, 0, 300));
+                return null;
+            }
+
+            $payload = json_decode((string) $response, true, 512, JSON_THROW_ON_ERROR);
             $content = $payload['choices'][0]['message']['content'] ?? null;
 
             return is_string($content) && trim($content) !== '' ? trim($content) : null;
-        } catch (Throwable) {
+        } catch (Throwable $e) {
+            error_log('[CommunityAI] chat() error: '.$e->getMessage());
             return null;
         }
     }
@@ -510,7 +524,7 @@ final class CommunityAiService
 
     private function extractLooseJsonTextField(string $content): ?string
     {
-        if (preg_match('/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/s', $content, $match) !== 1) {
+        if (preg_match('/"text"\s*:\s*"((?:[^"\\\\]|\\\\.)*)"/s', $content, $match) !== 1) {
             return null;
         }
 
@@ -533,7 +547,7 @@ final class CommunityAiService
         $content = trim((string) preg_replace('/^```(?:json)?\s*|\s*```$/i', '', $content));
         $content = trim($content, " \t\n\r\0\x0B{}");
 
-        if (preg_match('/^"text"\s*:\s*"((?:[^"\\]|\\.)*)"\s*$/s', $content, $match) === 1) {
+        if (preg_match('/^"text"\s*:\s*"((?:[^"\\\\]|\\\\.)*)"\s*$/s', $content, $match) === 1) {
             try {
                 $decoded = json_decode('"'.$match[1].'"', true, 512, JSON_THROW_ON_ERROR);
                 if (is_string($decoded)) {

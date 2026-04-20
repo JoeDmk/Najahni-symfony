@@ -523,6 +523,28 @@ class CommunityController extends AbstractController
         return $this->redirectToRoute('app_community_groups');
     }
 
+    #[Route('/groups/{id}/kick/{memberId}', name: 'app_community_group_kick', methods: ['POST'])]
+    public function kickMember(Group $group, int $memberId, EntityManagerInterface $em): Response
+    {
+        if (!$this->canManageGroup($group, $this->currentUser())) {
+            throw $this->createAccessDeniedException();
+        }
+
+        if ($group->getGroupAdmin()?->getId() === $memberId) {
+            $this->addFlash('danger', 'Vous ne pouvez pas vous exclure vous-meme.');
+            return $this->redirectToRoute('app_community_group_show', ['id' => $group->getId()]);
+        }
+
+        $membership = $em->getRepository(GroupMember::class)->findOneBy(['group' => $group, 'user' => $memberId]);
+        if ($membership instanceof GroupMember) {
+            $em->remove($membership);
+            $em->flush();
+            $this->addFlash('success', 'Membre exclu du groupe.');
+        }
+
+        return $this->redirectToRoute('app_community_group_show', ['id' => $group->getId()]);
+    }
+
     #[Route('/groups/{id}/delete', name: 'app_community_group_delete', methods: ['POST'])]
     public function deleteGroup(Group $group, EntityManagerInterface $em): Response
     {
@@ -1060,7 +1082,7 @@ class CommunityController extends AbstractController
         return $this->redirectToRoute('app_community_event_show', ['id' => $event->getId()]);
     }
 
-    #[Route('/events/{id}/report.pdf', name: 'app_community_event_report', methods: ['GET'])]
+    #[Route('/events/{id}/report', name: 'app_community_event_report', methods: ['GET'])]
     public function exportEventReport(
         Event $event,
         CommunityAiService $communityAiService,

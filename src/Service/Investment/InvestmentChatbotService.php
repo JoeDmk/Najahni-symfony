@@ -262,6 +262,8 @@ PROMPT;
                 try {
                     $response = $this->httpClient->request('POST', self::HF_URL, [
                         'timeout' => self::TIMEOUT,
+                        'verify_peer' => false,
+                        'verify_host' => false,
                         'headers' => [
                             'Authorization' => 'Bearer ' . $this->hfToken,
                             'Content-Type' => 'application/json',
