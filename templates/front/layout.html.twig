@@ -68,11 +68,11 @@
 
 {# ========== LOGIN MODAL ========== #}
 <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" style="max-width:860px">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:1050px">
         <div class="modal-content border-0 overflow-hidden" style="border-radius:1.5rem">
             <div class="row g-0">
                 {# Left — Image #}
-                <div class="col-md-5 d-none d-md-block position-relative" style="min-height:520px">
+                <div class="col-md-5 d-none d-md-block position-relative" style="min-height:650px">
                     <img src="{{ asset('uploads/auth-banner.avif') }}" alt="" class="w-100 h-100 position-absolute top-0 start-0" style="object-fit:cover">
                     <div class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-end p-4" style="background:linear-gradient(0deg,rgba(58,12,163,.85) 0%,rgba(67,97,238,.4) 50%,transparent 100%)">
                         <h4 class="text-white fw-bold mb-2">Bienvenue sur Najahni</h4>
@@ -149,11 +149,11 @@
 
 {# ========== REGISTER MODAL ========== #}
 <div class="modal fade" id="registerModal" tabindex="-1" aria-labelledby="registerModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered" style="max-width:920px">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:1100px">
         <div class="modal-content border-0 overflow-hidden" style="border-radius:1.5rem">
             <div class="row g-0">
                 {# Left — Image #}
-                <div class="col-lg-5 d-none d-lg-block position-relative" style="min-height:620px">
+                <div class="col-lg-5 d-none d-lg-block position-relative" style="min-height:750px">
                     <img src="{{ asset('uploads/auth-banner.avif') }}" alt="" class="w-100 h-100 position-absolute top-0 start-0" style="object-fit:cover">
                     <div class="position-absolute top-0 start-0 w-100 h-100 d-flex flex-column justify-content-end p-4" style="background:linear-gradient(0deg,rgba(114,9,183,.85) 0%,rgba(67,97,238,.4) 50%,transparent 100%)">
                         <h4 class="text-white fw-bold mb-2">Rejoignez Najahni</h4>
@@ -326,32 +326,43 @@
     const readAllBtn = document.getElementById('notifReadAll');
     if (!badge || !list) return;
 
-    function renderNotifs(data) {
-        if (data.unreadCount > 0) {
-            badge.textContent = data.unreadCount > 9 ? '9+' : data.unreadCount;
+    let currentUnread = 0;
+    let notifCache = [];
+
+    function renderNotifCard(n) {
+        return `<div class="d-flex align-items-start gap-2 px-3 py-2 border-bottom ${!n.isRead ? 'bg-light' : ''}" style="cursor:pointer">
+            <div class="flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle mt-1" style="width:32px;height:32px;background:var(--bs-${n.typeColor})20">
+                <i class="bi bi-${n.typeIcon}" style="color:var(--bs-${n.typeColor});font-size:.85rem"></i>
+            </div>
+            <div class="flex-grow-1 min-width-0">
+                <div class="d-flex justify-content-between">
+                    <span class="small fw-semibold text-truncate ${!n.isRead ? '' : 'text-muted'}">${n.title}</span>
+                    <small class="text-muted flex-shrink-0 ms-2" style="font-size:.7rem">${n.createdAt}</small>
+                </div>
+                <p class="mb-0 text-muted" style="font-size:.78rem;line-height:1.3">${n.message}</p>
+            </div>
+            ${!n.isRead ? '<span class="badge rounded-pill bg-primary mt-1" style="font-size:.4rem">&bull;</span>' : ''}
+        </div>`;
+    }
+
+    function updateBadge(count) {
+        currentUnread = count;
+        if (count > 0) {
+            badge.textContent = count > 9 ? '9+' : count;
             badge.classList.remove('d-none');
         } else {
             badge.classList.add('d-none');
         }
+    }
+
+    function renderNotifs(data) {
+        updateBadge(data.unreadCount);
+        notifCache = data.notifications;
         if (!data.notifications.length) {
             list.innerHTML = '<div class="text-center text-muted small py-4"><i class="bi bi-bell-slash" style="font-size:1.5rem"></i><p class="mt-2 mb-0">Aucune notification</p></div>';
             return;
         }
-        list.innerHTML = data.notifications.map(n => `
-            <div class="d-flex align-items-start gap-2 px-3 py-2 border-bottom ${!n.isRead ? 'bg-light' : ''}" style="cursor:pointer">
-                <div class="flex-shrink-0 d-flex align-items-center justify-content-center rounded-circle mt-1" style="width:32px;height:32px;background:var(--bs-${n.typeColor})20">
-                    <i class="bi bi-${n.typeIcon}" style="color:var(--bs-${n.typeColor});font-size:.85rem"></i>
-                </div>
-                <div class="flex-grow-1 min-width-0">
-                    <div class="d-flex justify-content-between">
-                        <span class="small fw-semibold text-truncate ${!n.isRead ? '' : 'text-muted'}">${n.title}</span>
-                        <small class="text-muted flex-shrink-0 ms-2" style="font-size:.7rem">${n.createdAt}</small>
-                    </div>
-                    <p class="mb-0 text-muted" style="font-size:.78rem;line-height:1.3">${n.message}</p>
-                </div>
-                ${!n.isRead ? '<span class="badge rounded-pill bg-primary mt-1" style="font-size:.4rem">&bull;</span>' : ''}
-            </div>
-        `).join('');
+        list.innerHTML = data.notifications.map(renderNotifCard).join('');
     }
 
     function loadNotifs() {
@@ -359,6 +370,108 @@
             .then(r => r.json())
             .then(renderNotifs)
             .catch(() => {});
+    }
+
+    // Show a toast for a real-time push notification
+    function showToast(n) {
+        const container = document.querySelector('.toast-container') || (function(){
+            const c = document.createElement('div');
+            c.className = 'toast-container position-fixed top-0 end-0 p-3';
+            c.style.zIndex = '9999';
+            document.body.appendChild(c);
+            return c;
+        })();
+        const id = 'wsToast' + Date.now();
+        container.insertAdjacentHTML('beforeend', `
+            <div class="toast show border-0 shadow" id="${id}" role="alert">
+                <div class="toast-header bg-primary text-white">
+                    <i class="bi bi-bell me-2"></i>
+                    <strong class="me-auto">${n.title}</strong>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                </div>
+                <div class="toast-body">${n.message}</div>
+            </div>`);
+        const el = document.getElementById(id);
+        if (el) new bootstrap.Toast(el, {delay: 5000}).show();
+    }
+
+    // ===== WebSocket Connection =====
+    let ws = null;
+    let wsRetryCount = 0;
+    const wsMaxRetries = 10;
+    const userId = {{ app.user.id }};
+
+    function connectWebSocket() {
+        try {
+            ws = new WebSocket('ws://127.0.0.1:8090');
+        } catch(e) {
+            fallbackToPolling();
+            return;
+        }
+
+        ws.onopen = function() {
+            console.log('[WS] Connected');
+            wsRetryCount = 0;
+            // Authenticate with user ID
+            ws.send(JSON.stringify({ type: 'auth', userId: userId }));
+        };
+
+        ws.onmessage = function(event) {
+            try {
+                const msg = JSON.parse(event.data);
+                if (msg.type === 'auth_ok') {
+                    console.log('[WS] Authenticated');
+                    return;
+                }
+                if (msg.type === 'notification') {
+                    // Real-time push notification received!
+                    currentUnread++;
+                    updateBadge(currentUnread);
+
+                    // Prepend to cache
+                    notifCache.unshift({
+                        id: msg.id,
+                        title: msg.title,
+                        message: msg.message,
+                        type: msg.notifType,
+                        typeIcon: msg.typeIcon,
+                        typeColor: msg.typeColor,
+                        isRead: false,
+                        createdAt: msg.createdAt
+                    });
+                    // Re-render list (keep max 15)
+                    notifCache = notifCache.slice(0, 15);
+                    list.innerHTML = notifCache.map(renderNotifCard).join('');
+
+                    // Show toast
+                    showToast(msg);
+                }
+            } catch(e) {}
+        };
+
+        ws.onclose = function() {
+            console.log('[WS] Disconnected');
+            ws = null;
+            if (wsRetryCount < wsMaxRetries) {
+                wsRetryCount++;
+                setTimeout(connectWebSocket, Math.min(2000 * wsRetryCount, 30000));
+            } else {
+                console.log('[WS] Max retries reached, falling back to polling');
+                fallbackToPolling();
+            }
+        };
+
+        ws.onerror = function() {
+            if (ws) ws.close();
+        };
+    }
+
+    let pollInterval = null;
+    function fallbackToPolling() {
+        if (!pollInterval) {
+            console.log('[WS] Using polling fallback (30s)');
+            pollInterval = setInterval(loadNotifs, 30000);
+        }
     }
 
     // Load on dropdown open
@@ -371,9 +484,9 @@
             .then(() => loadNotifs());
     });
 
-    // Poll every 30s for badge count
+    // Initial load from API + start WebSocket
     loadNotifs();
-    setInterval(loadNotifs, 30000);
+    connectWebSocket();
 })();
 </script>
 {% endif %}
