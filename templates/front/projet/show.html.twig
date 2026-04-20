@@ -16,6 +16,31 @@
     </div>
 </div>
 
+{# AI Action Buttons #}
+<div class="card border-0 shadow-sm p-3 mb-4" style="border-radius:1rem;background:linear-gradient(135deg,rgba(67,97,238,.04),rgba(114,9,183,.04))">
+    <div class="d-flex flex-wrap gap-2 align-items-center">
+        <span class="fw-bold small me-2"><i class="bi bi-robot me-1"></i>Actions IA :</span>
+        <form method="post" action="{{ path('app_projet_evaluate_ai', {id: projet.id}) }}" class="d-inline">
+            <button class="btn btn-sm btn-outline-primary"><i class="bi bi-stars me-1"></i>Scoring IA</button>
+        </form>
+        <a href="{{ path('app_projet_business_plan', {id: projet.id}) }}" class="btn btn-sm btn-outline-success">
+            <i class="bi bi-file-earmark-text me-1"></i>Business Plan IA
+        </a>
+        <a href="{{ path('app_projet_recommendations', {id: projet.id}) }}" class="btn btn-sm btn-outline-info">
+            <i class="bi bi-lightbulb me-1"></i>Recommandations IA
+        </a>
+    </div>
+    <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
+        <span class="fw-bold small me-2"><i class="bi bi-tools me-1"></i>Outils :</span>
+        <a href="{{ path('app_projet_exchange_rates', {id: projet.id}) }}" class="btn btn-sm btn-outline-success">
+            <i class="bi bi-currency-exchange me-1"></i>Taux de Change
+        </a>
+        <a href="{{ path('app_projet_news', {id: projet.id}) }}" class="btn btn-sm btn-outline-dark">
+            <i class="bi bi-newspaper me-1"></i>Actualités Secteur
+        </a>
+    </div>
+</div>
+
 <div class="row g-4">
     <div class="col-md-8">
         {# Project Details #}
@@ -28,6 +53,14 @@
             <h5 class="fw-bold">Description</h5>
             <p>{{ projet.description }}</p>
         </div>
+
+        {# Diagnostic IA même style que Description #}
+        {% if projet.diagnosticIa %}
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
+            <h5 class="fw-bold">Diagnostic IA du projet</h5>
+            <p>{{ projet.diagnosticIa|replace({'**':''})|nl2br }}</p>
+        </div>
+        {% endif %}
 
         {# Business Data #}
         {% if projet.donneesBusiness %}
@@ -109,12 +142,17 @@
         </div>
         {% endif %}
 
-        {% if projet.diagnosticIa %}
+        {# Radar Chart for Scores #}
+        {% if projet.donneesBusiness and projet.donneesBusiness.scoreFinancier %}
         <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
-            <h6 class="fw-bold"><i class="bi bi-robot me-2"></i>Diagnostic IA</h6>
-            <p class="text-muted small">{{ projet.diagnosticIa }}</p>
+            <h6 class="fw-bold mb-3"><i class="bi bi-diagram-3 me-2"></i>Radar des Scores</h6>
+            <canvas id="scoreRadar" height="250"></canvas>
         </div>
         {% endif %}
+
+
+
+
 
         <div class="card border-0 shadow-sm p-4" style="border-radius:1rem">
             <h6 class="fw-bold mb-3">Informations</h6>
@@ -127,4 +165,53 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block javascripts %}
+{% if projet.donneesBusiness and projet.donneesBusiness.scoreFinancier %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('scoreRadar');
+    if (!ctx) return;
+
+    new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: ['Financier', 'Marché', 'Équipe', 'Risque'],
+            datasets: [{
+                label: 'Scores',
+                data: [
+                    {{ projet.donneesBusiness.scoreFinancier|default(0) }},
+                    {{ projet.donneesBusiness.scoreMarche|default(0) }},
+                    {{ projet.donneesBusiness.scoreEquipeCalcule|default(0) }},
+                    {{ projet.donneesBusiness.scoreRisqueCalcule|default(0) }}
+                ],
+                backgroundColor: 'rgba(67, 97, 238, 0.15)',
+                borderColor: '#4361ee',
+                borderWidth: 2,
+                pointBackgroundColor: '#4361ee',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                r: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: { stepSize: 20, font: { size: 10 } },
+                    pointLabels: { font: { size: 12, weight: '600' } },
+                    grid: { color: 'rgba(0,0,0,.06)' }
+                }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+});
+</script>
+{% endif %}
 {% endblock %}

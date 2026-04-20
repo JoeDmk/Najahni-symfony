@@ -1,0 +1,81 @@
+<div style="font-family:'Helvetica Neue',Arial,sans-serif;max-width:600px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,.1)">
+    <div style="background:linear-gradient(135deg,#4361ee,#7209b7);padding:40px 32px;text-align:center">
+        <h1 style="color:#fff;margin:0 0 8px;font-size:28px;font-weight:800">Najahni</h1>
+        <p style="color:rgba(255,255,255,.85);margin:0;font-size:14px">Plateforme d'entrepreneuriat tunisienne</p>
+    </div>
+
+    <div style="padding:32px">
+        <div style="text-align:center;margin-bottom:24px">
+            <div style="display:inline-block;background:linear-gradient(135deg,rgba(67,97,238,.1),rgba(114,9,183,.1));border-radius:50%;width:64px;height:64px;line-height:64px;font-size:28px">🚀</div>
+        </div>
+
+        <h2 style="color:#1a1a2e;margin:0 0 8px;text-align:center;font-size:22px">Nouveau projet créé !</h2>
+        <p style="color:#888;text-align:center;margin:0 0 28px;font-size:14px">Votre projet a été enregistré avec succès sur Najahni.</p>
+
+        <div style="background:#f8f9fa;border-radius:12px;padding:24px;margin-bottom:24px">
+            <table style="width:100%;border-collapse:collapse">
+                <tr>
+                    <td style="padding:10px 0;border-bottom:1px solid #e9ecef">
+                        <span style="color:#888;font-size:13px">Titre du projet</span><br>
+                        <strong style="color:#1a1a2e;font-size:15px">{{ projet.titre }}</strong>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:10px 0;border-bottom:1px solid #e9ecef">
+                        <span style="color:#888;font-size:13px">Secteur</span><br>
+                        <span style="display:inline-block;background:linear-gradient(135deg,#4361ee,#7209b7);color:#fff;padding:3px 12px;border-radius:20px;font-size:13px;font-weight:600;margin-top:4px">{{ projet.secteur ?? 'Non défini' }}</span>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:10px 0;border-bottom:1px solid #e9ecef">
+                        <span style="color:#888;font-size:13px">Étape</span><br>
+                        <strong style="color:#1a1a2e;font-size:15px">{{ projet.etape ?? 'Non définie' }}</strong>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:10px 0;border-bottom:1px solid #e9ecef">
+                        <span style="color:#888;font-size:13px">Description</span><br>
+                        <span style="color:#555;font-size:14px;line-height:1.5">{{ projet.description|length > 200 ? projet.description|slice(0, 200) ~ '...' : projet.description }}</span>
+                    </td>
+                </tr>
+                {% if projet.donneesBusiness %}
+                <tr>
+                    <td style="padding:10px 0;border-bottom:1px solid #e9ecef">
+                        <span style="color:#888;font-size:13px">Coûts estimés</span><br>
+                        <strong style="color:#1a1a2e;font-size:15px">{{ projet.donneesBusiness.coutsEstimes|number_format(0, ',', ' ') }} DT</strong>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:10px 0;border-bottom:1px solid #e9ecef">
+                        <span style="color:#888;font-size:13px">Revenus attendus</span><br>
+                        <strong style="color:#06d6a0;font-size:15px">{{ projet.donneesBusiness.revenusAttendus|number_format(0, ',', ' ') }} DT</strong>
+                    </td>
+                </tr>
+                <tr>
+                    <td style="padding:10px 0">
+                        <span style="color:#888;font-size:13px">Taille du marché</span><br>
+                        <strong style="color:#1a1a2e;font-size:15px">{{ projet.donneesBusiness.tailleMarche|number_format(0, ',', ' ') }} DT</strong>
+                    </td>
+                </tr>
+                {% endif %}
+            </table>
+        </div>
+
+        <div style="text-align:center;margin-bottom:24px">
+            <a href="{{ url('app_projet_show', {id: projet.id}) }}" style="display:inline-block;background:linear-gradient(135deg,#4361ee,#7209b7);color:#fff;text-decoration:none;padding:14px 36px;border-radius:12px;font-weight:700;font-size:15px;box-shadow:0 4px 16px rgba(67,97,238,.3)">Voir mon projet</a>
+        </div>
+
+        <div style="background:linear-gradient(135deg,rgba(67,97,238,.05),rgba(114,9,183,.05));border-radius:12px;padding:20px;text-align:center">
+            <p style="color:#555;font-size:14px;margin:0 0 4px"><strong>Prochaines étapes :</strong></p>
+            <p style="color:#888;font-size:13px;margin:0;line-height:1.6">
+                ⭐ Lancez l'évaluation IA pour scorer votre projet<br>
+                📋 Générez un business plan complet<br>
+                💡 Obtenez des recommandations personnalisées
+            </p>
+        </div>
+    </div>
+
+    <div style="background:#f8f9fa;padding:20px 32px;text-align:center;border-top:1px solid #e9ecef">
+        <p style="color:#aaa;font-size:12px;margin:0">© {{ 'now'|date('Y') }} Najahni — Plateforme d'entrepreneuriat tunisienne</p>
+    </div>
+</div>

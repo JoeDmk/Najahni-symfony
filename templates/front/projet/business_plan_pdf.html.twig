@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <style>
+        body { font-family: DejaVu Sans, sans-serif; font-size: 11px; color: #333; line-height: 1.6; }
+        h1 { color: #4361ee; font-size: 22px; border-bottom: 3px solid #4361ee; padding-bottom: 8px; margin-top: 0; }
+        h2 { color: #7209b7; font-size: 16px; border-bottom: 1px solid #ddd; padding-bottom: 5px; margin-top: 25px; }
+        h3 { color: #4361ee; font-size: 13px; margin-top: 15px; }
+        .header { text-align: center; margin-bottom: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px; }
+        .header h1 { border: none; margin-bottom: 5px; }
+        .header p { color: #666; margin: 3px 0; }
+        .section { margin-bottom: 20px; page-break-inside: avoid; }
+        .grid { display: table; width: 100%; }
+        .grid-cell { display: table-cell; width: 50%; padding: 8px; vertical-align: top; }
+        .box { background: #f8f9fa; padding: 12px; border-radius: 6px; margin-bottom: 10px; border-left: 3px solid #4361ee; }
+        .box-danger { border-left-color: #dc3545; }
+        .box-success { border-left-color: #198754; }
+        .box-warning { border-left-color: #ffc107; }
+        table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        th, td { border: 1px solid #dee2e6; padding: 8px; text-align: center; }
+        th { background: #4361ee; color: white; }
+        .text-success { color: #198754; }
+        .text-danger { color: #dc3545; }
+        .footer { text-align: center; margin-top: 30px; padding-top: 15px; border-top: 1px solid #ddd; color: #999; font-size: 9px; }
+        .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; }
+        .badge-primary { background: #e8edff; color: #4361ee; }
+        .badge-info { background: #e0f7fa; color: #0097a7; }
+        ul { padding-left: 20px; }
+        li { margin-bottom: 4px; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Business Plan</h1>
+        <p style="font-size: 18px; font-weight: bold;">{{ projet.titre }}</p>
+        <p><span class="badge badge-primary">{{ projet.secteur }}</span> <span class="badge badge-info">{{ projet.etape }}</span></p>
+        <p>Généré le {{ "now"|date("d/m/Y") }} | Score : {{ projet.scoreGlobal|number_format(1) }}/100</p>
+    </div>
+
+    <div class="section">
+        <h2>1. Résumé Exécutif</h2>
+        <p>{{ plan.resume_executif }}</p>
+    </div>
+
+    <div class="section">
+        <h2>2. Problème & Solution</h2>
+        <div class="box box-danger">
+            <h3>Problème</h3>
+            <p>{{ plan.probleme_solution.probleme }}</p>
+        </div>
+        <div class="box box-success">
+            <h3>Solution</h3>
+            <p>{{ plan.probleme_solution.solution }}</p>
+        </div>
+        <div class="box">
+            <h3>Proposition de valeur</h3>
+            <p>{{ plan.probleme_solution.proposition_valeur }}</p>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>3. Analyse de Marché</h2>
+        <div class="grid">
+            <div class="grid-cell">
+                <div class="box"><strong>Taille :</strong> {{ plan.analyse_marche.taille }}</div>
+                <div class="box"><strong>Cible :</strong> {{ plan.analyse_marche.cible }}</div>
+            </div>
+            <div class="grid-cell">
+                <div class="box"><strong>Tendances :</strong> {{ plan.analyse_marche.tendances }}</div>
+                <div class="box"><strong>Concurrence :</strong> {{ plan.analyse_marche.concurrence }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section">
+        <h2>4. Modèle Économique</h2>
+        <div class="box"><strong>Sources de revenus :</strong> {{ plan.modele_economique.sources_revenus }}</div>
+        <div class="box"><strong>Structure de coûts :</strong> {{ plan.modele_economique.structure_couts }}</div>
+        <div class="box"><strong>Pricing :</strong> {{ plan.modele_economique.prix }}</div>
+        <div class="box box-success"><strong>Rentabilité :</strong> {{ plan.modele_economique.rentabilite }}</div>
+    </div>
+
+    <div class="section">
+        <h2>5. Stratégie Marketing</h2>
+        <p><strong>Positionnement :</strong> {{ plan.strategie_marketing.positionnement }}</p>
+        <p><strong>Canaux :</strong> {{ plan.strategie_marketing.canaux }}</p>
+        <h3>Actions :</h3>
+        <ul>
+            {% for action in plan.strategie_marketing.actions %}
+            <li>{{ action }}</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>6. Plan Opérationnel</h2>
+        <h3>Étapes clés :</h3>
+        <ul>
+            {% for etape in plan.plan_operationnel.etapes_cles %}
+            <li><strong>{{ loop.index }}.</strong> {{ etape }}</li>
+            {% endfor %}
+        </ul>
+        <p><strong>Ressources :</strong> {{ plan.plan_operationnel.ressources }}</p>
+        <p><strong>Timeline :</strong> {{ plan.plan_operationnel.timeline }}</p>
+    </div>
+
+    <div class="section">
+        <h2>7. Analyse des Risques</h2>
+        <table>
+            <tr><th>Risque</th><th>Mitigation</th></tr>
+            {% for r in plan.analyse_risques.risques %}
+            <tr><td style="text-align:left">{{ r.risque }}</td><td style="text-align:left">{{ r.mitigation }}</td></tr>
+            {% endfor %}
+        </table>
+        <p><strong>Plan B :</strong> {{ plan.analyse_risques.plan_b }}</p>
+    </div>
+
+    <div class="section">
+        <h2>8. Projections Financières</h2>
+        <table>
+            <tr><th></th><th>Année 1</th><th>Année 2</th><th>Année 3</th></tr>
+            <tr>
+                <td><strong>Revenus</strong></td>
+                <td>{{ plan.projections_financieres.annee_1.revenus|number_format(0, ',', ' ') }} DT</td>
+                <td>{{ plan.projections_financieres.annee_2.revenus|number_format(0, ',', ' ') }} DT</td>
+                <td>{{ plan.projections_financieres.annee_3.revenus|number_format(0, ',', ' ') }} DT</td>
+            </tr>
+            <tr>
+                <td><strong>Coûts</strong></td>
+                <td>{{ plan.projections_financieres.annee_1.couts|number_format(0, ',', ' ') }} DT</td>
+                <td>{{ plan.projections_financieres.annee_2.couts|number_format(0, ',', ' ') }} DT</td>
+                <td>{{ plan.projections_financieres.annee_3.couts|number_format(0, ',', ' ') }} DT</td>
+            </tr>
+            <tr>
+                <td><strong>Bénéfice</strong></td>
+                <td class="{{ plan.projections_financieres.annee_1.benefice >= 0 ? 'text-success' : 'text-danger' }}">
+                    {{ plan.projections_financieres.annee_1.benefice|number_format(0, ',', ' ') }} DT
+                </td>
+                <td class="{{ plan.projections_financieres.annee_2.benefice >= 0 ? 'text-success' : 'text-danger' }}">
+                    {{ plan.projections_financieres.annee_2.benefice|number_format(0, ',', ' ') }} DT
+                </td>
+                <td class="{{ plan.projections_financieres.annee_3.benefice >= 0 ? 'text-success' : 'text-danger' }}">
+                    {{ plan.projections_financieres.annee_3.benefice|number_format(0, ',', ' ') }} DT
+                </td>
+            </tr>
+        </table>
+        <p><strong>Point d'équilibre :</strong> {{ plan.projections_financieres.point_equilibre }}</p>
+    </div>
+
+    <div class="section">
+        <h2>9. Conclusion</h2>
+        <div class="box box-success">
+            <p>{{ plan.conclusion }}</p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <p>Business Plan généré par Najahni | {{ "now"|date("d/m/Y H:i") }} | Confidentiel</p>
+    </div>
+</body>
+</html>
