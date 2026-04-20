@@ -9,6 +9,11 @@ use Endroid\QrCode\Writer\PngWriter;
 
 class ContractQrCodeService
 {
+    public function __construct(
+        private readonly string $publicBaseUrl = '',
+    ) {
+    }
+
     public function buildResult(InvestmentContract $contract, string $verifyUrl, int $size = 300, int $margin = 10): object
     {
         return (new Builder(
@@ -25,28 +30,35 @@ class ContractQrCodeService
         return $this->buildResult($contract, $verifyUrl, $size, $margin)->getDataUri();
     }
 
-    private function buildPayload(InvestmentContract $contract, string $verifyUrl): string
+    public function resolveVerificationUrl(string $verifyUrl): string
     {
-        if ($this->isPublicVerifyUrl($verifyUrl)) {
+        $normalizedBaseUrl = rtrim(trim($this->publicBaseUrl), '/');
+        if ($normalizedBaseUrl === '') {
             return $verifyUrl;
         }
 
-        $projectTitle = $contract->getOffer()?->getOpportunity()?->getProject()?->getTitre() ?? 'Projet';
-        $amount = $contract->getOffer()?->getProposedAmount();
+        $path = parse_url($verifyUrl, PHP_URL_PATH);
+        if (!is_string($path) || $path === '') {
+            return $normalizedBaseUrl;
+        }
 
-        return implode("\n", array_filter([
-            'Najahni - Verification contrat d\'investissement',
-            'Contrat: #' . $contract->getId(),
-            'Statut: ' . ($contract->isFullySigned() ? 'VALIDE - signe par les deux parties' : 'NON VALIDE'),
-            'Projet: ' . $projectTitle,
-            $amount !== null ? 'Montant: ' . number_format((float) $amount, 0, ',', ' ') . ' DT' : null,
-            'Investisseur: ' . ($contract->getInvestor()?->getFullName() ?? 'N/A'),
-            'Entrepreneur: ' . ($contract->getEntrepreneur()?->getFullName() ?? 'N/A'),
-            'Signature investisseur: ' . ($contract->getInvestorSignedAt()?->format('d/m/Y H:i') ?? 'N/A'),
-            'Signature entrepreneur: ' . ($contract->getEntrepreneurSignedAt()?->format('d/m/Y H:i') ?? 'N/A'),
-            'Empreinte SHA-256: ' . $contract->getTermsDigest(),
-            'Lien web public indisponible sur cette instance locale.',
-        ]));
+        $resolvedUrl = $normalizedBaseUrl . $path;
+        $query = parse_url($verifyUrl, PHP_URL_QUERY);
+        if (is_string($query) && $query !== '') {
+            $resolvedUrl .= '?' . $query;
+        }
+
+        return $resolvedUrl;
+    }
+
+    public function isPublicVerificationUrl(string $verifyUrl): bool
+    {
+        return $this->isPublicVerifyUrl($this->resolveVerificationUrl($verifyUrl));
+    }
+
+    private function buildPayload(InvestmentContract $contract, string $verifyUrl): string
+    {
+        return $this->resolveVerificationUrl($verifyUrl);
     }
 
     private function isPublicVerifyUrl(string $verifyUrl): bool

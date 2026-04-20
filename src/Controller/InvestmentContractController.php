@@ -17,9 +17,6 @@ use App\Service\Investment\InvestmentChatbotService;
 use App\Service\Investment\StripePaymentService;
 use App\Service\EmailService;
 use App\Service\NotificationService;
-use Endroid\QrCode\Builder\Builder;
-use Endroid\QrCode\Encoding\Encoding;
-use Endroid\QrCode\Writer\PngWriter;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 use Doctrine\ORM\EntityManagerInterface;
@@ -43,6 +40,7 @@ class InvestmentContractController extends AbstractController
         InvestmentContractMessageRepository $messageRepository,
         ContractMilestoneRepository $milestoneRepository,
         ContractSignatureService $signatureService,
+        ContractQrCodeService $contractQrCodeService,
     ): Response {
         $user = $this->requireUser();
         $this->assertContractAccess($offer, $user);
@@ -50,6 +48,15 @@ class InvestmentContractController extends AbstractController
         $contract = $this->getOrCreateContract($offer, $em, $signatureService);
         $messages = $messageRepository->findChronological($contract);
         $milestones = $milestoneRepository->findByContract($contract);
+        $verifyUrl = null;
+        $verifyUrlIsPublic = false;
+
+        if ($contract->isFullySigned()) {
+            $verifyUrl = $contractQrCodeService->resolveVerificationUrl(
+                $this->generateUrl('app_invest_contract_verify', ['contractId' => $contract->getId()], UrlGeneratorInterface::ABSOLUTE_URL)
+            );
+            $verifyUrlIsPublic = $contractQrCodeService->isPublicVerificationUrl($verifyUrl);
+        }
 
         // Compute deal temperature
         [$dealTemperature, $dealTemperatureLabel, $lastMessageAt] = $this->computeDealTemperature($contract, $messages);
@@ -71,7 +78,8 @@ class InvestmentContractController extends AbstractController
             'dealTemperatureLabel' => $dealTemperatureLabel,
             'lastMessageAt' => $lastMessageAt,
             'qrCodeUrl' => $contract->isFullySigned() ? $this->generateUrl('app_invest_contract_qr', ['contractId' => $contract->getId()]) : null,
-            'verifyUrl' => $contract->isFullySigned() ? $this->generateUrl('app_invest_contract_verify', ['contractId' => $contract->getId()]) : null,
+            'verifyUrl' => $verifyUrl,
+            'verifyUrlIsPublic' => $verifyUrlIsPublic,
         ]);
     }
 
@@ -1006,7 +1014,9 @@ class InvestmentContractController extends AbstractController
      */
     private function buildQrBase64(InvestmentContract $contract, ContractQrCodeService $contractQrCodeService): string
     {
-        $verifyUrl = $this->generateUrl('app_invest_contract_verify', ['contractId' => $contract->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+        $verifyUrl = $contractQrCodeService->resolveVerificationUrl(
+            $this->generateUrl('app_invest_contract_verify', ['contractId' => $contract->getId()], UrlGeneratorInterface::ABSOLUTE_URL)
+        );
 
         return $contractQrCodeService->buildDataUri($contract, $verifyUrl, 200, 6);
     }

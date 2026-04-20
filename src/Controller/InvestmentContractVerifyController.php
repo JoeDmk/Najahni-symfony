@@ -46,7 +46,9 @@ class InvestmentContractVerifyController extends AbstractController
             throw $this->createAccessDeniedException('Acces refuse.');
         }
 
-        $verifyUrl = $this->generateUrl('app_invest_contract_verify', ['contractId' => $contract->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+        $verifyUrl = $contractQrCodeService->resolveVerificationUrl(
+            $this->generateUrl('app_invest_contract_verify', ['contractId' => $contract->getId()], UrlGeneratorInterface::ABSOLUTE_URL)
+        );
 
         $result = $contractQrCodeService->buildResult($contract, $verifyUrl, 300, 10);
 

@@ -1202,6 +1202,15 @@
                             <span class="text-muted">Empreinte SHA-256 :</span><br>
                             <code>{{ contract.termsDigest }}</code>
                         </div>
+                        <div class="small mb-3" style="background:{{ verifyUrlIsPublic ? '#ecfdf5' : '#fff7ed' }};border:1px solid {{ verifyUrlIsPublic ? '#a7f3d0' : '#fdba74' }};color:{{ verifyUrlIsPublic ? '#166534' : '#9a3412' }};border-radius:.75rem;padding:.75rem .9rem;word-break:break-word">
+                            {% if verifyUrlIsPublic %}
+                                Le QR ouvre directement la page publique de verification ci-dessous :<br>
+                                <span class="fw-semibold">{{ verifyUrl }}</span>
+                            {% else %}
+                                Le QR pointe actuellement vers cette instance locale. Pour un scan fonctionnel depuis un telephone, configurez <code>APP_PUBLIC_URL</code> avec une URL publique ou reseau accessible.<br>
+                                <span class="fw-semibold">{{ verifyUrl }}</span>
+                            {% endif %}
+                        </div>
                         <a href="{{ verifyUrl }}" target="_blank" rel="noopener" class="btn btn-outline-secondary btn-sm">Ouvrir la page de verification</a>
                     </div>
                 </div>
