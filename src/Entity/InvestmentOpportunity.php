@@ -93,7 +93,7 @@ class InvestmentOpportunity
     {
         $total = 0;
         foreach ($this->offers as $offer) {
-            if ($offer->getStatus() === InvestmentOffer::STATUS_ACCEPTED) {
+            if ($offer->isPaid()) {
                 $total += (float) $offer->getProposedAmount();
             }
         }

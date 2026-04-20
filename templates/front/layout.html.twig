@@ -53,6 +53,7 @@
                         <i class="bi bi-person-circle me-1"></i>{{ app.user.firstname }}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="{{ path('app_invest_my_contracts') }}"><i class="bi bi-file-earmark-text me-2"></i>Mes Contrats</a></li>
                         <li><a class="dropdown-item" href="{{ path('app_profile') }}"><i class="bi bi-person me-2"></i>Mon Profil</a></li>
                         <li><hr class="dropdown-divider"></li>
                         <li><a class="dropdown-item text-danger" href="{{ path('app_logout') }}"><i class="bi bi-box-arrow-right me-2"></i>Déconnexion</a></li>

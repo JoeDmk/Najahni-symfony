@@ -1,0 +1,228 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Matching IA - Najahni{% endblock %}
+
+{% block main %}
+{% include 'front/investment/_wayfinder.html.twig' with {pageLabel: 'Matching IA', activeStep: 1} %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2 class="fw-bold mb-0">Matching IA Investisseur</h2>
+    <a href="{{ path('app_invest_opportunities') }}" class="btn btn-outline-primary"><i class="bi bi-arrow-left me-1"></i>Retour</a>
+</div>
+
+<style>
+.flip-card-container { perspective: 1000px; margin-bottom: 1rem; }
+.flip-card-inner {
+    position: relative;
+    width: 100%;
+    min-height: 200px;
+    transition: transform 600ms ease;
+    transform-style: preserve-3d;
+}
+.flip-card-container:hover .flip-card-inner { transform: rotateY(180deg); }
+.flip-card-front, .flip-card-back {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    border-radius: .75rem;
+    overflow: hidden;
+}
+.flip-card-front {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    z-index: 2;
+}
+.flip-card-back {
+    background: linear-gradient(180deg, #f1f5f9 0%, #e2e8f0 100%);
+    border: 1px solid #cbd5e1;
+    transform: rotateY(180deg);
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+}
+.flip-hint {
+    font-size: .72rem;
+    color: #94a3b8;
+    margin-top: auto;
+    animation: flipHintFade 3s ease forwards;
+}
+@keyframes flipHintFade {
+    0%, 80% { opacity: 1; }
+    100% { opacity: 0; }
+}
+</style>
+
+<div class="row g-4">
+    {# Profile Form #}
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm" style="border-radius:1rem">
+            <div class="card-body">
+                <h5 class="fw-semibold mb-3">Mon profil investisseur</h5>
+                <form id="profileForm">
+                    <input type="hidden" name="_token" value="{{ csrf_token('investor_profile') }}">
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Secteurs preferes <span class="text-muted">(separes par des virgules)</span></label>
+                        <input type="text" name="sectors" class="form-control" placeholder="tech, sante, energie" value="{{ profile ? profile.preferredSectors : '' }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Tolerance au risque (1-10)</label>
+                        <input type="range" name="riskTolerance" class="form-range" min="1" max="10" value="{{ profile ? profile.riskTolerance : 5 }}" id="riskRange">
+                        <div class="d-flex justify-content-between small text-muted">
+                            <span>Prudent</span>
+                            <span id="riskRangeVal">{{ profile ? profile.riskTolerance : 5 }}</span>
+                            <span>Agressif</span>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Budget Min (DT)</label>
+                            <input type="number" name="budgetMin" class="form-control" min="0" value="{{ profile ? profile.budgetMin : 0 }}">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small fw-semibold">Budget Max (DT)</label>
+                            <input type="number" name="budgetMax" class="form-control" min="0" value="{{ profile ? profile.budgetMax : 100000 }}">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Horizon (mois)</label>
+                        <input type="number" name="horizonMonths" class="form-control" min="1" max="120" value="{{ profile ? profile.horizonMonths : 12 }}">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-semibold">Description</label>
+                        <textarea name="description" class="form-control" rows="2" placeholder="Objectifs d'investissement...">{{ profile ? profile.description : '' }}</textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-nj w-100" id="saveProfileBtn">
+                        <i class="bi bi-check-lg me-1"></i>Enregistrer et chercher
+                    </button>
+                </form>
+                <div id="profileMsg" class="mt-2 small"></div>
+            </div>
+        </div>
+    </div>
+
+    {# Matching Results #}
+    <div class="col-md-8">
+        <div class="card border-0 shadow-sm" style="border-radius:1rem">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-semibold mb-0">Opportunites recommandees</h5>
+                    <div id="matchSpinner" class="spinner-border spinner-border-sm text-primary d-none" role="status"></div>
+                </div>
+
+                <div id="matchResults">
+                    {% if profile %}
+                        <p class="text-muted">Cliquez sur "Enregistrer et chercher" pour lancer le matching IA.</p>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="bi bi-person-badge fs-1 text-muted"></i>
+                            <p class="text-muted mt-2">Completez votre profil investisseur pour recevoir des recommandations personnalisees.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const riskRange = document.getElementById('riskRange');
+    const riskRangeVal = document.getElementById('riskRangeVal');
+    riskRange.addEventListener('input', () => riskRangeVal.textContent = riskRange.value);
+
+    const profileForm = document.getElementById('profileForm');
+    const matchResults = document.getElementById('matchResults');
+    const matchSpinner = document.getElementById('matchSpinner');
+
+    profileForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('saveProfileBtn');
+        btn.disabled = true;
+
+        fetch('{{ path("app_invest_profile_save") }}', {
+            method: 'POST',
+            body: new URLSearchParams(new FormData(profileForm))
+        })
+        .then(r => r.json())
+        .then(data => {
+            document.getElementById('profileMsg').innerHTML = data.success
+                ? '<span class="text-success">' + data.message + '</span>'
+                : '<span class="text-danger">' + (data.error || 'Erreur') + '</span>';
+            btn.disabled = false;
+
+            if (data.success) loadMatches();
+        })
+        .catch(() => {
+            document.getElementById('profileMsg').innerHTML = '<span class="text-danger">Erreur reseau.</span>';
+            btn.disabled = false;
+        });
+    });
+
+    function loadMatches() {
+        matchSpinner.classList.remove('d-none');
+        matchResults.innerHTML = '';
+
+        fetch('{{ path("app_invest_matching_results") }}')
+            .then(r => r.json())
+            .then(data => {
+                matchSpinner.classList.add('d-none');
+                if (data.error) {
+                    matchResults.innerHTML = '<p class="text-danger">' + data.error + '</p>';
+                    return;
+                }
+                if (!data.matches || data.matches.length === 0) {
+                    matchResults.innerHTML = '<p class="text-muted text-center">Aucune opportunite ouverte ne correspond a vos criteres.</p>';
+                    return;
+                }
+
+                let html = '';
+                data.matches.forEach(function(m) {
+                    const scoreColor = m.compatibilityScore >= 70 ? '#27ae60' : m.compatibilityScore >= 40 ? '#f39c12' : '#e74c3c';
+                    html += '<div class="flip-card-container" style="min-height:200px">'
+                        + '<div class="flip-card-inner">'
+                        + '<div class="flip-card-front text-center">'
+                        + '<div class="fw-bold display-4 mb-2" style="color:' + scoreColor + '">' + m.compatibilityScore + '%</div>'
+                        + '<h6 class="fw-bold mb-1">' + m.projectTitle + '</h6>'
+                        + '<div class="small text-muted">Secteur: ' + m.sector + '</div>'
+                        + '<div class="flip-hint mt-2">Survolez pour voir les details</div>'
+                        + '</div>'
+                        + '<div class="flip-card-back">'
+                        + '<div class="d-flex justify-content-between align-items-start mb-2">'
+                        + '<h6 class="fw-bold mb-0">' + m.projectTitle + '</h6>'
+                        + '<span class="badge rounded-pill" style="background:' + scoreColor + ';color:#fff">' + m.compatibilityScore + '%</span>'
+                        + '</div>'
+                        + '<div class="small text-muted mb-1">Montant: ' + m.targetAmount + ' DT'
+                        + (m.deadline ? ' | Deadline: ' + m.deadline : '') + '</div>'
+                        + '<div class="small mb-3" style="line-height:1.5;color:#334155">' + m.explanation + '</div>'
+                        + '<div class="mt-auto d-flex gap-2">'
+                        + '<a href="' + m.showUrl + '" class="btn btn-sm btn-outline-primary flex-fill">Voir</a>'
+                        + '<a href="' + m.riskUrl + '" class="btn btn-sm btn-outline-secondary flex-fill">Analyse risque</a>'
+                        + '</div>'
+                        + '</div>'
+                        + '</div></div>';
+                });
+                matchResults.innerHTML = html;
+            })
+            .catch(() => {
+                matchSpinner.classList.add('d-none');
+                matchResults.innerHTML = '<p class="text-danger">Erreur de chargement.</p>';
+            });
+    }
+
+    {% if profile %}
+    // Auto-load matches if profile exists
+    loadMatches();
+    {% endif %}
+});
+</script>
+{% endblock %}

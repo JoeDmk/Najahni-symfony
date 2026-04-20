@@ -1,0 +1,158 @@
+{% extends 'front/layout.html.twig' %}
+
+{% block title %}Boite d'offres entrepreneur - Najahni{% endblock %}
+
+{% block main %}
+{% include 'front/investment/_wayfinder.html.twig' with {pageLabel: 'Boite d\'offres', activeStep: 2} %}
+
+<style>
+.inbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1rem;
+}
+
+.inbox-card {
+    border: 0;
+    border-radius: 1.1rem;
+    overflow: hidden;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+}
+
+.inbox-card-band {
+    height: 6px;
+    background: linear-gradient(90deg, #f59e0b, #f97316);
+}
+
+.inbox-kpi {
+    border: 0;
+    border-radius: 1rem;
+    padding: 1rem 1.1rem;
+    background: linear-gradient(135deg, rgba(249, 115, 22, .08), rgba(245, 158, 11, .12));
+}
+
+.inbox-empty {
+    border: 1px dashed #cbd5e1;
+    border-radius: 1.1rem;
+    padding: 3rem 1.5rem;
+    text-align: center;
+    background: #f8fafc;
+}
+
+.inbox-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    border-radius: 999px;
+    padding: .45rem .8rem;
+    background: #fff7ed;
+    color: #9a3412;
+    font-size: .78rem;
+    font-weight: 700;
+}
+</style>
+
+<div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-inbox me-2"></i>Boite d'offres entrepreneur</h2>
+        <div class="text-muted">Consultez toutes les propositions d'investissement en attente sur vos projets, puis acceptez, refusez ou ouvrez le detail du projet.</div>
+    </div>
+    <div class="d-flex gap-2 flex-wrap">
+        <a href="{{ path('app_invest_opportunities') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Opportunites</a>
+        <a href="{{ path('app_invest_create_opportunity') }}" class="btn btn-nj"><i class="bi bi-plus-lg me-1"></i>Creer une opportunite</a>
+    </div>
+</div>
+
+{% for message in app.flashes('success') %}
+    <div class="alert alert-success alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endfor %}
+{% for message in app.flashes('danger') %}
+    <div class="alert alert-danger alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
+{% endfor %}
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="inbox-kpi h-100">
+            <div class="small text-muted">Offres en attente</div>
+            <div class="display-6 fw-bold">{{ pendingCount }}</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="inbox-kpi h-100">
+            <div class="small text-muted">Action requise</div>
+            <div class="display-6 fw-bold">{{ pendingCount > 0 ? 'Oui' : '0' }}</div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="inbox-kpi h-100">
+            <div class="small text-muted">Profils investisseur consultables</div>
+            <div class="display-6 fw-bold">{{ pendingCount }}</div>
+        </div>
+    </div>
+</div>
+
+{% if offers|length > 0 %}
+<div class="inbox-grid">
+    {% for offer in offers %}
+        <div class="inbox-card">
+            <div class="inbox-card-band"></div>
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-3">
+                    <div>
+                        <div class="small text-muted mb-1">Projet</div>
+                        <h5 class="fw-bold mb-1">{{ offer.opportunity.project ? offer.opportunity.project.titre : 'Projet' }}</h5>
+                        <div class="text-muted small">Recue le {{ offer.createdAt|date('d/m/Y H:i') }}</div>
+                    </div>
+                    <span class="inbox-pill"><i class="bi bi-hourglass-split"></i>{{ offer.status }}</span>
+                </div>
+
+                <div class="row g-2 small mb-3">
+                    <div class="col-6">
+                        <div class="text-muted">Investisseur</div>
+                        <div class="fw-semibold">{{ offer.investor.fullName }}</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted">Montant propose</div>
+                        <div class="fw-semibold">{{ offer.proposedAmount|number_format(0, ',', ' ') }} DT</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted">Projet</div>
+                        <div class="fw-semibold">{{ offer.opportunity.project ? offer.opportunity.project.titre : 'N/A' }}</div>
+                    </div>
+                    <div class="col-6">
+                        <div class="text-muted">Financement cible</div>
+                        <div class="fw-semibold">{{ offer.opportunity.targetAmount|number_format(0, ',', ' ') }} DT</div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2 flex-wrap mb-3">
+                    <a href="{{ path('app_user_profile', {id: offer.investor.id}) }}" class="btn btn-outline-secondary flex-fill">Profil investisseur</a>
+                    <a href="{{ path('app_invest_opportunity_show', {id: offer.opportunity.id}) }}" class="btn btn-outline-primary flex-fill">Voir le detail</a>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <form method="post" action="{{ path('app_invest_offer_accept_front', {id: offer.id}) }}" class="flex-fill">
+                        <input type="hidden" name="_token" value="{{ csrf_token('offer_action_' ~ offer.id) }}">
+                        <input type="hidden" name="_redirect_route" value="app_invest_entrepreneur_inbox">
+                        <button class="btn btn-success w-100"><i class="bi bi-check-lg me-1"></i>Accepter</button>
+                    </form>
+                    <form method="post" action="{{ path('app_invest_offer_reject_front', {id: offer.id}) }}" class="flex-fill">
+                        <input type="hidden" name="_token" value="{{ csrf_token('offer_action_' ~ offer.id) }}">
+                        <input type="hidden" name="_redirect_route" value="app_invest_entrepreneur_inbox">
+                        <button class="btn btn-outline-danger w-100"><i class="bi bi-x-lg me-1"></i>Refuser</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="inbox-empty">
+    <div class="mb-3"><i class="bi bi-inbox" style="font-size:3rem;color:#94a3b8"></i></div>
+    <h4 class="fw-bold mb-2">Aucune offre en attente</h4>
+    <p class="text-muted mb-3">Les nouvelles propositions d'investissement apparaitront ici des qu'un investisseur soumet une offre sur l'un de vos projets.</p>
+    <a href="{{ path('app_invest_opportunities') }}" class="btn btn-nj">Revenir aux opportunites</a>
+</div>
+{% endif %}
+{% endblock %}

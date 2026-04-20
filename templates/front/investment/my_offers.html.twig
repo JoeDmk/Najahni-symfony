@@ -3,9 +3,13 @@
 {% block title %}Mes Offres - Najahni{% endblock %}
 
 {% block main %}
+{% include 'front/investment/_wayfinder.html.twig' with {pageLabel: 'Mes offres', activeStep: 2} %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="fw-bold mb-0"><i class="bi bi-list-check me-2"></i>Mes Offres d'investissement</h2>
-    <a href="{{ path('app_invest_opportunities') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Opportunités</a>
+    <div class="d-flex gap-2">
+        <a href="{{ path('app_invest_portfolio') }}" class="btn btn-outline-success"><i class="bi bi-briefcase me-1"></i>Portfolio</a>
+        <a href="{{ path('app_invest_opportunities') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Opportunités</a>
+    </div>
 </div>
 
 {% for message in app.flashes('success') %}
@@ -15,37 +19,811 @@
     <div class="alert alert-danger alert-dismissible fade show">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
 {% endfor %}
 
-{% if offers|length > 0 %}
-<p class="text-muted mb-3">{{ offers|length }} offre{{ offers|length > 1 ? 's' : '' }} soumise{{ offers|length > 1 ? 's' : '' }}</p>
-<div class="card border-0 shadow-sm" style="border-radius:1rem">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-nj mb-0">
-                <thead>
-                    <tr><th>Projet</th><th>Montant</th><th>Statut</th><th>Date</th><th>Objectif</th><th></th></tr>
-                </thead>
-                <tbody>
-                    {% for offer in offers %}
-                    <tr>
-                        <td class="fw-semibold">{{ offer.opportunity.project ? offer.opportunity.project.titre : 'N/A' }}</td>
-                        <td>{{ offer.proposedAmount|number_format(0, ',', ' ') }} DT</td>
-                        <td><span class="badge bg-{{ offer.status == 'ACCEPTED' ? 'success' : (offer.status == 'REJECTED' ? 'danger' : 'warning text-dark') }}">{{ offer.status }}</span></td>
-                        <td class="text-muted small">{{ offer.createdAt|date('d/m/Y H:i') }}</td>
-                        <td>{{ offer.opportunity.targetAmount|number_format(0, ',', ' ') }} DT</td>
-                        <td><a href="{{ path('app_invest_opportunity_show', {id: offer.opportunity.id}) }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a></td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+{% if nudge is defined %}
+{% set nudgeColors = {urgent: {bg: '#fffbeb', border: '#f59e0b', text: '#92400e'}, warning: {bg: '#fefce8', border: '#facc15', text: '#854d0e'}, info: {bg: '#eff6ff', border: '#3b82f6', text: '#1e40af'}, success: {bg: '#f0fdf4', border: '#22c55e', text: '#15803d'}} %}
+{% set nc = nudgeColors[nudge.type]|default(nudgeColors.info) %}
+<div class="mb-3 d-flex align-items-center gap-3 p-3 rounded" style="background:{{ nc.bg }};border:1px solid {{ nc.border }};border-left:4px solid {{ nc.border }}{% if nudge.type == 'urgent' %};animation:nudgePulse 2s ease-in-out infinite{% endif %}">
+    <div style="flex:1;font-size:.88rem;color:{{ nc.text }};line-height:1.5">{{ nudge.message }}</div>
+    {% if nudge.link %}<a href="{{ nudge.link }}" class="btn btn-sm" style="background:{{ nc.border }};color:#fff;white-space:nowrap">Action &rarr;</a>{% endif %}
+</div>
+<style>@keyframes nudgePulse { 0%,100%{ border-left-color: {{ nc.border }}; } 50%{ border-left-color: transparent; } }</style>
+{% endif %}
+
+{% set totalOffers = offers|length %}
+{% set pendingOffers = offers|filter(o => o.status == 'PENDING')|length %}
+{% set acceptedOffers = offers|filter(o => o.status == 'ACCEPTED')|length %}
+{% set signedContracts = offers|filter(o => o.contract and o.contract.fullySigned)|length %}
+
+<style>
+.offer-shell {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+}
+
+.offer-card {
+    position: relative;
+    overflow: hidden;
+    border: 0;
+    border-radius: 1.1rem;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.08);
+    transition: transform .18s ease, box-shadow .18s ease;
+}
+
+.offer-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 24px 55px rgba(15, 23, 42, 0.14);
+}
+
+.offer-stripe {
+    height: 5px;
+    width: 100%;
+}
+
+.offer-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    border-radius: 999px;
+    padding: .45rem .8rem;
+    font-size: .78rem;
+    font-weight: 700;
+}
+
+.offer-stat-card {
+    border: 0;
+    border-radius: 1rem;
+    padding: 1rem 1.1rem;
+    background: linear-gradient(135deg, rgba(67,97,238,.08), rgba(72,149,239,.14));
+}
+
+.payment-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.5);
+    backdrop-filter: blur(5px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
+    z-index: 1080;
+}
+
+.payment-backdrop.show {
+    display: flex;
+}
+
+.payment-modal {
+    width: min(760px, 100%);
+    border-radius: 1.35rem;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 25px 80px rgba(15, 23, 42, 0.28);
+}
+
+.payment-modal-head {
+    padding: 1.5rem 1.6rem;
+    background: linear-gradient(135deg, #0f172a, #1e3a8a 60%, #2563eb);
+    color: #fff;
+}
+
+.payment-modal-body {
+    padding: 1.4rem 1.6rem 1.6rem;
+    background: linear-gradient(180deg, #ffffff, #f8fafc);
+    max-height: min(78vh, 720px);
+    overflow-y: auto;
+}
+
+.payment-glass {
+    border: 1px solid #dbe6f5;
+    border-radius: 1rem;
+    background: rgba(255,255,255,.85);
+    padding: 1rem 1.1rem;
+}
+
+.payment-card-visual {
+    background: linear-gradient(135deg, #0f172a, #334155 55%, #475569);
+    color: #fff;
+    border-radius: 1.15rem;
+    padding: 1.2rem;
+    min-height: 210px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+}
+
+.payment-card-number {
+    font-size: 1.2rem;
+    letter-spacing: .18rem;
+    font-weight: 700;
+}
+
+.payment-note {
+    border-radius: .85rem;
+    padding: .85rem 1rem;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e3a8a;
+    font-size: .92rem;
+}
+
+.payment-feedback-success,
+.payment-feedback-error {
+    border-radius: .95rem;
+    padding: 1rem 1.1rem;
+}
+
+.payment-feedback-success {
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
+}
+
+.payment-feedback-error {
+    background: #fff7ed;
+    border: 1px solid #fdba74;
+    color: #9a3412;
+}
+</style>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="offer-stat-card h-100"
+            data-dates='{{ offers|map(o => o.createdAt|date('Y-m-d'))|json_encode|raw }}'>
+            <div class="small text-muted">Total offres</div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="display-6 fw-bold counter-up" data-target="{{ totalOffers }}">0</div>
+                <canvas class="sparkline-canvas" width="80" height="30" data-type="count"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="offer-stat-card h-100">
+            <div class="small text-muted">En attente</div>
+            <div class="display-6 fw-bold counter-up" data-target="{{ pendingOffers }}">0</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="offer-stat-card h-100">
+            <div class="small text-muted">Acceptees</div>
+            <div class="display-6 fw-bold counter-up" data-target="{{ acceptedOffers }}">0</div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="offer-stat-card h-100"
+            data-amounts='{{ offers|map(o => {d: o.createdAt|date('Y-m-d'), a: o.proposedAmount})|json_encode|raw }}'>
+            <div class="small text-muted">Contrats signes</div>
+            <div class="d-flex align-items-center gap-2">
+                <div class="display-6 fw-bold counter-up" data-target="{{ signedContracts }}">0</div>
+                <canvas class="sparkline-canvas" width="80" height="30" data-type="amount"></canvas>
+            </div>
         </div>
     </div>
 </div>
-{% else %}
-<div class="text-center py-5">
-    <div class="text-center"><i class="bi bi-bar-chart-line" style="font-size:4rem;color:var(--nj-primary)"></i></div>
-    <h4 class="fw-bold mt-3">Aucune offre soumise</h4>
-    <p class="text-muted">Parcourez les opportunités pour investir</p>
-    <a href="{{ path('app_invest_opportunities') }}" class="btn btn-nj">Explorer les opportunités</a>
+
+{# Search & Filter bar #}
+<div class="card border-0 shadow-sm mb-4" style="border-radius:1rem">
+    <div class="card-body p-3">
+        <div class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <label class="form-label fw-semibold small mb-1">Rechercher</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+                    <input type="text" id="myOffersSearch" class="form-control" placeholder="Nom du projet...">
+                </div>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold small mb-1">Statut</label>
+                <select id="myOffersStatus" class="form-select">
+                    <option value="">Tous les statuts</option>
+                    <option value="PENDING">En attente</option>
+                    <option value="ACCEPTED">Acceptées</option>
+                    <option value="REJECTED">Rejetées</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-center">
+                <div id="myOffersSpinner" class="spinner-border spinner-border-sm text-primary d-none" role="status"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% set _from = pagination.totalItemCount > 0 ? ((pagination.currentPageNumber - 1) * 6 + 1) : 0 %}
+{% set _to = pagination.totalItemCount < (_from + 6 - 1) ? pagination.totalItemCount : (_from + 6 - 1) %}
+<p class="text-muted mb-3" id="myOffersCount">{% if pagination.totalItemCount > 0 %}Affichage de {{ _from }} à {{ _to }} sur {{ pagination.totalItemCount }} offre{{ pagination.totalItemCount > 1 ? 's' : '' }} active{{ pagination.totalItemCount > 1 ? 's' : '' }}{% else %}0 offre active{% endif %}</p>
+
+<div id="myOffersTableWrap">
+{% if offers|length > 0 %}
+<div class="offer-shell" id="myOffersBody">
+    {% for offer in offers %}
+    {% set stripeColor = offer.status == 'ACCEPTED' ? '#16a34a' : (offer.status == 'REJECTED' ? '#dc2626' : '#f59e0b') %}
+    {% set statusBg = offer.status == 'ACCEPTED' ? '#dcfce7' : (offer.status == 'REJECTED' ? '#fee2e2' : '#fef3c7') %}
+    {% set statusColor = offer.status == 'ACCEPTED' ? '#166534' : (offer.status == 'REJECTED' ? '#991b1b' : '#92400e') %}
+    <div class="offer-card">
+        <div class="offer-stripe" style="background:{{ stripeColor }}"></div>
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <div class="small text-muted mb-1">Projet</div>
+                    <h5 class="fw-bold mb-0">{{ offer.opportunity.project ? offer.opportunity.project.titre : 'N/A' }}</h5>
+                </div>
+                <span class="offer-status-pill" style="background:{{ statusBg }};color:{{ statusColor }};">{{ offer.status }}</span>
+            </div>
+
+            <div class="mb-3">
+                <div class="small text-muted">Montant propose</div>
+                <div class="display-6 fw-bold">{{ offer.proposedAmount|number_format(0, ',', ' ') }} <span class="fs-6">DT</span></div>
+            </div>
+
+            <div class="row g-2 small mb-3">
+                <div class="col-6">
+                    <div class="text-muted">Objectif</div>
+                    <div class="fw-semibold">{{ offer.opportunity.targetAmount|number_format(0, ',', ' ') }} DT</div>
+                </div>
+                <div class="col-6">
+                    <div class="text-muted">Soumise le</div>
+                    <div class="fw-semibold">{{ offer.createdAt|date('d/m/Y H:i') }}</div>
+                </div>
+            </div>
+
+            {% if offer.paid %}
+            <div class="payment-feedback-success mb-3">
+                <div class="fw-bold mb-1">Paiement confirme</div>
+                <div class="small">Transaction {{ offer.paymentIntentId ?? 'N/A' }}</div>
+                <div class="small">Reglee le {{ offer.paidAt ? offer.paidAt|date('d/m/Y H:i') : 'N/A' }}</div>
+            </div>
+            {% elseif offer.status == 'ACCEPTED' %}
+            <div class="payment-note mb-3">
+                {% if offer.contract and offer.contract.fullySigned %}
+                    Contrat signe. Vous pouvez maintenant finaliser le paiement Stripe en mode test.
+                {% else %}
+                    Cette offre a ete acceptee. Negociez les termes et signez d'abord le contrat numerique.
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <div class="d-flex gap-2">
+                <a href="{{ path('app_invest_opportunity_show', {id: offer.opportunity.id}) }}" class="btn btn-outline-primary flex-fill">Voir l'offre</a>
+                {% if offer.status == 'ACCEPTED' %}
+                <a href="{{ path('app_invest_contract_show', {id: offer.id}) }}" class="btn btn-outline-secondary flex-fill">{{ offer.contract and offer.contract.fullySigned ? 'Voir le contrat' : 'Negocier le contrat' }}</a>
+                {% endif %}
+                {% if offer.status == 'ACCEPTED' and not offer.paid %}
+                    {% if offer.contract and offer.contract.fullySigned %}
+                    <button
+                        type="button"
+                        class="btn btn-nj flex-fill js-open-payment"
+                        data-offer-id="{{ offer.id }}"
+                        data-project-title="{{ offer.opportunity.project ? offer.opportunity.project.titre|e('html_attr') : 'N/A' }}"
+                        data-amount="{{ offer.proposedAmount|number_format(0, ',', ' ') }}"
+                        data-pay-url="{{ path('app_invest_offer_pay', {id: offer.id}) }}"
+                        data-token="{{ csrf_token('pay_offer_' ~ offer.id) }}"
+                    >Payer via Stripe</button>
+                    {% elseif offer.contract %}
+                    <button type="button" class="btn btn-secondary flex-fill" disabled>
+                        <i class="bi bi-lock me-1"></i>En attente des signatures
+                    </button>
+                    {% else %}
+                    <span class="btn btn-light flex-fill text-muted" disabled>Contrat non cree</span>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
 </div>
 {% endif %}
+</div>
+
+{% if pagination.pageCount > 1 %}
+<nav aria-label="Pagination des offres" class="mt-4" id="myOffersPagination">
+    <ul class="pagination justify-content-center">
+        <li class="page-item {{ pagination.currentPageNumber <= 1 ? 'disabled' : '' }}">
+            <a class="page-link" href="{{ path('app_invest_my_offers', {page: pagination.currentPageNumber - 1}) }}">Précédent</a>
+        </li>
+        {% for p in 1..pagination.pageCount %}
+        <li class="page-item {{ p == pagination.currentPageNumber ? 'active' : '' }}">
+            <a class="page-link" href="{{ path('app_invest_my_offers', {page: p}) }}">{{ p }}</a>
+        </li>
+        {% endfor %}
+        <li class="page-item {{ pagination.currentPageNumber >= pagination.pageCount ? 'disabled' : '' }}">
+            <a class="page-link" href="{{ path('app_invest_my_offers', {page: pagination.currentPageNumber + 1}) }}">Suivant</a>
+        </li>
+    </ul>
+</nav>
+{% endif %}
+
+<div class="text-center py-5 d-none" id="myOffersEmpty">
+    <div class="text-center"><i class="bi bi-bar-chart-line" style="font-size:4rem;color:var(--nj-primary)"></i></div>
+    <h4 class="fw-bold mt-3">Aucune offre active</h4>
+    <p class="text-muted">Les offres payees sont deplacees dans votre portfolio.</p>
+    <a href="{{ path('app_invest_opportunities') }}" class="btn btn-nj">Explorer les opportunités</a>
+</div>
+
+<div class="payment-backdrop" id="paymentBackdrop" aria-hidden="true">
+    <div class="payment-modal">
+        <div class="payment-modal-head d-flex justify-content-between align-items-start gap-3">
+            <div>
+                <div class="small text-uppercase opacity-75 mb-2">Paiement securise</div>
+                <h4 class="fw-bold mb-1" id="paymentProjectTitle">Projet</h4>
+                <div class="opacity-75">Finalisez votre investissement avec Stripe en mode test.</div>
+            </div>
+            <button type="button" class="btn btn-sm btn-light" id="paymentCloseBtn">Fermer</button>
+        </div>
+        <div class="payment-modal-body">
+            <div class="row g-4 align-items-stretch">
+                <div class="col-lg-5">
+                    <div class="payment-card-visual h-100">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="small text-uppercase opacity-75">Najahni Stripe Test</span>
+                            <span class="fw-bold">VISA</span>
+                        </div>
+                        <div>
+                            <div class="small opacity-75 mb-2">Numero de carte</div>
+                            <div class="payment-card-number" id="visualCardNumber">4242 4242 4242 4242</div>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-end">
+                            <div>
+                                <div class="small opacity-75">Titulaire</div>
+                                <div class="fw-semibold" id="visualCardHolder">INVESTOR TEST</div>
+                            </div>
+                            <div>
+                                <div class="small opacity-75">Expiration</div>
+                                <div class="fw-semibold" id="visualCardExpiry">12/34</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="payment-glass mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted">Montant de l'offre</span>
+                            <strong id="paymentAmount">0 DT</strong>
+                        </div>
+                        <div class="small text-muted">Le paiement est confirme cote serveur en mode test Stripe, comme dans le projet pidev.</div>
+                    </div>
+
+                    <form id="paymentForm" novalidate>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Titulaire de la carte</label>
+                            <input type="text" class="form-control form-control-lg" id="cardHolderInput" placeholder="Nom complet" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">Numero de carte</label>
+                            <input type="text" class="form-control form-control-lg" id="cardNumberInput" placeholder="4242 4242 4242 4242" maxlength="19" required>
+                        </div>
+                        <div class="row g-3 mb-3">
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">Expiration</label>
+                                <input type="text" class="form-control form-control-lg" id="cardExpiryInput" placeholder="MM/YY" maxlength="5" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label fw-semibold">CVV</label>
+                                <input type="text" class="form-control form-control-lg" id="cardCvvInput" placeholder="123" maxlength="4" required>
+                            </div>
+                        </div>
+                        <div class="payment-note mb-3">
+                            Carte test recommandee: <strong>4242 4242 4242 4242</strong>. Aucune donnee sensible n'est stockee dans l'application.
+                        </div>
+                        <div id="paymentFeedback" class="d-none mb-3"></div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline-secondary flex-fill" id="paymentCancelBtn">Annuler</button>
+                            <button type="submit" class="btn btn-nj flex-fill" id="paymentSubmitBtn">Confirmer le paiement</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+(function() {
+    var searchInput = document.getElementById('myOffersSearch');
+    var statusSelect = document.getElementById('myOffersStatus');
+    var tableWrap = document.getElementById('myOffersTableWrap');
+    var countEl = document.getElementById('myOffersCount');
+    var emptyEl = document.getElementById('myOffersEmpty');
+    var spinner = document.getElementById('myOffersSpinner');
+    var paymentBackdrop = document.getElementById('paymentBackdrop');
+    var paymentForm = document.getElementById('paymentForm');
+    var paymentCloseBtn = document.getElementById('paymentCloseBtn');
+    var paymentCancelBtn = document.getElementById('paymentCancelBtn');
+    var paymentFeedback = document.getElementById('paymentFeedback');
+    var paymentSubmitBtn = document.getElementById('paymentSubmitBtn');
+    var paymentProjectTitle = document.getElementById('paymentProjectTitle');
+    var paymentAmount = document.getElementById('paymentAmount');
+    var cardHolderInput = document.getElementById('cardHolderInput');
+    var cardNumberInput = document.getElementById('cardNumberInput');
+    var cardExpiryInput = document.getElementById('cardExpiryInput');
+    var cardCvvInput = document.getElementById('cardCvvInput');
+    var visualCardNumber = document.getElementById('visualCardNumber');
+    var visualCardHolder = document.getElementById('visualCardHolder');
+    var visualCardExpiry = document.getElementById('visualCardExpiry');
+    var timer = null;
+    var ajaxUrl = '{{ path("app_invest_my_offers_ajax") }}';
+    var currentPayment = null;
+    var myOffersPaginationNav = document.getElementById('myOffersPagination');
+    var currentPage = 1;
+
+    function offerStatusMeta(s) {
+        if (s === 'ACCEPTED') return { stripe: '#16a34a', bg: '#dcfce7', color: '#166534' };
+        if (s === 'REJECTED') return { stripe: '#dc2626', bg: '#fee2e2', color: '#991b1b' };
+        return { stripe: '#f59e0b', bg: '#fef3c7', color: '#92400e' };
+    }
+
+    function escapeHtml(text) {
+        return String(text == null ? '' : text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function renderOfferCard(o) {
+        var meta = offerStatusMeta(o.status);
+        var paymentBlock = '';
+        if (o.paid) {
+            paymentBlock = '<div class="payment-feedback-success mb-3">'
+                + '<div class="fw-bold mb-1">Paiement confirme</div>'
+                + '<div class="small">Transaction ' + escapeHtml(o.paymentIntentId || 'N/A') + '</div>'
+                + '<div class="small">Reglee le ' + escapeHtml(o.paidAt || 'N/A') + '</div>'
+                + '</div>';
+        } else if (o.status === 'ACCEPTED') {
+            paymentBlock = '<div class="payment-note mb-3">'
+                + (o.contractSigned
+                    ? 'Contrat signe. Vous pouvez maintenant finaliser le paiement Stripe en mode test.'
+                    : 'Cette offre a ete acceptee. Negociez les termes et signez d\'abord le contrat numerique.')
+                + '</div>';
+        }
+
+        var payBtn = '';
+        if (o.canPay) {
+            payBtn = '<button type="button" class="btn btn-nj flex-fill js-open-payment"'
+                + ' data-offer-id="' + o.id + '"'
+                + ' data-project-title="' + escapeHtml(o.projectTitle) + '"'
+                + ' data-amount="' + escapeHtml(o.proposedAmount) + '"'
+                + ' data-pay-url="' + escapeHtml(o.payUrl) + '"'
+                + ' data-token="' + escapeHtml(o.payToken || '') + '"'
+                + '>Payer via Stripe</button>';
+        } else if (o.status === 'ACCEPTED' && !o.paid) {
+            if (o.contractExists && !o.contractSigned) {
+                payBtn = '<button type="button" class="btn btn-secondary flex-fill" disabled>'
+                    + '<i class="bi bi-lock me-1"></i>En attente des signatures</button>';
+            } else if (!o.contractExists) {
+                payBtn = '<span class="btn btn-light flex-fill text-muted" disabled>Contrat non cree</span>';
+            }
+        }
+
+            var contractBtn = '';
+            if (o.status === 'ACCEPTED') {
+                contractBtn = '<a href="' + escapeHtml(o.contractUrl) + '" class="btn btn-outline-secondary flex-fill">'
+                + (o.contractSigned ? 'Voir le contrat' : 'Negocier le contrat')
+                + '</a>';
+            }
+
+        return '<div class="offer-card">'
+            + '<div class="offer-stripe" style="background:' + meta.stripe + '"></div>'
+            + '<div class="card-body p-4">'
+            + '<div class="d-flex justify-content-between align-items-start mb-3">'
+            + '<div><div class="small text-muted mb-1">Projet</div><h5 class="fw-bold mb-0">' + escapeHtml(o.projectTitle) + '</h5></div>'
+            + '<span class="offer-status-pill" style="background:' + meta.bg + ';color:' + meta.color + ';">' + escapeHtml(o.status) + '</span>'
+            + '</div>'
+            + '<div class="mb-3"><div class="small text-muted">Montant propose</div><div class="display-6 fw-bold">' + escapeHtml(o.proposedAmount) + ' <span class="fs-6">DT</span></div></div>'
+            + '<div class="row g-2 small mb-3">'
+            + '<div class="col-6"><div class="text-muted">Objectif</div><div class="fw-semibold">' + escapeHtml(o.targetAmount) + ' DT</div></div>'
+            + '<div class="col-6"><div class="text-muted">Soumise le</div><div class="fw-semibold">' + escapeHtml(o.createdAt) + '</div></div>'
+            + '</div>'
+            + paymentBlock
+            + '<div class="d-flex gap-2">'
+            + '<a href="' + escapeHtml(o.showUrl) + '" class="btn btn-outline-primary flex-fill">Voir l\'offre</a>'
+                + contractBtn
+            + payBtn
+            + '</div></div></div>';
+    }
+
+    function bindPaymentButtons() {
+        document.querySelectorAll('.js-open-payment').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                currentPayment = {
+                    offerId: this.getAttribute('data-offer-id'),
+                    projectTitle: this.getAttribute('data-project-title'),
+                    amount: this.getAttribute('data-amount'),
+                    payUrl: this.getAttribute('data-pay-url'),
+                    token: this.getAttribute('data-token')
+                };
+                paymentProjectTitle.textContent = currentPayment.projectTitle;
+                paymentAmount.textContent = currentPayment.amount + ' DT';
+                paymentFeedback.className = 'd-none mb-3';
+                paymentFeedback.innerHTML = '';
+                paymentForm.reset();
+                visualCardNumber.textContent = '4242 4242 4242 4242';
+                visualCardHolder.textContent = 'INVESTOR TEST';
+                visualCardExpiry.textContent = '12/34';
+                paymentBackdrop.classList.add('show');
+                cardHolderInput.focus();
+            });
+        });
+    }
+
+    function closePaymentModal() {
+        paymentBackdrop.classList.remove('show');
+        currentPayment = null;
+        paymentSubmitBtn.disabled = false;
+    }
+
+    function setPaymentFeedback(type, message, details) {
+        paymentFeedback.className = (type === 'success' ? 'payment-feedback-success' : 'payment-feedback-error') + ' mb-3';
+        paymentFeedback.innerHTML = '<div class="fw-bold mb-1">' + message + '</div>' + (details ? '<div class="small mt-1">' + details + '</div>' : '');
+    }
+
+    function validatePaymentForm() {
+        var holder = cardHolderInput.value.trim();
+        var number = cardNumberInput.value.replace(/\s+/g, '');
+        var expiry = cardExpiryInput.value.trim();
+        var cvv = cardCvvInput.value.trim();
+
+        if (holder.length < 3) return 'Le nom du titulaire est incomplet.';
+        if (!/^\d{16}$/.test(number)) return 'Le numero de carte doit contenir 16 chiffres.';
+        if (!/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiry)) return 'La date d\'expiration doit etre au format MM/YY.';
+        if (!/^\d{3,4}$/.test(cvv)) return 'Le CVV doit contenir 3 ou 4 chiffres.';
+        return null;
+    }
+
+    function doSearch(page) {
+        if (typeof page === 'number') currentPage = page;
+        var q = searchInput.value.trim();
+        var status = statusSelect.value;
+        spinner.classList.remove('d-none');
+
+        fetch(ajaxUrl + '?q=' + encodeURIComponent(q) + '&status=' + encodeURIComponent(status) + '&page=' + currentPage, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            spinner.classList.add('d-none');
+            var offers = data.offers;
+            var total = data.count;
+            var perPage = data.perPage || 6;
+            var pg = data.page || 1;
+            var totalPages = data.totalPages || 1;
+            var from = total > 0 ? (pg - 1) * perPage + 1 : 0;
+            var to = Math.min(from + perPage - 1, total);
+            countEl.textContent = total > 0
+                ? 'Affichage de ' + from + ' à ' + to + ' sur ' + total + ' offre' + (total > 1 ? 's' : '') + ' active' + (total > 1 ? 's' : '')
+                : '0 offre active';
+
+            if (offers.length === 0) {
+                tableWrap.innerHTML = '';
+                if (myOffersPaginationNav) myOffersPaginationNav.innerHTML = '';
+                emptyEl.classList.remove('d-none');
+                return;
+            }
+
+            emptyEl.classList.add('d-none');
+            tableWrap.innerHTML = '<div class="offer-shell">' + offers.map(renderOfferCard).join('') + '</div>';
+            bindPaymentButtons();
+
+            // Render pagination
+            if (totalPages > 1) {
+                var pHtml = '<ul class="pagination justify-content-center">';
+                pHtml += '<li class="page-item ' + (pg <= 1 ? 'disabled' : '') + '"><a class="page-link" href="#" data-page="' + (pg - 1) + '">Précédent</a></li>';
+                for (var i = 1; i <= totalPages; i++) {
+                    pHtml += '<li class="page-item ' + (i === pg ? 'active' : '') + '"><a class="page-link" href="#" data-page="' + i + '">' + i + '</a></li>';
+                }
+                pHtml += '<li class="page-item ' + (pg >= totalPages ? 'disabled' : '') + '"><a class="page-link" href="#" data-page="' + (pg + 1) + '">Suivant</a></li>';
+                pHtml += '</ul>';
+                if (!myOffersPaginationNav) {
+                    myOffersPaginationNav = document.createElement('nav');
+                    myOffersPaginationNav.id = 'myOffersPagination';
+                    myOffersPaginationNav.className = 'mt-4';
+                    tableWrap.parentNode.insertBefore(myOffersPaginationNav, tableWrap.nextSibling);
+                }
+                myOffersPaginationNav.innerHTML = pHtml;
+                myOffersPaginationNav.querySelectorAll('a[data-page]').forEach(function(a) {
+                    a.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        if (!this.closest('.page-item').classList.contains('disabled') && !this.closest('.page-item').classList.contains('active')) {
+                            doSearch(parseInt(this.getAttribute('data-page')));
+                        }
+                    });
+                });
+            } else if (myOffersPaginationNav) {
+                myOffersPaginationNav.innerHTML = '';
+            }
+        })
+        .catch(function() { spinner.classList.add('d-none'); });
+    }
+
+    cardNumberInput.addEventListener('input', function() {
+        var digits = this.value.replace(/\D/g, '').slice(0, 16);
+        this.value = digits.replace(/(.{4})/g, '$1 ').trim();
+        visualCardNumber.textContent = this.value || '4242 4242 4242 4242';
+    });
+
+    cardHolderInput.addEventListener('input', function() {
+        visualCardHolder.textContent = this.value.trim().toUpperCase() || 'INVESTOR TEST';
+    });
+
+    cardExpiryInput.addEventListener('input', function() {
+        var digits = this.value.replace(/\D/g, '').slice(0, 4);
+        if (digits.length > 2) {
+            digits = digits.slice(0, 2) + '/' + digits.slice(2);
+        }
+        this.value = digits;
+        visualCardExpiry.textContent = this.value || '12/34';
+    });
+
+    paymentCloseBtn.addEventListener('click', closePaymentModal);
+    paymentCancelBtn.addEventListener('click', closePaymentModal);
+    paymentBackdrop.addEventListener('click', function(e) {
+        if (e.target === paymentBackdrop) closePaymentModal();
+    });
+
+    paymentForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        if (!currentPayment) return;
+
+        var validationError = validatePaymentForm();
+        if (validationError) {
+            setPaymentFeedback('error', validationError);
+            return;
+        }
+
+        paymentSubmitBtn.disabled = true;
+        setPaymentFeedback('success', 'Connexion securisee a Stripe...', 'Validation en cours du paiement test.');
+
+        var body = new URLSearchParams();
+        body.append('_token', currentPayment.token);
+
+        fetch(currentPayment.payUrl, {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            body: body
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (!data.success) {
+                if (data.redirectTo) {
+                    window.location.href = data.redirectTo;
+                    return;
+                }
+                setPaymentFeedback('error', data.error || 'Le paiement Stripe a echoue.');
+                paymentSubmitBtn.disabled = false;
+                return;
+            }
+
+            setPaymentFeedback(
+                'success',
+                data.message || 'Paiement confirme avec succes.',
+                'Transaction ' + (data.paymentIntentId || 'N/A') + ' · ' + (data.paidAt || '')
+            );
+            setTimeout(function() {
+                closePaymentModal();
+                doSearch();
+            }, 1200);
+        })
+        .catch(function() {
+            setPaymentFeedback('error', 'Erreur reseau pendant le paiement.');
+            paymentSubmitBtn.disabled = false;
+        });
+    });
+
+    searchInput.addEventListener('input', function() {
+        clearTimeout(timer);
+        currentPage = 1;
+        timer = setTimeout(function() { doSearch(1); }, 300);
+    });
+    statusSelect.addEventListener('change', function() { doSearch(1); });
+    bindPaymentButtons();
+
+    // Counter-up animation
+    document.querySelectorAll('.counter-up').forEach(function(el) {
+        var target = parseInt(el.getAttribute('data-target')) || 0;
+        if (target === 0) { el.textContent = '0'; return; }
+        var start = performance.now();
+        var duration = 1000;
+        function countUp(now) {
+            var elapsed = now - start;
+            var progress = Math.min(elapsed / duration, 1);
+            var eased = 1 - (1 - progress) * (1 - progress);
+            el.textContent = Math.round(eased * target);
+            if (progress < 1) requestAnimationFrame(countUp);
+        }
+        requestAnimationFrame(countUp);
+    });
+
+    // Sparklines
+    document.querySelectorAll('.sparkline-canvas').forEach(function(canvas) {
+        var ctx = canvas.getContext('2d');
+        var type = canvas.getAttribute('data-type');
+        var card = canvas.closest('.offer-stat-card');
+        var points = [];
+
+        // Build 8-week buckets
+        var now = new Date();
+        var weekMs = 7 * 86400000;
+        var weeks = [];
+        for (var w = 7; w >= 0; w--) {
+            weeks.push({ start: new Date(now.getTime() - (w + 1) * weekMs), end: new Date(now.getTime() - w * weekMs), val: 0 });
+        }
+
+        if (type === 'count' && card) {
+            try {
+                var dates = JSON.parse(card.getAttribute('data-dates') || '[]');
+                dates.forEach(function(d) {
+                    var dt = new Date(d);
+                    weeks.forEach(function(wk) { if (dt >= wk.start && dt < wk.end) wk.val++; });
+                });
+                points = weeks.map(function(wk) { return wk.val; });
+            } catch(e) {}
+        } else if (type === 'amount' && card) {
+            try {
+                var items = JSON.parse(card.getAttribute('data-amounts') || '[]');
+                var cumul = 0;
+                weeks.forEach(function(wk) {
+                    items.forEach(function(it) {
+                        var dt = new Date(it.d);
+                        if (dt < wk.end) cumul += parseFloat(it.a) || 0;
+                    });
+                    wk.val = cumul;
+                    cumul = 0; // reset for next pass
+                });
+                // Cumulative: re-process
+                cumul = 0;
+                var sorted = (items || []).slice().sort(function(a,b) { return a.d < b.d ? -1 : 1; });
+                weeks.forEach(function(wk) {
+                    sorted.forEach(function(it) {
+                        if (new Date(it.d) < wk.end) cumul += parseFloat(it.a) || 0;
+                    });
+                    wk.val = cumul;
+                    cumul = wk.val;
+                });
+                points = weeks.map(function(wk) { return wk.val; });
+            } catch(e) {}
+        }
+
+        if (!points.length || Math.max.apply(null, points) === 0) return;
+
+        var w = canvas.width;
+        var h = canvas.height;
+        var maxVal = Math.max.apply(null, points);
+        var minVal = Math.min.apply(null, points);
+        var range = maxVal - minVal || 1;
+        var stepX = w / (points.length - 1);
+
+        // Gradient fill
+        var grad = ctx.createLinearGradient(0, 0, 0, h);
+        grad.addColorStop(0, 'rgba(59,130,246,.25)');
+        grad.addColorStop(1, 'rgba(59,130,246,.02)');
+
+        ctx.beginPath();
+        ctx.moveTo(0, h);
+        points.forEach(function(v, i) {
+            var x = i * stepX;
+            var y = h - ((v - minVal) / range) * (h - 4) - 2;
+            if (i === 0) ctx.lineTo(x, y);
+            else ctx.lineTo(x, y);
+        });
+        ctx.lineTo(w, h);
+        ctx.closePath();
+        ctx.fillStyle = grad;
+        ctx.fill();
+
+        // Line
+        ctx.beginPath();
+        points.forEach(function(v, i) {
+            var x = i * stepX;
+            var y = h - ((v - minVal) / range) * (h - 4) - 2;
+            if (i === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+        });
+        ctx.strokeStyle = '#3b82f6';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+    });
+})();
+</script>
 {% endblock %}
