@@ -1,0 +1,70 @@
+{% extends 'admin/layout.html.twig' %}
+
+{% block title %}Communauté Admin - Najahni{% endblock %}
+
+{% block main %}
+{% include 'admin/community/_nav.html.twig' with {section: section, communityTotals: communityTotals} %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="fw-bold mb-1"><i class="bi bi-chat-dots me-2"></i>Communauté</h2>
+        <p class="text-muted mb-0">Accédez aux groupes, événements et posts depuis un seul espace d administration.</p>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100" style="border-radius:1rem">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0">Groupes</h5>
+                    <span class="badge text-bg-primary">{{ groupStats.total }}</span>
+                </div>
+                <p class="text-muted small mb-3">Gérez les groupes créés par les utilisateurs, ouvrez-les ou supprimez-les.</p>
+                <div class="small text-muted d-flex flex-column gap-2 mb-3">
+                    <span>{{ groupStats.private }} privés</span>
+                    <span>{{ groupStats.public }} publics</span>
+                    <span>{{ groupStats.memberships }} adhésions</span>
+                    <span>{{ groupStats.threads }} discussions</span>
+                </div>
+                <a href="{{ path('admin_community_groups') }}" class="btn btn-outline-primary btn-sm">Ouvrir les groupes</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100" style="border-radius:1rem">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0">Evenements</h5>
+                    <span class="badge text-bg-primary">{{ eventStats.total }}</span>
+                </div>
+                <p class="text-muted small mb-3">Consultez les événements publiés et supprimez ceux qui doivent être retirés.</p>
+                <div class="small text-muted d-flex flex-column gap-2 mb-3">
+                    <span>{{ eventStats.upcoming }} à venir</span>
+                    <span>{{ eventStats.past }} passés</span>
+                    <span>{{ eventStats.limited }} avec capacité</span>
+                    <span>{{ eventStats.registrations }} inscriptions</span>
+                </div>
+                <a href="{{ path('admin_community_events') }}" class="btn btn-outline-primary btn-sm">Ouvrir les evenements</a>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100" style="border-radius:1rem">
+            <div class="card-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold mb-0">Posts</h5>
+                    <span class="badge text-bg-primary">{{ postStats.total }}</span>
+                </div>
+                <p class="text-muted small mb-3">Surveillez les publications communautaires et supprimez n importe quel post.</p>
+                <div class="small text-muted d-flex flex-column gap-2 mb-3">
+                    <span>{{ postStats.with_images }} avec image</span>
+                    <span>{{ postStats.today }} aujourd hui</span>
+                    <span>{{ postStats.reactions }} réactions</span>
+                </div>
+                <a href="{{ path('admin_community_posts') }}" class="btn btn-outline-primary btn-sm">Ouvrir les posts</a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

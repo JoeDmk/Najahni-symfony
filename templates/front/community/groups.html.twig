@@ -2,6 +2,20 @@
 
 {% block title %}Groupes - Najahni{% endblock %}
 
+{% block stylesheets %}
+{{ parent() }}
+<style>
+    .community-nav-card {
+        transition: transform .18s ease, box-shadow .18s ease;
+    }
+
+    .community-nav-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 1.25rem 2.5rem rgba(15, 23, 42, .12) !important;
+    }
+</style>
+{% endblock %}
+
 {% block main %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
@@ -19,8 +33,9 @@
     {% set canAccess = (not group.isPrivate) or isMember or is_granted('ROLE_ADMIN') %}
     {% set hasPendingRequest = pendingRequestGroupIds[group.id] is defined %}
     <div class="col-md-6 col-lg-4">
-        <div class="card border-0 shadow-sm h-100" style="border-radius:1rem">
-            <div class="card-body p-4">
+        <div class="card border-0 shadow-sm h-100 community-nav-card" style="border-radius:1rem">
+            <div class="card-body p-4 position-relative">
+                <a href="{{ path('app_community_group_show', {id: group.id}) }}" class="stretched-link" aria-label="Ouvrir le groupe {{ group.name }}"></a>
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <h5 class="fw-bold mb-0">{{ group.name }}</h5>
                     {% if group.isPrivate %}
@@ -35,9 +50,10 @@
                     <span><i class="bi bi-people me-2"></i>{{ group.membersCount }} membres</span>
                     <span><i class="bi bi-chat-dots me-2"></i>{{ group.threads|length }} discussions</span>
                 </div>
-                <div class="d-flex flex-wrap gap-2 align-items-center">
-                    <a href="{{ path('app_community_group_show', {id: group.id}) }}" class="btn btn-sm btn-outline-primary">Ouvrir</a>
-
+                <div class="small text-muted mb-3 position-relative" style="z-index:2">
+                    Cliquez sur la carte pour ouvrir la fiche du groupe.
+                </div>
+                <div class="d-flex flex-wrap gap-2 align-items-center position-relative" style="z-index:2">
                     {% if not isMember and not group.isPrivate %}
                     <form method="post" action="{{ path('app_community_group_join', {id: group.id}) }}">
                         <button class="btn btn-sm btn-nj"><i class="bi bi-box-arrow-in-right me-1"></i>Rejoindre</button>
@@ -61,7 +77,8 @@
                     {% endif %}
 
                     {% if isOwner %}
-                    <form method="post" action="{{ path('app_community_group_delete', {id: group.id}) }}" class="ms-auto">
+                    <a href="{{ path('app_community_group_show', {id: group.id}) }}" class="btn btn-sm btn-outline-primary ms-auto"><i class="bi bi-sliders me-1"></i>Gerer</a>
+                    <form method="post" action="{{ path('app_community_group_delete', {id: group.id}) }}">
                         <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>Supprimer</button>
                     </form>
                     {% endif %}

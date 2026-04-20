@@ -5,15 +5,6 @@
 {% block stylesheets %}
 {{ parent() }}
 <style>
-    .community-ticket-qr {
-        width: 220px;
-        max-width: 100%;
-        border-radius: 1rem;
-        border: 1px solid rgba(0, 0, 0, .06);
-        background: #fff;
-        padding: .75rem;
-    }
-
     .community-meta-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -30,6 +21,10 @@
 {% endblock %}
 
 {% block main %}
+{% set eventAiResult = eventAiResult|default(null) %}
+{% set eventEditData = eventEditData|default({title: event.title, description: event.description, event_date: event.eventDate|date('Y-m-d\\TH:i'), capacity: event.capacity > 0 ? event.capacity : 1}) %}
+{% set eventEditErrors = eventEditErrors|default({}) %}
+{% set openEventEdit = openEventEdit|default(false) %}
 <a href="{{ path('app_community_events') }}" class="text-decoration-none text-muted"><i class="bi bi-arrow-left me-1"></i>Tous les evenements</a>
 
 <div class="row g-4 mt-3">
@@ -50,6 +45,7 @@
                 </div>
                 <div class="d-flex flex-wrap gap-2">
                     {% if isCreator %}
+                    <a href="{{ path('app_community_event_report', {id: event.id}) }}" class="btn btn-sm btn-outline-dark"><i class="bi bi-file-earmark-arrow-down me-1"></i>Exporter PDF</a>
                     <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#edit-event-form"><i class="bi bi-pencil-square me-1"></i>Modifier</button>
                     <form method="post" action="{{ path('app_community_event_delete', {id: event.id}) }}">
                         <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>Supprimer</button>
@@ -88,25 +84,39 @@
             </div>
 
             {% if isCreator %}
-            <div class="collapse" id="edit-event-form">
+            <div class="collapse{{ openEventEdit ? ' show' : '' }}" id="edit-event-form">
                 <div class="border rounded-4 p-3 bg-light-subtle">
-                    <form method="post" action="{{ path('app_community_event_update', {id: event.id}) }}">
+                    <form method="post" action="{{ path('app_community_event_update', {id: event.id}) }}" novalidate>
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Titre</label>
-                            <input type="text" name="title" class="form-control" value="{{ event.title }}" required>
+                            <input type="text" name="title" class="form-control{{ eventEditErrors.title is defined ? ' is-invalid' }}" value="{{ eventEditData.title }}" maxlength="150" required>
+                            <div class="form-text">5 a 150 caracteres avec un vrai titre exploitable.</div>
+                            {% if eventEditErrors.title is defined %}
+                            <div class="invalid-feedback d-block">{{ eventEditErrors.title }}</div>
+                            {% endif %}
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold">Description</label>
-                            <textarea name="description" class="form-control" rows="4" required>{{ event.description }}</textarea>
+                            <textarea name="description" class="form-control{{ eventEditErrors.description is defined ? ' is-invalid' }}" rows="4" maxlength="4000" required>{{ eventEditData.description }}</textarea>
+                            <div class="form-text">Expliquez clairement l objectif, le deroule et les infos pratiques.</div>
+                            {% if eventEditErrors.description is defined %}
+                            <div class="invalid-feedback d-block">{{ eventEditErrors.description }}</div>
+                            {% endif %}
                         </div>
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Date et heure</label>
-                                <input type="datetime-local" name="event_date" class="form-control" value="{{ event.eventDate|date('Y-m-d\\TH:i') }}" required>
+                                <input type="datetime-local" name="event_date" class="form-control{{ eventEditErrors.event_date is defined ? ' is-invalid' }}" value="{{ eventEditData.event_date }}" required>
+                                {% if eventEditErrors.event_date is defined %}
+                                <div class="invalid-feedback d-block">{{ eventEditErrors.event_date }}</div>
+                                {% endif %}
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label fw-semibold">Capacite</label>
-                                <input type="number" name="capacity" min="1" class="form-control" value="{{ event.capacity > 0 ? event.capacity : 1 }}" required>
+                                <input type="number" name="capacity" min="1" class="form-control{{ eventEditErrors.capacity is defined ? ' is-invalid' }}" value="{{ eventEditData.capacity }}" required>
+                                {% if eventEditErrors.capacity is defined %}
+                                <div class="invalid-feedback d-block">{{ eventEditErrors.capacity }}</div>
+                                {% endif %}
                             </div>
                         </div>
                         <button type="submit" class="btn btn-nj btn-sm mt-3">Enregistrer</button>
@@ -155,8 +165,19 @@
                                 </form>
                             </div>
                         </div>
-                        {% if eventAiOutput %}
-                        <div style="white-space:pre-wrap">{{ eventAiOutput }}</div>
+                        {% if eventAiResult %}
+                        <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
+                            <span class="badge rounded-pill {{ eventAiResult.error ? 'text-bg-danger' : (eventAiResult.used_provider ? 'text-bg-success' : 'text-bg-secondary') }}">{{ eventAiResult.source_label }}{% if eventAiResult.model %} · {{ eventAiResult.model }}{% endif %}</span>
+                        </div>
+                        {% if eventAiResult.error_message %}
+                        <div class="alert alert-danger py-2 px-3 small mb-2">{{ eventAiResult.error_message }}</div>
+                        {% endif %}
+                        {% if eventAiResult.content %}
+                        <div style="white-space:pre-wrap">{{ eventAiResult.content }}</div>
+                        {% endif %}
+                        {% if eventAiResult.source_hint %}
+                        <div class="small text-muted mt-2">{{ eventAiResult.source_hint }}</div>
+                        {% endif %}
                         {% else %}
                         <div class="text-muted">Choisissez un mode pour generer un texte adapte a cet evenement.</div>
                         {% endif %}
@@ -165,21 +186,11 @@
             </div>
         </div>
 
-        {% if ticket %}
+        {% if isParticipant and not isCreator %}
         <div class="card border-0 shadow-sm mt-4" style="border-radius:1rem">
             <div class="card-body p-4">
-                <h5 class="fw-bold mb-3"><i class="bi bi-qr-code me-2"></i>Votre ticket</h5>
-                <div class="row g-4 align-items-center">
-                    <div class="col-md-4 text-center">
-                        <img src="{{ ticket.qr_url }}" alt="QR ticket" class="community-ticket-qr">
-                    </div>
-                    <div class="col-md-8">
-                        <div class="small text-uppercase text-muted fw-semibold mb-2">Code manuel</div>
-                        <div class="fw-semibold mb-3">{{ ticket.manual_code }}</div>
-                        <div class="small text-uppercase text-muted fw-semibold mb-2">Payload signe</div>
-                        <textarea class="form-control" rows="4" readonly>{{ ticket.payload }}</textarea>
-                    </div>
-                </div>
+                <h5 class="fw-bold mb-2"><i class="bi bi-envelope-check me-2"></i>Ticket QR envoye par email</h5>
+                <p class="text-muted mb-0">Votre ticket n est plus affiche sur cette page. Il est envoye a <strong>{{ app.user.email }}</strong> au moment de l inscription pour rester reserve aux participants.</p>
             </div>
         </div>
         {% endif %}

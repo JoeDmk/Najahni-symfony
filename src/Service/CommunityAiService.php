@@ -42,37 +42,43 @@ final class CommunityAiService
     }
 
     /** @param Comment[] $comments */
-    public function summarizeThread(Thread $thread, array $comments): string
+    public function summarizeThread(Thread $thread, array $comments): array
     {
         $allCommentsCount = count($comments);
         $comments = $this->recentChronologicalComments($comments, 60);
+        $configured = $this->isConfigured();
+        $language = $this->dominantDiscussionLanguage($thread, $comments);
 
         if ($comments === []) {
-            return $this->noDiscussionMessage($this->dominantDiscussionLanguage($thread, $comments));
+            return $this->textResult($this->noDiscussionMessage($language), false, $configured);
         }
 
         $user = $this->buildThreadSummaryPrompt($thread, $comments, $allCommentsCount);
         $content = $this->chat(
-            'You are an expert community discussion analyst. You receive a structured dossier containing the group, the opening message, every visible comment in chronological order, the participants, and the latest messages. Use that full discussion context, not isolated keywords. Write a strong summary in the dominant language used by the participants. Output only two or three natural sentences. Explain the original request, the most relevant ideas raised in the conversation, and the latest direction, decision, or open question. Never include headings, usernames, timestamps, or bullet points. If the discussion is too vague or incoherent, say so clearly instead of inventing detail.',
+            'You are an expert community discussion analyst. You receive a structured dossier containing the group, its description, the opening message, every visible comment in chronological order, the participants, the latest messages, the discussion mode, and the likely topic. Use that full conversation context, not isolated keywords. Return only valid JSON with this exact shape: {"summary":"..."}. The summary must be in the dominant language of the thread, two or three natural sentences, and must explain the opening need, the most useful ideas raised, and the latest direction, decision, or unresolved question. Never include headings, usernames, timestamps, markdown, or bullet points. If the discussion is too vague, say that clearly instead of inventing detail.',
             $user,
             0.15,
         );
-        $summary = $content !== null ? $this->cleanSummary($content) : null;
+        $summary = $content !== null ? $this->extractStructuredSummary($content) : null;
 
-        if (($summary === null || $this->summaryLooksWeak($summary, $thread, $comments)) && $this->isConfigured()) {
+        if (($summary === null || $this->summaryLooksWeak($summary, $thread, $comments)) && $configured) {
             $retry = $this->chat(
-                'Summarize the actual conversation flow. Keep the opening need, the concrete ideas from the replies, and the most recent direction tightly connected. Use the same language as the discussion. Output only two or three plain sentences and do not copy the thread title or any comment verbatim.',
+                'Return only valid JSON matching {"summary":"..."}. Summarize the actual conversation flow. Keep the opening need, the concrete ideas from the replies, and the most recent direction tightly connected. Use the same language as the discussion. Output only two or three plain sentences and do not copy the thread title or any comment verbatim.',
                 $user,
                 0.1,
             );
-            $summary = $retry !== null ? $this->cleanSummary($retry) : $summary;
+            $summary = $retry !== null ? $this->extractStructuredSummary($retry) : $summary;
         }
 
         if ($summary !== null && !$this->summaryLooksWeak($summary, $thread, $comments)) {
-            return $summary;
+            return $this->textResult($summary, true, $configured);
         }
 
-        return $this->fallbackThreadSummary($thread, $comments);
+        if ($configured) {
+            return $this->providerErrorTextResult('Groq n a pas renvoye un resume exploitable pour cette discussion.');
+        }
+
+        return $this->textResult($this->fallbackThreadSummary($thread, $comments), false, false);
     }
 
     /** @param Comment[] $comments */
@@ -82,45 +88,73 @@ final class CommunityAiService
         $comments = $this->recentChronologicalComments($comments, 60);
 
         $user = $this->buildReplyPrompt($thread, $comments, $allCommentsCount);
+        $configured = $this->isConfigured();
         $content = $this->chat(
-            'You write exactly 3 ready-to-post replies for the next message in a community thread. You receive the full discussion dossier: opening message, full chronological transcript, participant names, and the latest replies. Base each reply on the actual conversation and the latest messages, not on generic advice. Use the dominant language of the discussion. Make the 3 replies clearly different: one practical next step, one clarifying or alignment reply, and one constructive refinement or alternative. Write in first person, keep them natural, and never narrate the thread. Output strictly as numbered lines: 1) ..., 2) ..., 3) ...',
+            'You write exactly 3 ready-to-post replies for the next message in a community thread. You receive the full discussion dossier: opening message, full chronological transcript, participant names, latest replies, discussion mode, and the likely topic. Base each reply on the actual conversation and the latest messages, not on generic advice. Use the dominant language of the discussion. Make the 3 replies clearly different: one practical next step, one clarifying or alignment reply, and one constructive refinement or alternative. Write in first person, keep them natural, and never narrate the thread. Return only valid JSON with this exact shape: {"replies":["...","...","..."]}.',
             $user,
             0.45,
         );
-        $suggestions = $content !== null ? $this->uniqueSuggestions($this->parseNumberedList($content)) : [];
+        $suggestions = $content !== null ? $this->extractStructuredSuggestions($content) : [];
 
-        if ($this->suggestionsLookWeak($suggestions, $thread, $comments) && $this->isConfigured()) {
+        if ($this->suggestionsLookWeak($suggestions, $thread, $comments) && $configured) {
             $retry = $this->chat(
-                'Write the next three replies using the whole conversation. Every reply must connect the opening request to the latest comments. Avoid vague filler. Make the replies usable as real follow-ups that move the discussion forward. Output strictly as 1) 2) 3).',
+                'Return only valid JSON matching {"replies":["...","...","..."]}. Write the next three replies using the whole conversation. Every reply must connect the opening request to the latest comments. Avoid vague filler. Make the replies usable as real follow-ups that move the discussion forward.',
                 $user,
                 0.25,
             );
-            $suggestions = $retry !== null ? $this->uniqueSuggestions($this->parseNumberedList($retry)) : $suggestions;
+            $suggestions = $retry !== null ? $this->extractStructuredSuggestions($retry) : $suggestions;
         }
 
         if ($this->suggestionsLookWeak($suggestions, $thread, $comments)) {
-            $suggestions = $this->fallbackReplySuggestions($thread, $comments);
+            if ($configured) {
+                return $this->providerErrorSuggestionsResult('Groq n a pas renvoye trois reponses assez solides pour ce fil.');
+            }
+
+            return $this->suggestionsResult(array_slice($this->fallbackReplySuggestions($thread, $comments), 0, 3), false, false);
         }
 
-        return array_slice($suggestions, 0, 3);
+        return $this->suggestionsResult(array_slice($suggestions, 0, 3), true, $configured);
     }
 
-    public function generateEventText(Event $event, string $mode): string
+    public function generateEventText(Event $event, string $mode): array
     {
         $mode = in_array($mode, ['summary', 'promo', 'checklist'], true) ? $mode : 'summary';
+        $configured = $this->isConfigured();
         $user = match ($mode) {
-            'promo' => $this->buildEventPrompt($event, 'Write a short promotional text for this event. Friendly tone. Two or three lines max. Do not invent details.'),
-            'checklist' => $this->buildEventPrompt($event, 'Create a short preparation checklist for this event. Max three bullet points. Practical, brief, and grounded in the provided details.'),
-            default => $this->buildEventPrompt($event, 'Write a neutral factual summary of the event in one or two sentences. Do not invent details.'),
+            'promo' => $this->buildEventPrompt($event, 'Write one short promotional line for this event. Maximum 18 words. One sentence only. Mention the clearest reason to join. Do not repeat the title unless it adds useful information.'),
+            'checklist' => $this->buildEventPrompt($event, 'Write exactly 3 preparation bullets for this event. Each bullet must be 2 to 6 words. No intro sentence. No title repetition. Use short dash bullets only.'),
+            default => $this->buildEventPrompt($event, 'Write one precise factual summary sentence for this event. Maximum 18 words. Keep only the essential facts and no filler.'),
+        };
+
+        $system = match ($mode) {
+            'promo' => 'You are a concise event-writing assistant. Use only the provided facts. Return only valid JSON with this exact shape: {"text":"..."}. The text value must be a single short sentence, precise, useful, and free of labels like text:, promo:, summary:, or checklist:.',
+            'checklist' => 'You are a concise event-writing assistant. Use only the provided facts. Return only valid JSON with this exact shape: {"text":"- first item\n- second item\n- third item"}. The text value must contain exactly 3 very short dash bullets and nothing else. Do not include labels like text:, promo:, summary:, checklist:, or preparation checklist.',
+            default => 'You are a concise event-writing assistant. Use only the provided facts. Return only valid JSON with this exact shape: {"text":"..."}. The text value must be one short factual sentence and must not include labels like text:, promo:, summary:, or checklist:.',
+        };
+
+        $temperature = match ($mode) {
+            'promo' => 0.2,
+            'checklist' => 0.1,
+            default => 0.1,
         };
 
         $content = $this->chat(
-            'You are a concise event-writing assistant. Keep the output short, useful, and based only on the provided details. Use the same language as the provided title and description when possible.',
+            $system,
             $user,
-            0.35,
+            $temperature,
         );
 
-        return $content !== null ? trim($content) : $this->fallbackEventText($event, $mode);
+        $text = $content !== null ? $this->extractStructuredEventText($content) : null;
+
+        if ($text !== null && $text !== '') {
+            return $this->textResult($text, true, $configured);
+        }
+
+        if ($configured) {
+            return $this->providerErrorTextResult('Groq n a pas renvoye un texte exploitable pour cet evenement.');
+        }
+
+        return $this->textResult($this->fallbackEventText($event, $mode), false, false);
     }
 
     /** @param Comment[] $comments */
@@ -129,7 +163,7 @@ final class CommunityAiService
         $lines = [
             'TASK: Write a strong summary of this discussion.',
             'OUTPUT RULES:',
-            '- Output only the final summary text, with no heading.',
+            '- Output only valid JSON: {"summary":"..."}.',
             '- Keep the opening request, the concrete ideas from the replies, and the latest direction tied together.',
             '- Never copy one message word for word unless a short phrase is necessary.',
             '- Never include usernames, dates, timestamps, or labels in the final answer.',
@@ -146,6 +180,7 @@ final class CommunityAiService
         $lines = [
             'TASK: Generate 3 ready-to-post comment replies.',
             'RULES:',
+            '- Output only valid JSON: {"replies":["...","...","..."]}.',
             '- Each reply must sound ready to post as-is.',
             '- React to the latest messages while staying aligned with the opening request.',
             '- Reply 1 must be practical, reply 2 must clarify or align, reply 3 must refine or propose an alternative.',
@@ -162,9 +197,13 @@ final class CommunityAiService
     {
         return implode("\n", [
             'TASK: '.$task,
+            'OUTPUT RULES:',
+            '- Return only valid JSON: {"text":"..."}.',
+            '- Keep the wording grounded in the provided details only.',
             'EVENT CONTEXT:',
             'Title: '.$this->safe($event->getTitle()),
             'Description: '.$this->safe($event->getDescription()),
+            'Organizer: '.$this->safe($event->getCreatedBy()?->getFullName()),
             'Capacity: '.(int) $event->getCapacity(),
             'Date: '.$this->eventDateLabel($event),
         ]);
@@ -289,6 +328,7 @@ final class CommunityAiService
         $lines = [
             'THREAD DOSSIER:',
             'group_name: '.$this->safe($thread->getGroup()?->getName()),
+            'group_description: '.$this->safe($thread->getGroup()?->getDescription()),
             'thread_author: '.$this->participantName($thread->getUser()),
             'thread_created_at: '.$this->dateLabel($thread->getCreatedAt()),
             'thread_title: '.$this->safe($thread->getTitle()),
@@ -296,6 +336,9 @@ final class CommunityAiService
             'comments_total: '.$allCommentsCount,
             'comments_included: '.count($comments),
             'participants: '.($participants !== [] ? implode(', ', $participants) : 'unknown'),
+            'dominant_language: '.$this->dominantDiscussionLanguage($thread, $comments),
+            'discussion_mode: '.$this->dominantDiscussionMode($comments),
+            'discussion_topic: '.$this->threadTopic($thread, $comments),
         ];
 
         if ($allCommentsCount > count($comments)) {
@@ -340,13 +383,13 @@ final class CommunityAiService
         $capacity = (int) $event->getCapacity();
 
         return match ($mode) {
-            'promo' => trim(sprintf('%s arrive le %s. %s', $title, $date, $description !== '' ? $description : 'C est un bon moment pour consulter les details et se preparer.')),
+            'promo' => trim(sprintf('%s le %s. %s', $title, $date, $description !== '' ? $description : 'Consultez les details et preparez votre venue.')),
             'checklist' => implode("\n", [
-                '- Verifier l horaire final et le lieu.',
-                '- Preparer ce que les participants doivent apporter avant le debut.',
-                '- Suivre les inscriptions pour gerer clairement les '.max($capacity, 1).' places disponibles.',
+                '- Verifier date et heure.',
+                '- Confirmer le materiel utile.',
+                '- Suivre les '.max($capacity, 1).' places disponibles.',
             ]),
-            default => trim(sprintf('%s est prevu le %s avec %d places. %s', $title, $date, max($capacity, 1), $description)),
+            default => trim(sprintf('%s est prevu le %s avec %d places.', $title, $date, max($capacity, 1))),
         };
     }
 
@@ -358,7 +401,7 @@ final class CommunityAiService
         }
 
         try {
-            $response = $this->httpClient->request('POST', self::ENDPOINT, [
+            $options = [
                 'headers' => [
                     'Authorization' => 'Bearer '.$apiKey,
                     'Accept' => 'application/json',
@@ -372,8 +415,15 @@ final class CommunityAiService
                         ['role' => 'user', 'content' => $user],
                     ],
                 ],
-                'timeout' => 12,
-            ]);
+                'timeout' => $this->timeout(),
+            ];
+
+            if ($this->allowInsecureTls()) {
+                $options['verify_peer'] = false;
+                $options['verify_host'] = false;
+            }
+
+            $response = $this->httpClient->request('POST', $this->endpoint(), $options);
 
             if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 300) {
                 return null;
@@ -397,6 +447,244 @@ final class CommunityAiService
         }
 
         return $this->normalizeSpaces($content);
+    }
+
+    private function extractStructuredSummary(string $content): ?string
+    {
+        $payload = $this->extractJsonObject($content);
+        $summary = $payload['summary'] ?? null;
+
+        if (is_string($summary) && trim($summary) !== '') {
+            return $this->cleanSummary($summary);
+        }
+
+        $clean = $this->cleanSummary($content);
+
+        return $clean !== '' ? $clean : null;
+    }
+
+    /** @return string[] */
+    private function extractStructuredSuggestions(string $content): array
+    {
+        $payload = $this->extractJsonObject($content);
+        $items = $payload['replies'] ?? $payload['suggestions'] ?? null;
+
+        if (is_array($items)) {
+            return $this->uniqueSuggestions(array_map(
+                fn (mixed $item): string => $this->normalizeSpaces((string) $item),
+                $items,
+            ));
+        }
+
+        $parsed = $this->parseNumberedList($content);
+        if ($parsed !== []) {
+            return $this->uniqueSuggestions($parsed);
+        }
+
+        $lines = preg_split('/\R+/u', $content) ?: [];
+
+        return $this->uniqueSuggestions(array_map(
+            fn (string $line): string => (string) preg_replace('/^[-*•\d\)\.\s]+/u', '', trim($line)),
+            $lines,
+        ));
+    }
+
+    private function extractStructuredEventText(string $content): ?string
+    {
+        $payload = $this->extractJsonObject($content);
+        $text = $payload['text'] ?? null;
+
+        if (is_string($text) && trim($text) !== '') {
+            return $this->cleanEventText($text);
+        }
+
+        $looseText = $this->extractLooseJsonTextField($content);
+        if ($looseText !== null) {
+            return $this->cleanEventText($looseText);
+        }
+
+        $clean = $this->cleanEventText($content);
+
+        return $clean !== '' ? $clean : null;
+    }
+
+    private function extractLooseJsonTextField(string $content): ?string
+    {
+        if (preg_match('/"text"\s*:\s*"((?:[^"\\]|\\.)*)"/s', $content, $match) !== 1) {
+            return null;
+        }
+
+        try {
+            $decoded = json_decode('"'.$match[1].'"', true, 512, JSON_THROW_ON_ERROR);
+
+            return is_string($decoded) && trim($decoded) !== '' ? $decoded : null;
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    private function cleanEventText(string $content): string
+    {
+        $content = trim($content);
+        if ($content === '') {
+            return '';
+        }
+
+        $content = trim((string) preg_replace('/^```(?:json)?\s*|\s*```$/i', '', $content));
+        $content = trim($content, " \t\n\r\0\x0B{}");
+
+        if (preg_match('/^"text"\s*:\s*"((?:[^"\\]|\\.)*)"\s*$/s', $content, $match) === 1) {
+            try {
+                $decoded = json_decode('"'.$match[1].'"', true, 512, JSON_THROW_ON_ERROR);
+                if (is_string($decoded)) {
+                    $content = $decoded;
+                }
+            } catch (Throwable) {
+            }
+        }
+
+        if (str_starts_with($content, '"') && str_ends_with($content, '"')) {
+            try {
+                $decoded = json_decode($content, true, 512, JSON_THROW_ON_ERROR);
+                if (is_string($decoded)) {
+                    $content = $decoded;
+                }
+            } catch (Throwable) {
+            }
+        }
+
+        $content = str_replace(["\r\n", "\r", '\\n', '\\r'], ["\n", "\n", "\n", ''], $content);
+        $content = (string) preg_replace('/^\s*(summary|resume|promo|promotion|checklist|preparation checklist(?:\s+for[^:\n]+)?)\s*[:\-]\s*/iu', '', $content);
+
+        if (preg_match('/(?:^|\s)\*\s+/u', $content) === 1) {
+            $content = ltrim((string) preg_replace('/\s*\*\s+/u', "\n- ", $content), "\n");
+        }
+
+        $lines = preg_split('/\R+/u', $content) ?: [];
+        $normalizedLines = [];
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '') {
+                continue;
+            }
+
+            if (preg_match('/^[-*•]\s+/u', $line) === 1) {
+                $line = '- '.trim((string) preg_replace('/^[-*•]\s+/u', '', $line));
+            } else {
+                $line = $this->normalizeSpaces($line);
+            }
+
+            $normalizedLines[] = $line;
+        }
+
+        if ($normalizedLines === []) {
+            return '';
+        }
+
+        return count($normalizedLines) > 1
+            ? implode("\n", $normalizedLines)
+            : $this->normalizeSpaces($normalizedLines[0]);
+    }
+
+    /** @return array<string, mixed> */
+    private function extractJsonObject(string $content): array
+    {
+        $content = trim($content);
+        if ($content === '') {
+            return [];
+        }
+
+        $candidates = [$content];
+        $withoutFence = preg_replace('/^```(?:json)?\s*|\s*```$/i', '', $content);
+        if (is_string($withoutFence) && trim($withoutFence) !== '' && trim($withoutFence) !== $content) {
+            $candidates[] = trim($withoutFence);
+        }
+
+        if (preg_match('/\{(?:[^{}]|(?R))*\}/s', $content, $match) === 1) {
+            $candidates[] = trim($match[0]);
+        }
+
+        foreach ($candidates as $candidate) {
+            try {
+                $decoded = json_decode($candidate, true, 512, JSON_THROW_ON_ERROR);
+
+                return is_array($decoded) ? $decoded : [];
+            } catch (Throwable) {
+            }
+        }
+
+        return [];
+    }
+
+    /** @return array<string, mixed> */
+    private function textResult(string $content, bool $usedProvider, bool $configured): array
+    {
+        return [
+            'content' => trim($content),
+            'used_provider' => $usedProvider,
+            'configured' => $configured,
+            'provider' => $usedProvider ? 'Groq' : 'Local',
+            'model' => $usedProvider ? $this->model() : null,
+            'source_label' => $usedProvider ? 'Groq' : ($configured ? 'Repli local' : 'Mode local'),
+            'source_hint' => $usedProvider
+                ? 'Generation reelle via Groq.'
+                : ($configured ? 'Groq n a pas renvoye un resultat exploitable, le repli local a pris le relais.' : 'Ajoutez une cle Groq pour activer la generation distante.'),
+            'error' => false,
+            'error_message' => null,
+        ];
+    }
+
+    /** @param string[] $items
+     *  @return array<string, mixed>
+     */
+    private function suggestionsResult(array $items, bool $usedProvider, bool $configured): array
+    {
+        return [
+            'items' => $items,
+            'used_provider' => $usedProvider,
+            'configured' => $configured,
+            'provider' => $usedProvider ? 'Groq' : 'Local',
+            'model' => $usedProvider ? $this->model() : null,
+            'source_label' => $usedProvider ? 'Groq' : ($configured ? 'Repli local' : 'Mode local'),
+            'source_hint' => $usedProvider
+                ? 'Suggestions generees depuis le contexte complet du fil.'
+                : ($configured ? 'Groq n a pas renvoye des suggestions assez solides, le repli local a ete utilise.' : 'Ajoutez une cle Groq pour activer des suggestions distantes.'),
+            'error' => false,
+            'error_message' => null,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function providerErrorTextResult(string $message): array
+    {
+        return [
+            'content' => '',
+            'used_provider' => false,
+            'configured' => true,
+            'provider' => 'Groq',
+            'model' => $this->model(),
+            'source_label' => 'Groq indisponible',
+            'source_hint' => 'Aucun repli local n a ete utilise. Verifiez la cle, la connexion reseau ou le TLS local.',
+            'error' => true,
+            'error_message' => $message,
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function providerErrorSuggestionsResult(string $message): array
+    {
+        return [
+            'items' => [],
+            'used_provider' => false,
+            'configured' => true,
+            'provider' => 'Groq',
+            'model' => $this->model(),
+            'source_label' => 'Groq indisponible',
+            'source_hint' => 'Aucun repli local n a ete utilise. Verifiez la cle, la connexion reseau ou le TLS local.',
+            'error' => true,
+            'error_message' => $message,
+        ];
     }
 
     private function noDiscussionMessage(string $language): string
@@ -431,7 +719,7 @@ final class CommunityAiService
     /** @param Comment[] $comments */
     private function summaryLooksWeak(string $summary, Thread $thread, array $comments): bool
     {
-        if ($summary === '' || mb_strlen($summary) < 25) {
+        if ($summary === '' || mb_strlen($summary) < 20) {
             return true;
         }
 
@@ -439,28 +727,18 @@ final class CommunityAiService
             return true;
         }
 
-        $sources = [
-            (string) $thread->getTitle(),
-            (string) $thread->getContent(),
-        ];
+        $title = $this->normalizeSpaces((string) $thread->getTitle());
+        if ($title !== '') {
+            similar_text(mb_strtolower($summary), mb_strtolower($title), $similarity);
 
-        if ($comments !== []) {
-            $sources[] = (string) $comments[0]->getContent();
-            $sources[] = (string) $comments[array_key_last($comments)]->getContent();
-        }
-
-        foreach ($sources as $sourceText) {
-            $sourceText = $this->normalizeSpaces($sourceText);
-
-            if ($sourceText === '') {
-                continue;
-            }
-
-            similar_text(mb_strtolower($summary), mb_strtolower($sourceText), $similarity);
-
-            if ($similarity >= 88.0) {
+            if ($similarity >= 96.0) {
                 return true;
             }
+        }
+
+        $opening = $this->normalizeSpaces((string) $thread->getContent());
+        if ($opening !== '' && mb_strtolower($summary) === mb_strtolower($opening)) {
+            return true;
         }
 
         return false;
@@ -481,31 +759,16 @@ final class CommunityAiService
         }
 
         foreach ($suggestions as $suggestion) {
+            if (mb_strlen(trim($suggestion)) < 18) {
+                return true;
+            }
+
             if (preg_match('/\b(someone|the person|they seem|this thread)\b/i', $suggestion) === 1) {
                 return true;
             }
         }
 
-        $contextKeywords = array_slice(array_unique(array_merge(
-            $this->extractKeywordsFromComments(array_slice($comments, -3), 3),
-            $this->extractKeywordsFromText((string) ($thread->getTitle().' '.$thread->getContent()), 3),
-        )), 0, 4);
-
-        if ($contextKeywords === []) {
-            return false;
-        }
-
-        foreach ($suggestions as $suggestion) {
-            $lower = mb_strtolower($suggestion);
-
-            foreach ($contextKeywords as $keyword) {
-                if (str_contains($lower, mb_strtolower($keyword))) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
+        return false;
     }
 
     /** @param Comment[] $comments */
@@ -1048,12 +1311,25 @@ final class CommunityAiService
 
     private function parseNumberedList(string $content): array
     {
-        preg_match_all('/^\s*[123]\)\s*(.+)$/mi', $content, $matches);
+        preg_match_all('/^\s*(?:[123][\)\.]|[-*•])\s*(.+)$/mi', $content, $matches);
 
         return array_values(array_filter(array_map(
             fn (string $line): string => $this->normalizeSpaces(trim($line)),
             $matches[1] ?? [],
         )));
+    }
+
+    private function endpoint(): string
+    {
+        foreach (['COMMUNITY_GROQ_ENDPOINT', 'GROQ_API_ENDPOINT'] as $key) {
+            $value = $_SERVER[$key] ?? $_ENV[$key] ?? getenv($key);
+
+            if (is_string($value) && trim($value) !== '') {
+                return trim($value);
+            }
+        }
+
+        return self::ENDPOINT;
     }
 
     private function apiKey(): ?string
@@ -1080,6 +1356,24 @@ final class CommunityAiService
         }
 
         return self::DEFAULT_MODEL;
+    }
+
+    private function timeout(): float
+    {
+        $value = $_SERVER['COMMUNITY_GROQ_TIMEOUT'] ?? $_ENV['COMMUNITY_GROQ_TIMEOUT'] ?? getenv('COMMUNITY_GROQ_TIMEOUT');
+
+        if (is_string($value) && is_numeric($value) && (float) $value > 0) {
+            return (float) $value;
+        }
+
+        return 18.0;
+    }
+
+    private function allowInsecureTls(): bool
+    {
+        $value = $_SERVER['COMMUNITY_GROQ_INSECURE'] ?? $_ENV['COMMUNITY_GROQ_INSECURE'] ?? getenv('COMMUNITY_GROQ_INSECURE');
+
+        return in_array(mb_strtolower(trim((string) $value)), ['1', 'true', 'yes', 'on'], true);
     }
 
     private function safe(?string $value): string
