@@ -10,7 +10,7 @@
 
 <div class="card border-0 shadow-sm" style="border-radius:1rem">
     <div class="card-body p-4">
-        <form method="post">
+        <form method="post" enctype="multipart/form-data">
             <div class="row g-3">
                 <div class="col-md-8">
                     <label class="form-label fw-semibold">Titre</label>
@@ -52,11 +52,25 @@
                         </div>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <label class="form-label fw-semibold">Image URL</label>
                     <input type="url" name="image_url" class="form-control" value="{{ cours ? cours.imageUrl }}">
                 </div>
-                <div class="col-md-6">
+                <div class="col-md-4">
+                    <label class="form-label fw-semibold">Document du cours</label>
+                    <input type="file" name="document_file" class="form-control" accept=".pdf,.doc,.docx,.txt">
+                    {% if cours and cours.documentPath %}
+                    <div class="mt-2 d-flex align-items-center gap-2">
+                        <i class="bi bi-paperclip text-muted"></i>
+                        <a href="{{ asset('uploads/documents/' ~ cours.documentPath) }}" target="_blank" class="small text-muted">
+                            {{ cours.documentPath }}
+                        </a>
+                        <span class="badge bg-success">Fichier actuel</span>
+                    </div>
+                    {% endif %}
+                    <div class="form-text">Formats acceptés : PDF, DOC, DOCX, TXT (max 10MB)</div>
+                </div>
+                <div class="col-md-4">
                     <label class="form-label fw-semibold">Vidéo URL</label>
                     <input type="url" name="video_url" class="form-control" value="{{ cours ? cours.videoUrl }}">
                 </div>

@@ -117,4 +117,14 @@ class Cours
             self::NIVEAU_AVANCE => 'warning', self::NIVEAU_EXPERT => 'danger', default => 'secondary',
         };
     }
+    public function getEmbedUrl(): ?string
+    {
+        if (!$this->videoUrl) {
+            return null;
+        }
+        if (preg_match('/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/', $this->videoUrl, $m)) {
+            return 'https://www.youtube.com/embed/' . $m[1];
+        }
+        return $this->videoUrl;
+    }
 }

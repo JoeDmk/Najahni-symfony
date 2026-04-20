@@ -16,11 +16,70 @@
             <h2 class="fw-bold mb-3">{{ cours.titre }}</h2>
             <p>{{ cours.description }}</p>
 
-            {% if cours.videoUrl %}
+            {% if cours.embedUrl %}
             <div class="ratio ratio-16x9 mt-3">
-                <iframe src="{{ cours.videoUrl }}" allowfullscreen></iframe>
+                <iframe src="{{ cours.embedUrl }}"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen></iframe>
             </div>
+            <p class="small text-muted mt-1">
+                <i class="bi bi-info-circle me-1"></i>
+                Si la vidéo ne s'affiche pas,
+                <a href="{{ cours.videoUrl }}" target="_blank">regardez-la sur YouTube</a>.
+            </p>
             {% endif %}
+
+            {# ===== DOCUMENT ===== #}
+            {% if cours.documentPath %}
+                {% set ext = cours.documentPath|split('.')|last|lower %}
+                {% set docUrl = path('app_apprentissage_cours_document', {id: cours.id}) %}
+
+                <div class="mt-4">
+                    <h6 class="fw-bold mb-3"><i class="bi bi-paperclip me-2"></i>Document du cours</h6>
+
+                    {% if ext == 'pdf' %}
+                        <div class="border rounded overflow-hidden mb-2" style="height:600px">
+                            <iframe src="{{ docUrl }}"
+                                    type="application/pdf"
+                                    width="100%"
+                                    height="100%"
+                                    style="border:none">
+                                <p class="p-3">Votre navigateur ne supporte pas l'affichage PDF.
+                                    <a href="{{ docUrl }}" target="_blank">Télécharger le PDF</a>
+                                </p>
+                            </iframe>
+                        </div>
+                        <a href="{{ docUrl }}" target="_blank" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-file-earmark-pdf me-1"></i>Ouvrir en plein écran
+                        </a>
+
+                    {% elseif ext == 'txt' %}
+                        <div class="border rounded overflow-hidden mb-2" style="height:400px">
+                            <iframe src="{{ docUrl }}"
+                                    width="100%"
+                                    height="100%"
+                                    style="border:none; background:#fff">
+                            </iframe>
+                        </div>
+                        <a href="{{ docUrl }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                            <i class="bi bi-file-earmark-text me-1"></i>Ouvrir en plein écran
+                        </a>
+
+                    {% elseif ext in ['doc', 'docx'] %}
+                        <div class="alert alert-info d-flex align-items-center gap-3 mb-2">
+                            <i class="bi bi-file-earmark-word fs-3 text-primary"></i>
+                            <div>
+                                <strong>Document Word</strong>
+                                <p class="mb-0 small text-muted">L'aperçu Word n'est pas disponible. Téléchargez le fichier pour l'ouvrir.</p>
+                            </div>
+                            <a href="{{ docUrl }}" class="btn btn-primary btn-sm ms-auto">
+                                <i class="bi bi-download me-1"></i>Télécharger
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endif %}
+            {# ===== FIN DOCUMENT ===== #}
         </div>
 
         {# Comments/Reviews #}
@@ -32,10 +91,7 @@
                     <textarea name="contenu" class="form-control" rows="2" placeholder="Votre avis sur ce cours..." required></textarea>
                 </div>
                 <div class="d-flex gap-2 align-items-center">
-                    <label class="small fw-semibold">Note :</label>
-                    <select name="rating" class="form-select form-select-sm" style="width:80px">
-                        {% for i in ['1.0','2.0','3.0','4.0','5.0'] %}<option value="{{ i }}">{{ i }}</option>{% endfor %}
-                    </select>
+                    <span class="small text-muted">La note est attribuée automatiquement par IA (1 à 5 étoiles).</span>
                     <button class="btn btn-sm btn-nj ms-auto"><i class="bi bi-send me-1"></i>Publier</button>
                 </div>
             </form>
@@ -75,6 +131,11 @@
                 {% if progression.pointsXp > 0 %}
                 <p class="small text-success mt-2 mb-0"><i class="bi bi-star me-1"></i>{{ progression.pointsXp }} XP gagnés</p>
                 {% endif %}
+                {% if progression.pourcentage >= 100 %}
+                <button type="button" id="retakeQuizBtn" class="btn btn-outline-nj btn-sm w-100 mt-3">
+                    <i class="bi bi-arrow-repeat me-1"></i>Refaire un quiz
+                </button>
+                {% endif %}
             {% else %}
                 <p class="text-muted small mb-3">Vous n'êtes pas encore inscrit à ce cours.</p>
                 <form method="post" action="{{ path('app_apprentissage_enroll', {id: cours.id}) }}">
@@ -91,8 +152,160 @@
                 <li class="mb-2"><i class="bi bi-star text-muted me-2"></i>{{ cours.pointsXp }} XP</li>
                 <li class="mb-2"><i class="bi bi-bar-chart text-muted me-2"></i>{{ cours.niveauDifficulte }}</li>
                 <li><i class="bi bi-tag text-muted me-2"></i>{{ cours.categorie }}</li>
+                {% if cours.documentPath %}
+                <li class="mt-2">
+                    <i class="bi bi-file-earmark text-muted me-2"></i>
+                    <a href="{{ path('app_apprentissage_cours_document', {id: cours.id}) }}" 
+                    target="_blank" class="text-decoration-none">
+                        Voir / Télécharger le document
+                    </a>
+                </li>
+                {% endif %}
             </ul>
         </div>
     </div>
 </div>
+
+{% if progression and progression.pourcentage >= 100 %}
+<div class="modal fade" id="courseQuizModal" tabindex="-1" aria-labelledby="courseQuizModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0" style="border-radius:1rem;overflow:hidden">
+            <div class="modal-header" style="background:var(--nj-gradient);color:#fff">
+                <h5 class="modal-title fw-bold" id="courseQuizModalLabel"><i class="bi bi-patch-question me-2"></i>Quiz d'entraînement</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <p class="text-muted mb-3">Bravo, vous avez terminé ce cours. Répondez à ce quiz rapide généré par IA (3 à 5 questions).</p>
+                <div id="quizLoading" class="py-4 text-center">
+                    <div class="spinner-border text-primary" role="status"></div>
+                    <p class="small text-muted mt-2 mb-0">Génération du quiz...</p>
+                </div>
+                <div id="quizError" class="alert alert-danger d-none" role="alert"></div>
+                <form id="quizForm" class="d-none"></form>
+                <div id="quizResult" class="alert d-none mt-3" role="alert"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" id="quizSubmitBtn" class="btn btn-nj d-none">Valider mes réponses</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block javascripts %}
+{{ parent() }}
+{% if progression and progression.pourcentage >= 100 %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const storageKey = 'nj-course-quiz-shown-{{ cours.id }}';
+    const modalElement = document.getElementById('courseQuizModal');
+    const retakeQuizBtn = document.getElementById('retakeQuizBtn');
+    if (!modalElement || typeof bootstrap === 'undefined') {
+        return;
+    }
+
+    const quizLoading = document.getElementById('quizLoading');
+    const quizError = document.getElementById('quizError');
+    const quizForm = document.getElementById('quizForm');
+    const quizResult = document.getElementById('quizResult');
+    const quizSubmitBtn = document.getElementById('quizSubmitBtn');
+    let questions = [];
+
+    const modal = new bootstrap.Modal(modalElement);
+
+    function loadQuiz() {
+        quizForm.innerHTML = '';
+        quizResult.classList.add('d-none');
+        quizError.classList.add('d-none');
+        quizForm.classList.add('d-none');
+        quizSubmitBtn.classList.add('d-none');
+        quizLoading.classList.remove('d-none');
+
+        fetch('{{ path('app_apprentissage_cours_quiz', {id: cours.id}) }}', {
+            method: 'GET',
+            headers: {'Accept': 'application/json'}
+        })
+        .then(function (response) {
+            if (!response.ok) {
+                throw new Error('Impossible de générer le quiz pour le moment.');
+            }
+            return response.json();
+        })
+        .then(function (data) {
+            questions = Array.isArray(data.questions) ? data.questions.slice(0, 5) : [];
+            if (questions.length < 3) {
+                throw new Error('Quiz incomplet. Réessayez plus tard.');
+            }
+
+            const html = questions.map(function (q, idx) {
+                const options = Array.isArray(q.options) ? q.options : [];
+                const optionsHtml = options.map(function (opt, optIdx) {
+                    const inputId = 'quiz-q' + idx + '-opt' + optIdx;
+                    return '<div class="form-check mb-2">'
+                        + '<input class="form-check-input" type="radio" name="q' + idx + '" id="' + inputId + '" value="' + optIdx + '" required>'
+                        + '<label class="form-check-label" for="' + inputId + '">' + opt + '</label>'
+                        + '</div>';
+                }).join('');
+
+                return '<div class="border rounded-3 p-3 mb-3">'
+                    + '<h6 class="fw-semibold mb-3">' + (idx + 1) + '. ' + q.question + '</h6>'
+                    + optionsHtml
+                    + '</div>';
+            }).join('');
+
+            quizForm.innerHTML = html;
+            quizLoading.classList.add('d-none');
+            quizError.classList.add('d-none');
+            quizForm.classList.remove('d-none');
+            quizSubmitBtn.classList.remove('d-none');
+        })
+        .catch(function (error) {
+            quizLoading.classList.add('d-none');
+            quizError.textContent = error.message;
+            quizError.classList.remove('d-none');
+        });
+    }
+
+    if (retakeQuizBtn) {
+        retakeQuizBtn.addEventListener('click', function () {
+            modal.show();
+            loadQuiz();
+        });
+    }
+
+    if (sessionStorage.getItem(storageKey) !== '1') {
+        sessionStorage.setItem(storageKey, '1');
+        modal.show();
+        loadQuiz();
+    }
+
+    quizSubmitBtn.addEventListener('click', function () {
+        if (!quizForm.reportValidity()) {
+            return;
+        }
+
+        let correct = 0;
+        questions.forEach(function (q, idx) {
+            const selected = quizForm.querySelector('input[name="q' + idx + '"]:checked');
+            if (!selected) {
+                return;
+            }
+            if (parseInt(selected.value, 10) === parseInt(q.answer_index, 10)) {
+                correct += 1;
+            }
+        });
+
+        const total = questions.length;
+        const pct = Math.round((correct / total) * 100);
+
+        quizResult.classList.remove('d-none', 'alert-success', 'alert-warning');
+        quizResult.classList.add(pct >= 70 ? 'alert-success' : 'alert-warning');
+        quizResult.innerHTML = '<strong>Résultat:</strong> ' + correct + '/' + total + ' (' + pct + '%)';
+        quizSubmitBtn.classList.add('d-none');
+    });
+});
+</script>
+{% endif %}
 {% endblock %}
