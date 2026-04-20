@@ -87,105 +87,118 @@
 </div>
 
 <script>
-let mediaRecorder = null;
-let audioChunks = [];
-let isRecording = false;
+/* ── Web Speech API – Reconnaissance vocale temps réel ── */
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-function toggleRecording() {
-    if (isRecording) {
-        stopRecording();
-    } else {
-        startRecording();
-    }
-}
+function createVoiceRecorder(opts) {
+    const btnId      = opts.btnId;
+    const labelId    = opts.labelId;
+    const statusId   = opts.statusId;
+    const fieldId    = opts.fieldId;
+    let recognition  = null;
+    let active       = false;
 
-function startRecording() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        document.getElementById('voiceStatus').textContent = 'Enregistrement vocal non supporté par ce navigateur.';
-        return;
+    function setUI(recording) {
+        const btn   = document.getElementById(btnId);
+        const label = document.getElementById(labelId);
+        const status = document.getElementById(statusId);
+        if (recording) {
+            btn.classList.replace('btn-outline-secondary', 'btn-danger');
+            label.textContent = 'Arrêter l\'enregistrement';
+            status.innerHTML  = '<i class="bi bi-soundwave text-danger"></i> Parlez maintenant...';
+        } else {
+            btn.classList.replace('btn-danger', 'btn-outline-secondary');
+            label.textContent = 'Enregistrer vocalement';
+        }
     }
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
-        mediaRecorder = new MediaRecorder(stream);
-        audioChunks = [];
-        mediaRecorder.ondataavailable = function(e) { audioChunks.push(e.data); };
-        mediaRecorder.onstop = function() {
-            stream.getTracks().forEach(function(t) { t.stop(); });
-            var blob = new Blob(audioChunks, { type: 'audio/webm' });
-            transcribeAudio(blob);
+
+    function start() {
+        if (!SpeechRecognition) {
+            document.getElementById(statusId).textContent = 'Votre navigateur ne supporte pas la reconnaissance vocale. Utilisez Chrome ou Edge.';
+            return;
+        }
+        recognition = new SpeechRecognition();
+        recognition.lang = 'fr-FR';
+        recognition.continuous = true;
+        recognition.interimResults = true;
+
+        let finalTranscript = '';
+        const field = document.getElementById(fieldId);
+        const startValue = field.value;
+
+        recognition.onresult = function(e) {
+            let interim = '';
+            finalTranscript = '';
+            for (let i = 0; i < e.results.length; i++) {
+                if (e.results[i].isFinal) {
+                    finalTranscript += e.results[i][0].transcript;
+                } else {
+                    interim += e.results[i][0].transcript;
+                }
+            }
+            // Show interim text in grey, final in normal
+            field.value = (startValue ? startValue + ' ' : '') + finalTranscript + interim;
+            document.getElementById(statusId).innerHTML = '<i class="bi bi-soundwave text-danger"></i> Parlez maintenant... <span class="text-muted">(' + (finalTranscript.length + interim.length) + ' car.)</span>';
         };
-        mediaRecorder.start();
-        isRecording = true;
-        document.getElementById('voiceRecordBtn').classList.replace('btn-outline-secondary', 'btn-danger');
-        document.getElementById('voiceBtnLabel').textContent = 'Arrêter l\'enregistrement';
-        document.getElementById('voiceStatus').textContent = 'Enregistrement en cours...';
-    }).catch(function() {
-        document.getElementById('voiceStatus').textContent = 'Accès micro refusé.';
-    });
-}
 
-function stopRecording() {
-    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-        mediaRecorder.stop();
-    }
-    isRecording = false;
-    document.getElementById('voiceRecordBtn').classList.replace('btn-danger', 'btn-outline-secondary');
-    document.getElementById('voiceBtnLabel').textContent = 'Enregistrer vocalement';
-    document.getElementById('voiceStatus').textContent = 'Transcription...';
-}
-
-function transcribeAudio(blob) {
-    transcribeToField('motivationText', 'voiceStatus');
-}
-
-function transcribeToField(fieldId, statusId) {
-    var recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-    recognition.lang = 'fr-FR';
-    recognition.interimResults = false;
-    recognition.onresult = function(e) {
-        var text = e.results[0][0].transcript;
-        var field = document.getElementById(fieldId);
-        field.value += (field.value ? ' ' : '') + text;
-        document.getElementById(statusId).textContent = 'Transcription ajoutée !';
-    };
-    recognition.onerror = function() {
-        document.getElementById(statusId).textContent = 'Erreur de transcription.';
-    };
-    recognition.start();
-}
-
-/* Goals voice recording */
-let goalsRecorder = null, goalsChunks = [], goalsRecording = false;
-function toggleGoalsRecording() {
-    if (goalsRecording) { stopGoalsRecording(); } else { startGoalsRecording(); }
-}
-function startGoalsRecording() {
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        document.getElementById('voiceGoalsStatus').textContent = 'Non supporté.';
-        return;
-    }
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(function(stream) {
-        goalsRecorder = new MediaRecorder(stream);
-        goalsChunks = [];
-        goalsRecorder.ondataavailable = function(e) { goalsChunks.push(e.data); };
-        goalsRecorder.onstop = function() {
-            stream.getTracks().forEach(function(t) { t.stop(); });
-            transcribeToField('goalsText', 'voiceGoalsStatus');
+        recognition.onerror = function(e) {
+            active = false;
+            setUI(false);
+            if (e.error === 'not-allowed') {
+                document.getElementById(statusId).textContent = 'Accès au microphone refusé. Autorisez le micro dans votre navigateur.';
+            } else if (e.error === 'no-speech') {
+                document.getElementById(statusId).textContent = 'Aucune voix détectée. Réessayez.';
+            } else {
+                document.getElementById(statusId).textContent = 'Erreur : ' + e.error;
+            }
         };
-        goalsRecorder.start();
-        goalsRecording = true;
-        document.getElementById('voiceGoalsBtn').classList.replace('btn-outline-secondary', 'btn-danger');
-        document.getElementById('voiceGoalsBtnLabel').textContent = 'Arrêter';
-        document.getElementById('voiceGoalsStatus').textContent = 'Enregistrement...';
-    }).catch(function() {
-        document.getElementById('voiceGoalsStatus').textContent = 'Accès micro refusé.';
-    });
+
+        recognition.onend = function() {
+            if (active) {
+                // Ended naturally (timeout) — finalize
+                active = false;
+                setUI(false);
+                if (finalTranscript) {
+                    field.value = (startValue ? startValue + ' ' : '') + finalTranscript;
+                    document.getElementById(statusId).innerHTML = '<i class="bi bi-check-circle text-success"></i> Transcription ajoutée !';
+                } else {
+                    document.getElementById(statusId).textContent = 'Aucun texte détecté.';
+                }
+            }
+        };
+
+        recognition.start();
+        active = true;
+        setUI(true);
+    }
+
+    function stop() {
+        if (recognition) {
+            active = false;
+            recognition.stop();
+            setUI(false);
+            document.getElementById(statusId).innerHTML = '<i class="bi bi-check-circle text-success"></i> Transcription ajoutée !';
+        }
+    }
+
+    return function toggle() {
+        if (active) { stop(); } else { start(); }
+    };
 }
-function stopGoalsRecording() {
-    if (goalsRecorder && goalsRecorder.state !== 'inactive') goalsRecorder.stop();
-    goalsRecording = false;
-    document.getElementById('voiceGoalsBtn').classList.replace('btn-danger', 'btn-outline-secondary');
-    document.getElementById('voiceGoalsBtnLabel').textContent = 'Enregistrer vocalement';
-    document.getElementById('voiceGoalsStatus').textContent = 'Transcription...';
-}
+
+/* Create two independent voice recorders */
+const toggleRecording = createVoiceRecorder({
+    btnId: 'voiceRecordBtn',
+    labelId: 'voiceBtnLabel',
+    statusId: 'voiceStatus',
+    fieldId: 'motivationText'
+});
+
+const toggleGoalsRecording = createVoiceRecorder({
+    btnId: 'voiceGoalsBtn',
+    labelId: 'voiceGoalsBtnLabel',
+    statusId: 'voiceGoalsStatus',
+    fieldId: 'goalsText'
+});
 </script>
 {% endblock %}
