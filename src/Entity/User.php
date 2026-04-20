@@ -139,6 +139,11 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: Post::class, mappedBy: 'user')]
     private Collection $posts;
 
+    // ✅ NOUVEAU — Relation badges
+    #[ORM\ManyToMany(targetEntity: Badge::class)]
+    #[ORM\JoinTable(name: 'user_badge')]
+    private Collection $badges;
+
     public function __construct()
     {
         $this->createdAt = new \DateTime();
@@ -146,6 +151,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         $this->projets = new ArrayCollection();
         $this->progressions = new ArrayCollection();
         $this->posts = new ArrayCollection();
+        $this->badges = new ArrayCollection(); // ✅ NOUVEAU
     }
 
     #[ORM\PreUpdate]
@@ -225,6 +231,23 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     public function getProgressions(): Collection { return $this->progressions; }
     /** @return Collection<int, Post> */
     public function getPosts(): Collection { return $this->posts; }
+
+    // ✅ NOUVEAU — Badges
+    /** @return Collection<int, Badge> */
+    public function getBadges(): Collection { return $this->badges; }
+
+    public function addBadge(Badge $badge): static
+    {
+        if (!$this->badges->contains($badge)) {
+            $this->badges->add($badge);
+        }
+        return $this;
+    }
+
+    public function hasBadge(Badge $badge): bool
+    {
+        return $this->badges->contains($badge);
+    }
 
     // UserInterface
     public function getRoles(): array
