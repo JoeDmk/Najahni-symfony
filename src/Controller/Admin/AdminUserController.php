@@ -16,6 +16,7 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[Route('/admin/users')]
 #[IsGranted('ROLE_ADMIN')]
@@ -64,13 +65,25 @@ class AdminUserController extends AbstractController
     }
 
     #[Route('/new', name: 'admin_users_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $em, UserPasswordHasherInterface $hasher): Response
+    public function new(Request $request, EntityManagerInterface $em, UserPasswordHasherInterface $hasher, ValidatorInterface $validator): Response
     {
         if ($request->isMethod('POST')) {
             $user = new User();
             $this->hydrateUser($user, $request);
             $user->setPassword($hasher->hashPassword($user, $request->request->get('password', 'najahni123')));
             $user->setVerified(true);
+
+            $errors = $validator->validate($user);
+            if (count($errors) > 0) {
+                $fieldErrors = [];
+                foreach ($errors as $error) {
+                    $field = $error->getPropertyPath();
+                    if (!isset($fieldErrors[$field])) {
+                        $fieldErrors[$field] = $error->getMessage();
+                    }
+                }
+                return $this->render('admin/user/form.html.twig', ['user' => null, 'fieldErrors' => $fieldErrors]);
+            }
 
             $em->persist($user);
             $em->flush();
@@ -84,10 +97,23 @@ class AdminUserController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'admin_users_edit', methods: ['GET', 'POST'])]
-    public function edit(User $user, Request $request, EntityManagerInterface $em): Response
+    public function edit(User $user, Request $request, EntityManagerInterface $em, ValidatorInterface $validator): Response
     {
         if ($request->isMethod('POST')) {
             $this->hydrateUser($user, $request);
+
+            $errors = $validator->validate($user);
+            if (count($errors) > 0) {
+                $fieldErrors = [];
+                foreach ($errors as $error) {
+                    $field = $error->getPropertyPath();
+                    if (!isset($fieldErrors[$field])) {
+                        $fieldErrors[$field] = $error->getMessage();
+                    }
+                }
+                return $this->render('admin/user/form.html.twig', ['user' => $user, 'fieldErrors' => $fieldErrors]);
+            }
+
             $em->flush();
             $this->addFlash('success', 'Utilisateur modifié avec succès.');
             return $this->redirectToRoute('admin_users');

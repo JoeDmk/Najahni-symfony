@@ -10,12 +10,15 @@ use App\Repository\InvestmentContractRepository;
 use App\Repository\InvestmentOfferRepository;
 use App\Repository\InvestmentOpportunityRepository;
 use App\Repository\InvestorProfileRepository;
+use App\Service\EmailService;
 use App\Service\NotificationService;
 use App\Service\Investment\StripePaymentService;
 use App\Service\Investment\EconomicApiService;
 use App\Service\Investment\EconomicRiskEngine;
+use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
 use Doctrine\ORM\EntityManagerInterface;
 use Knp\Component\Pager\PaginatorInterface;
+use Psr\Log\LoggerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -201,6 +204,7 @@ class InvestmentController extends AbstractController
         InvestmentOffer $offer,
         Request $request,
         EntityManagerInterface $em,
+        InvestmentOfferRepository $offerRepo,
         NotificationService $notificationService,
     ): Response
     {
@@ -220,6 +224,13 @@ class InvestmentController extends AbstractController
             return $this->redirectToRoute('app_invest_opportunity_show', ['id' => $opportunity->getId()]);
         }
 
+        $acceptedTotal = $offerRepo->sumAcceptedAmountsForOpportunity($opportunity);
+        $nextAcceptedTotal = $acceptedTotal + (float) $offer->getProposedAmount();
+        if (($nextAcceptedTotal - (float) $opportunity->getTargetAmount()) > 0.00001) {
+            $this->addFlash('danger', 'Le montant total des offres acceptées dépasserait l\'objectif de financement.');
+            return $this->redirectAfterOfferAction($request, $offer);
+        }
+
         $offer->setStatus(InvestmentOffer::STATUS_ACCEPTED);
         $contractUrl = $this->generateUrl('app_invest_contract_show', ['id' => $offer->getId()]);
         $notificationService->notify(
@@ -230,10 +241,6 @@ class InvestmentController extends AbstractController
             $contractUrl,
             'Ouvrir le contrat'
         );
-
-        if ($opportunity->getTotalFunded() >= (float) $opportunity->getTargetAmount()) {
-            $opportunity->setStatus(InvestmentOpportunity::STATUS_FUNDED);
-        }
 
         $em->flush();
 
@@ -324,6 +331,7 @@ class InvestmentController extends AbstractController
             return $this->redirectToRoute('app_invest_opportunity_show', ['id' => $opp->getId()]);
         }
 
+        $riskAcknowledged = $request->request->getBoolean('risk_acknowledged');
         $amount = $request->request->get('amount');
         if (!is_numeric($amount) || (float) $amount <= 0) {
             $this->addFlash('danger', 'Le montant doit être un nombre positif.');
@@ -342,7 +350,7 @@ class InvestmentController extends AbstractController
         $offer->setProposedAmount((string) (float) $amount);
         $offer->setStatus('PENDING');
         $offer->setPaid(false);
-        $offer->setRiskAcknowledged($request->request->getBoolean('risk_acknowledged'));
+        $offer->setRiskAcknowledged($riskAcknowledged);
 
         $errors = $validator->validate($offer);
         if (count($errors) > 0) {
@@ -350,8 +358,13 @@ class InvestmentController extends AbstractController
             return $this->redirectToRoute('app_invest_opportunity_show', ['id' => $opp->getId()]);
         }
 
-        $em->persist($offer);
-        $em->flush();
+        try {
+            $em->persist($offer);
+            $em->flush();
+        } catch (UniqueConstraintViolationException) {
+            $this->addFlash('danger', 'Vous avez déjà soumis une offre pour cette opportunité.');
+            return $this->redirectToRoute('app_invest_opportunity_show', ['id' => $opp->getId()]);
+        }
 
         $this->addFlash('success', 'Offre soumise avec succes !');
         return $this->redirectToRoute('app_invest_opportunity_show', ['id' => $opp->getId()]);
@@ -1089,6 +1102,8 @@ class InvestmentController extends AbstractController
         EntityManagerInterface $em,
         StripePaymentService $paymentService,
         NotificationService $notificationService,
+        EmailService $emailService,
+        LoggerInterface $logger,
     ): JsonResponse {
         if ($offer->getInvestor() !== $this->getUser()) {
             return $this->json(['error' => 'Vous ne pouvez pas payer cette offre.'], 403);
@@ -1147,6 +1162,10 @@ class InvestmentController extends AbstractController
         $offer->setPaid(true);
         $offer->setPaidAt(new \DateTime());
         $offer->setPaymentIntentId($result['paymentIntentId'] ?? null);
+        if ($contract->getStatus() !== \App\Entity\InvestmentContract::STATUS_FUNDED) {
+            $contract->setStatus(\App\Entity\InvestmentContract::STATUS_FUNDED);
+        }
+        $this->markOpportunityFundedIfPaidOut($offer->getOpportunity());
         $contractUrl = $this->generateUrl('app_invest_contract_show', ['id' => $offer->getId()]);
         $notificationService->notify(
             $offer->getInvestor(),
@@ -1166,6 +1185,27 @@ class InvestmentController extends AbstractController
         );
         $em->flush();
 
+        try {
+            if ($offer->getInvestor()?->getEmail()) {
+                $emailService->sendInvestmentPaymentConfirmation(
+                    $offer->getInvestor()->getEmail(),
+                    $offer->getInvestor()->getFirstname() ?? 'Utilisateur',
+                    $offer->getOpportunity()->getProject()?->getTitre() ?? 'Projet',
+                    number_format((float) $offer->getProposedAmount(), 0, ',', ' ') . ' DT',
+                    $offer->getPaidAt()?->format('d/m/Y H:i') ?? (new \DateTime())->format('d/m/Y H:i'),
+                    $offer->getPaymentIntentId(),
+                    $this->generateUrl('app_invest_contract_show', ['id' => $offer->getId()], \Symfony\Component\Routing\Generator\UrlGeneratorInterface::ABSOLUTE_URL),
+                    'Paiement integral du contrat'
+                );
+            }
+        } catch (\Throwable $exception) {
+            $logger->error('Unable to send investment payment confirmation email.', [
+                'offerId' => $offer->getId(),
+                'paymentIntentId' => $offer->getPaymentIntentId(),
+                'exception' => $exception,
+            ]);
+        }
+
         return $this->json([
             'success' => true,
             'message' => 'Paiement confirme avec succes.',
@@ -1176,6 +1216,13 @@ class InvestmentController extends AbstractController
             'amount' => number_format((float) $offer->getProposedAmount(), 0, ',', ' '),
             'projectTitle' => $offer->getOpportunity()->getProject()?->getTitre() ?? 'Projet',
         ]);
+    }
+
+    private function markOpportunityFundedIfPaidOut(InvestmentOpportunity $opportunity): void
+    {
+        if ($opportunity->getTotalFunded() >= (float) $opportunity->getTargetAmount()) {
+            $opportunity->setStatus(InvestmentOpportunity::STATUS_FUNDED);
+        }
     }
 
     #[Route('/create-opportunity', name: 'app_invest_create_opportunity', methods: ['GET', 'POST'])]
@@ -1197,27 +1244,30 @@ class InvestmentController extends AbstractController
                 return $this->render('front/investment/create_opportunity.html.twig', ['projets' => $projets]);
             }
 
+            $fieldErrors = [];
             $targetAmount = $request->request->get('target_amount');
             if (!is_numeric($targetAmount) || (float) $targetAmount < 100) {
-                $this->addFlash('danger', 'Le montant cible doit être au minimum 100 DT.');
-                return $this->render('front/investment/create_opportunity.html.twig', ['projets' => $projets]);
+                $fieldErrors['target_amount'] = 'Le montant cible doit être au minimum 100 DT.';
             }
 
             $deadlineStr = $request->request->get('deadline');
+            $deadline = null;
             if (!$deadlineStr || strtotime($deadlineStr) === false) {
-                $this->addFlash('danger', 'La date limite est invalide.');
-                return $this->render('front/investment/create_opportunity.html.twig', ['projets' => $projets]);
-            }
-            $deadline = new \DateTime($deadlineStr);
-            if ($deadline <= new \DateTime('today')) {
-                $this->addFlash('danger', 'La date limite doit être dans le futur.');
-                return $this->render('front/investment/create_opportunity.html.twig', ['projets' => $projets]);
+                $fieldErrors['deadline'] = 'La date limite est invalide.';
+            } else {
+                $deadline = new \DateTime($deadlineStr);
+                if ($deadline <= new \DateTime('today')) {
+                    $fieldErrors['deadline'] = 'La date limite doit être dans le futur.';
+                }
             }
 
             $description = trim($request->request->get('description', ''));
             if (mb_strlen($description) < 10) {
-                $this->addFlash('danger', 'La description doit contenir au moins 10 caractères.');
-                return $this->render('front/investment/create_opportunity.html.twig', ['projets' => $projets]);
+                $fieldErrors['description'] = 'La description doit contenir au moins 10 caractères.';
+            }
+
+            if (!empty($fieldErrors)) {
+                return $this->render('front/investment/create_opportunity.html.twig', ['projets' => $projets, 'fieldErrors' => $fieldErrors]);
             }
 
             $opp = new InvestmentOpportunity();
@@ -1229,8 +1279,14 @@ class InvestmentController extends AbstractController
 
             $errors = $validator->validate($opp);
             if (count($errors) > 0) {
-                $this->addFlash('danger', (string) $errors->get(0)->getMessage());
-                return $this->render('front/investment/create_opportunity.html.twig', ['projets' => $projets]);
+                $fieldErrors = [];
+                foreach ($errors as $error) {
+                    $field = $error->getPropertyPath();
+                    if (!isset($fieldErrors[$field])) {
+                        $fieldErrors[$field] = $error->getMessage();
+                    }
+                }
+                return $this->render('front/investment/create_opportunity.html.twig', ['projets' => $projets, 'fieldErrors' => $fieldErrors]);
             }
 
             $em->persist($opp);

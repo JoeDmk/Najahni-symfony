@@ -28,6 +28,7 @@ security:
         ROLE_ADMIN: [ROLE_USER, ROLE_ENTREPRENEUR, ROLE_MENTOR, ROLE_INVESTISSEUR]
 
     access_control:
+        - { path: ^/api/face-login, roles: PUBLIC_ACCESS }
         - { path: ^/admin, roles: ROLE_ADMIN }
         - { path: ^/profile, roles: ROLE_USER }
         - { path: ^/community, roles: ROLE_USER }

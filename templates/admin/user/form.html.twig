@@ -10,23 +10,28 @@
 
 <div class="card border-0 shadow-sm" style="border-radius:1rem">
     <div class="card-body p-4">
-        <form method="post">
+        <form method="post" novalidate>
+            {% set e = fieldErrors|default({}) %}
             <div class="row g-3">
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Prénom</label>
-                    <input type="text" name="firstname" class="form-control" value="{{ user ? user.firstname }}" required>
+                    <input type="text" name="firstname" class="form-control {{ e.firstname is defined ? 'is-invalid' }}" value="{{ user ? user.firstname }}" required minlength="2" maxlength="100">
+                    {% if e.firstname is defined %}<div class="invalid-feedback d-block">{{ e.firstname }}</div>{% endif %}
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Nom</label>
-                    <input type="text" name="lastname" class="form-control" value="{{ user ? user.lastname }}" required>
+                    <input type="text" name="lastname" class="form-control {{ e.lastname is defined ? 'is-invalid' }}" value="{{ user ? user.lastname }}" required minlength="2" maxlength="100">
+                    {% if e.lastname is defined %}<div class="invalid-feedback d-block">{{ e.lastname }}</div>{% endif %}
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Email</label>
-                    <input type="email" name="email" class="form-control" value="{{ user ? user.email }}" required>
+                    <input type="email" name="email" class="form-control {{ e.email is defined ? 'is-invalid' }}" value="{{ user ? user.email }}" required maxlength="255">
+                    {% if e.email is defined %}<div class="invalid-feedback d-block">{{ e.email }}</div>{% endif %}
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Téléphone</label>
-                    <input type="text" name="phone" class="form-control" value="{{ user ? user.phone }}">
+                    <input type="tel" name="phone" class="form-control {{ e.phone is defined ? 'is-invalid' }}" value="{{ user ? user.phone }}" pattern="^\+?[0-9\s\-]{7,20}$" maxlength="20" title="Numéro de téléphone valide (7-20 chiffres)">
+                    {% if e.phone is defined %}<div class="invalid-feedback d-block">{{ e.phone }}</div>{% endif %}
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Rôle</label>
@@ -45,15 +50,18 @@
                 {% endif %}
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Entreprise</label>
-                    <input type="text" name="company_name" class="form-control" value="{{ user ? user.companyName }}">
+                    <input type="text" name="company_name" class="form-control {{ e.companyName is defined ? 'is-invalid' }}" value="{{ user ? user.companyName }}" maxlength="200">
+                    {% if e.companyName is defined %}<div class="invalid-feedback d-block">{{ e.companyName }}</div>{% endif %}
                 </div>
                 <div class="col-md-6">
                     <label class="form-label fw-semibold">Adresse</label>
-                    <input type="text" name="address" class="form-control" value="{{ user ? user.address }}">
+                    <input type="text" name="address" class="form-control {{ e.address is defined ? 'is-invalid' }}" value="{{ user ? user.address }}" maxlength="300">
+                    {% if e.address is defined %}<div class="invalid-feedback d-block">{{ e.address }}</div>{% endif %}
                 </div>
                 <div class="col-12">
                     <label class="form-label fw-semibold">Bio</label>
-                    <textarea name="bio" class="form-control" rows="3">{{ user ? user.bio }}</textarea>
+                    <textarea name="bio" class="form-control {{ e.bio is defined ? 'is-invalid' }}" rows="3" maxlength="1000">{{ user ? user.bio }}</textarea>
+                    {% if e.bio is defined %}<div class="invalid-feedback d-block">{{ e.bio }}</div>{% endif %}
                 </div>
             </div>
             <button type="submit" class="btn btn-nj mt-4"><i class="bi bi-check-lg me-2"></i>{{ user ? 'Enregistrer' : 'Créer' }}</button>

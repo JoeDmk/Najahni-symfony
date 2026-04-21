@@ -173,7 +173,6 @@ class InvestmentAdvancedController extends AbstractController
         Request $request,
         EconomicApiService $api,
         EconomicRiskEngine $engine,
-        EntityManagerInterface $em,
     ): JsonResponse {
         $country = $request->query->get('country', 'TN');
         $data = $api->fetchAllEconomicData($country);
@@ -183,11 +182,6 @@ class InvestmentAdvancedController extends AbstractController
 
         $score = $engine->calculateFullRisk($targetAmount, $deadline, $data);
         $economicFactor = $engine->computeEconomicFactor($data);
-
-        // Persist the risk score on the opportunity
-        $opp->setRiskScore((float) $score);
-        $opp->setRiskLabel(EconomicRiskEngine::getRiskLevel($score));
-        $em->flush();
 
         return $this->json([
             'score' => $score,
@@ -274,11 +268,22 @@ class InvestmentAdvancedController extends AbstractController
             $profile->setUser($this->getUser());
         }
 
+        $riskTolerance = max(1, min(10, (int) $request->request->get('riskTolerance', 5)));
+        $budgetMin = max(0, (float) $request->request->get('budgetMin', 0));
+        $budgetMax = max(0, (float) $request->request->get('budgetMax', 10000000));
+        $horizonMonths = max(1, (int) $request->request->get('horizonMonths', 12));
+
+        if ($budgetMin >= $budgetMax) {
+            return $this->json([
+                'error' => 'Le budget minimum doit etre strictement inferieur au budget maximum.',
+            ], 400);
+        }
+
         $profile->setPreferredSectors($request->request->get('sectors', ''));
-        $profile->setRiskTolerance(max(1, min(10, (int) $request->request->get('riskTolerance', 5))));
-        $profile->setBudgetMin((string) max(0, (float) $request->request->get('budgetMin', 0)));
-        $profile->setBudgetMax((string) max(0, (float) $request->request->get('budgetMax', 10000000)));
-        $profile->setHorizonMonths(max(1, (int) $request->request->get('horizonMonths', 12)));
+        $profile->setRiskTolerance($riskTolerance);
+        $profile->setBudgetMin((string) $budgetMin);
+        $profile->setBudgetMax((string) $budgetMax);
+        $profile->setHorizonMonths($horizonMonths);
         $profile->setDescription($request->request->get('description'));
 
         $em->persist($profile);

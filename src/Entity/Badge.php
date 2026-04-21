@@ -21,26 +21,31 @@ class Badge
     private ?int $id = null;
 
     #[ORM\Column(length: 100, unique: true)]
-    #[Assert\NotBlank]
+    #[Assert\NotBlank(message: 'Le nom est obligatoire.')]
+    #[Assert\Length(min: 2, max: 100, minMessage: 'Le nom doit contenir au moins {{ limit }} caractères.', maxMessage: 'Le nom ne peut pas dépasser {{ limit }} caractères.')]
     private ?string $nom = null;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
+    #[Assert\Length(max: 1000, maxMessage: 'La description ne peut pas dépasser {{ limit }} caractères.')]
     private ?string $description = null;
 
     #[ORM\Column(length: 50)]
     private string $icone = '';
 
     #[ORM\Column(name: 'condition_obtention', type: Types::TEXT)]
-    #[Assert\NotBlank]
+    #[Assert\NotBlank(message: 'La condition d\'obtention est obligatoire.')]
     private ?string $conditionObtention = null;
 
     #[ORM\Column]
+    #[Assert\PositiveOrZero(message: 'Les points requis doivent être positifs ou nuls.')]
     private int $pointsRequis = 0;
 
     #[ORM\Column]
+    #[Assert\PositiveOrZero(message: 'Le nombre de cours requis doit être positif ou nul.')]
     private int $coursRequis = 0;
 
     #[ORM\Column]
+    #[Assert\PositiveOrZero(message: 'Le niveau requis doit être positif ou nul.')]
     private int $niveauRequis = 0;
 
     #[ORM\Column(length: 50)]

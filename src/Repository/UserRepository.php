@@ -51,4 +51,18 @@ class UserRepository extends ServiceEntityRepository implements PasswordUpgrader
             ->setParameter('q', '%' . $query . '%')
             ->orderBy('u.createdAt', 'DESC');
     }
+
+    /**
+     * @return User[]
+     */
+    public function findFaceRegisteredUsers(): array
+    {
+        return $this->createQueryBuilder('u')
+            ->where('u.faceRegistered = true')
+            ->andWhere('u.faceEncoding IS NOT NULL')
+            ->andWhere('u.isActive = true')
+            ->andWhere('u.isBanned = false')
+            ->getQuery()
+            ->getResult();
+    }
 }

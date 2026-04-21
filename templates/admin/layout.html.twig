@@ -33,7 +33,7 @@
             <span class="px-3 pt-3 pb-2 text-uppercase fw-bold text-muted" style="font-size:.7rem;letter-spacing:1px">Modules</span>
             <a class="nav-link {{ app.request.attributes.get('_route') starts with 'admin_projet' ? 'active' }}" href="{{ path('admin_projets') }}"><i class="bi bi-kanban"></i>Projets</a>
             <a class="nav-link {{ app.request.attributes.get('_route') starts with 'admin_invest' ? 'active' }}" href="{{ path('admin_invest_opportunities') }}"><i class="bi bi-graph-up-arrow"></i>Investissement</a>
-            <a class="nav-link {{ app.request.attributes.get('_route') starts with 'admin_community' ? 'active' }}" href="{{ path('admin_community_groups') }}"><i class="bi bi-chat-dots"></i>Communauté</a>
+            <a class="nav-link {{ app.request.attributes.get('_route') starts with 'admin_community' ? 'active' }}" href="{{ path('admin_community_dashboard') }}"><i class="bi bi-chat-dots"></i>Communauté</a>
             <a class="nav-link {{ app.request.attributes.get('_route') starts with 'admin_mentorat' ? 'active' }}" href="{{ path('admin_mentorat_requests') }}"><i class="bi bi-mortarboard"></i>Mentorat</a>
             <a class="nav-link {{ app.request.attributes.get('_route') starts with 'admin_cours' ? 'active' }}" href="{{ path('admin_cours') }}"><i class="bi bi-book"></i>Cours</a>
             <a class="nav-link {{ app.request.attributes.get('_route') starts with 'admin_badge' ? 'active' }}" href="{{ path('admin_badges') }}"><i class="bi bi-award"></i>Badges</a>

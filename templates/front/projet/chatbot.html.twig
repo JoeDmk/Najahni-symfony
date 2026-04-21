@@ -272,7 +272,8 @@
                 const data = await res.json();
                 addBotMsg(data.response);
             } else {
-                addBotMsg("Désolé, une erreur est survenue. Réessayez dans un instant.");
+                const err = await res.json().catch(() => null);
+                addBotMsg(err?.error || "Désolé, une erreur est survenue. Réessayez dans un instant.");
             }
         } catch(e){
             removeTyping();

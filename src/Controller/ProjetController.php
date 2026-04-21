@@ -71,13 +71,20 @@ class ProjetController extends AbstractController
             $errors = $validator->validate($projet);
             $erreursDonnees = $validator->validate($donnees);
             if (count($errors) > 0 || count($erreursDonnees) > 0) {
+                $fieldErrors = [];
                 foreach ($errors as $error) {
-                    $this->addFlash('error', $error->getMessage());
+                    $field = $error->getPropertyPath();
+                    if (!isset($fieldErrors[$field])) {
+                        $fieldErrors[$field] = $error->getMessage();
+                    }
                 }
                 foreach ($erreursDonnees as $error) {
-                    $this->addFlash('error', $error->getMessage());
+                    $field = $error->getPropertyPath();
+                    if (!isset($fieldErrors[$field])) {
+                        $fieldErrors[$field] = $error->getMessage();
+                    }
                 }
-                return $this->render('front/projet/form.html.twig', ['projet' => $projet]);
+                return $this->render('front/projet/form.html.twig', ['projet' => $projet, 'fieldErrors' => $fieldErrors]);
             }
 
             $em->persist($projet);
@@ -129,13 +136,20 @@ class ProjetController extends AbstractController
             $errors = $validator->validate($projet);
             $erreursDonnees = $donnees ? $validator->validate($donnees) : [];
             if (count($errors) > 0 || count($erreursDonnees) > 0) {
+                $fieldErrors = [];
                 foreach ($errors as $error) {
-                    $this->addFlash('error', $error->getMessage());
+                    $field = $error->getPropertyPath();
+                    if (!isset($fieldErrors[$field])) {
+                        $fieldErrors[$field] = $error->getMessage();
+                    }
                 }
                 foreach ($erreursDonnees as $error) {
-                    $this->addFlash('error', $error->getMessage());
+                    $field = $error->getPropertyPath();
+                    if (!isset($fieldErrors[$field])) {
+                        $fieldErrors[$field] = $error->getMessage();
+                    }
                 }
-                return $this->render('front/projet/form.html.twig', ['projet' => $projet]);
+                return $this->render('front/projet/form.html.twig', ['projet' => $projet, 'fieldErrors' => $fieldErrors]);
             }
 
             $em->flush();
@@ -392,9 +406,10 @@ class ProjetController extends AbstractController
             return $this->json(['error' => 'Message vide'], 400);
         }
 
-        // Build full portfolio context
-        $projets = $repo->findByUser($this->getUser());
-        $context = "L'entrepreneur a " . count($projets) . " projet(s) au total.\n\n";
+        try {
+            // Build full portfolio context
+            $projets = $repo->findBy(['user' => $this->getUser()]);
+            $context = "L'entrepreneur a " . count($projets) . " projet(s) au total.\n\n";
 
         foreach ($projets as $i => $p) {
             $num = $i + 1;
@@ -411,13 +426,13 @@ class ProjetController extends AbstractController
             $db = $p->getDonneesBusiness();
             if ($db) {
                 $context .= sprintf(
-                    "Coûts: %s DT | Revenus: %s DT | Marge: %s DT | Marché: %s DT | Risque: %s | Équipe: %s/10\n",
-                    number_format($db->getCoutsEstimes(), 0, ',', ' '),
-                    number_format($db->getRevenusAttendus(), 0, ',', ' '),
-                    number_format($db->getMargeEstimee(), 0, ',', ' '),
-                    number_format($db->getTailleMarche(), 0, ',', ' '),
+                    "Coûts: %s DT | Revenus: %s DT | Marge: %s DT | Marché: %s | Risque: %s | Équipe: %s/10\n",
+                    number_format((float) ($db->getCoutsEstimes() ?? 0), 0, ',', ' '),
+                    number_format((float) ($db->getRevenusAttendus() ?? 0), 0, ',', ' '),
+                    number_format((float) ($db->getMargeEstimee() ?? 0), 0, ',', ' '),
+                    $db->getTailleMarche() ?? 'N/A',
                     $db->getNiveauRisque() ?? 'N/A',
-                    $db->getForceEquipe()
+                    $db->getForceEquipe() ?? 'N/A'
                 );
             }
             $context .= "\n";
@@ -446,6 +461,9 @@ PROMPT;
         }
 
         return $this->json(['response' => $response]);
+        } catch (\Throwable $e) {
+            return $this->json(['error' => 'Erreur: ' . $e->getMessage()], 500);
+        }
     }
 
     // ==================== PRIVATE HELPERS ====================

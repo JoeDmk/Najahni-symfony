@@ -3,7 +3,44 @@
 {% block title %}Gestion Publications - Najahni{% endblock %}
 
 {% block main %}
+{% include 'admin/community/_nav.html.twig' with {section: section, communityTotals: communityTotals} %}
+
 <h2 class="fw-bold mb-4"><i class="bi bi-chat-square-text me-2"></i>Publications</h2>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-6 col-xl-3">
+        <div class="card border-0 shadow-sm" style="border-radius:1rem">
+            <div class="card-body p-4">
+                <div class="small text-muted mb-1">Total Posts</div>
+                <div class="fw-bold fs-3">{{ stats.total }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="card border-0 shadow-sm" style="border-radius:1rem">
+            <div class="card-body p-4">
+                <div class="small text-muted mb-1">Avec Image</div>
+                <div class="fw-bold fs-3">{{ stats.with_images }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="card border-0 shadow-sm" style="border-radius:1rem">
+            <div class="card-body p-4">
+                <div class="small text-muted mb-1">Aujourd hui</div>
+                <div class="fw-bold fs-3">{{ stats.today }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6 col-xl-3">
+        <div class="card border-0 shadow-sm" style="border-radius:1rem">
+            <div class="card-body p-4">
+                <div class="small text-muted mb-1">Reactions</div>
+                <div class="fw-bold fs-3">{{ stats.reactions }}</div>
+            </div>
+        </div>
+    </div>
+</div>
 
 <div class="card border-0 shadow-sm" style="border-radius:1rem">
     <div class="card-body p-0">
@@ -18,6 +55,7 @@
                         <td>{{ post.reactions|length }}</td>
                         <td>{{ post.createdAt|date('d/m/Y H:i') }}</td>
                         <td class="text-end">
+                            <a href="{{ path('app_community_posts') ~ '#post-' ~ post.id }}" class="btn btn-sm btn-outline-primary">Ouvrir</a>
                             <form method="post" action="{{ path('admin_community_posts_delete', {id: post.id}) }}" class="d-inline" onsubmit="return confirm('Supprimer ?')">
                                 <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
                             </form>

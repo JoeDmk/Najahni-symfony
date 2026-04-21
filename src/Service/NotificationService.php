@@ -20,13 +20,13 @@ class NotificationService
         ?string $actionUrl = null,
         ?string $actionLabel = null,
     ): Notification {
-        unset($actionUrl, $actionLabel);
-
         $notification = new Notification();
         $notification->setUser($user);
         $notification->setTitle($title);
         $notification->setMessage($message);
         $notification->setType($type);
+        $notification->setActionUrl($actionUrl);
+        $notification->setActionLabel($actionLabel);
 
         $this->em->persist($notification);
 

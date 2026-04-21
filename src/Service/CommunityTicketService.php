@@ -44,6 +44,46 @@ final class CommunityTicketService
         ];
     }
 
+    public function renderQrPng(string $payload): string
+    {
+        $payload = trim($payload);
+
+        if ($payload === '') {
+            throw new RuntimeException('Le contenu du ticket est vide.');
+        }
+
+        try {
+            $response = $this->httpClient->request('GET', self::QR_ENDPOINT, [
+                'query' => [
+                    'size' => '600x600',
+                    'data' => $payload,
+                ],
+                'headers' => [
+                    'Accept' => 'image/png',
+                ],
+                'timeout' => 12,
+            ]);
+
+            if ($response->getStatusCode() < 200 || $response->getStatusCode() >= 300) {
+                throw new RuntimeException('Le service de generation QR est indisponible.');
+            }
+
+            $image = $response->getContent(false);
+        } catch (Throwable $exception) {
+            if ($exception instanceof RuntimeException) {
+                throw $exception;
+            }
+
+            throw new RuntimeException('Impossible de generer le QR du ticket.', 0, $exception);
+        }
+
+        if (!is_string($image) || $image === '') {
+            throw new RuntimeException('Impossible de generer le QR du ticket.');
+        }
+
+        return $image;
+    }
+
     public function decodeUploadedImage(UploadedFile $file): string
     {
         if (!$file->isValid()) {

@@ -72,6 +72,8 @@ class SmokeTest extends WebTestCase
         yield 'mentorat-sessions' => ['/mentorat/sessions'];
         yield 'mentorat-availability' => ['/mentorat/availability'];
         yield 'mentorat-chatbot' => ['/mentorat/chatbot'];
+        yield 'mentorat-calendar' => ['/mentorat/calendar'];
+        yield 'mentorat-my-calendar' => ['/mentorat/my-calendar'];
         yield 'mentorat-export-pdf' => ['/mentorat/sessions/export/pdf'];
         yield 'mentorat-export-excel' => ['/mentorat/sessions/export/excel'];
 

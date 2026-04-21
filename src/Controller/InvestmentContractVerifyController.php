@@ -4,9 +4,7 @@ namespace App\Controller;
 
 use App\Entity\User;
 use App\Repository\InvestmentContractRepository;
-use Endroid\QrCode\Builder\Builder;
-use Endroid\QrCode\Encoding\Encoding;
-use Endroid\QrCode\Writer\PngWriter;
+use App\Service\Investment\ContractQrCodeService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
@@ -36,6 +34,7 @@ class InvestmentContractVerifyController extends AbstractController
     public function qrCode(
         int $contractId,
         InvestmentContractRepository $contractRepo,
+        ContractQrCodeService $contractQrCodeService,
     ): Response {
         $contract = $contractRepo->find($contractId);
         if (!$contract) {
@@ -47,15 +46,11 @@ class InvestmentContractVerifyController extends AbstractController
             throw $this->createAccessDeniedException('Acces refuse.');
         }
 
-        $verifyUrl = $this->generateUrl('app_invest_contract_verify', ['contractId' => $contract->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+        $verifyUrl = $contractQrCodeService->resolveVerificationUrl(
+            $this->generateUrl('app_invest_contract_verify', ['contractId' => $contract->getId()], UrlGeneratorInterface::ABSOLUTE_URL)
+        );
 
-        $result = (new Builder(
-            writer: new PngWriter(),
-            data: $verifyUrl,
-            encoding: new Encoding('UTF-8'),
-            size: 300,
-            margin: 10,
-        ))->build();
+        $result = $contractQrCodeService->buildResult($contract, $verifyUrl, 300, 10);
 
         return new Response($result->getString(), 200, [
             'Content-Type' => $result->getMimeType(),
