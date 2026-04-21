@@ -16,6 +16,7 @@ use Dompdf\Options;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -644,5 +645,67 @@ class MentoratController extends AbstractController
     public function chatbot(): Response
     {
         return $this->render('front/mentorat/chatbot.html.twig');
+    }
+
+    // ──────────────────────────────────────────────
+    //  VOICE TRANSCRIPTION (Groq Whisper fallback)
+    // ──────────────────────────────────────────────
+
+    #[Route('/transcribe', name: 'app_mentorat_transcribe', methods: ['POST'])]
+    public function transcribe(Request $request): JsonResponse
+    {
+        $audioFile = $request->files->get('audio');
+        if (!$audioFile) {
+            return new JsonResponse(['error' => 'Aucun fichier audio reçu.'], 400);
+        }
+
+        $apiKey = $this->getParameter('app.groq_api_key');
+        if (!$apiKey) {
+            return new JsonResponse(['error' => 'Clé API Groq non configurée.'], 500);
+        }
+
+        $tmpPath = $audioFile->getPathname();
+        $boundary = bin2hex(random_bytes(16));
+
+        // Build multipart form data manually for file_get_contents
+        $body = '';
+        // file field
+        $body .= "--{$boundary}\r\n";
+        $body .= "Content-Disposition: form-data; name=\"file\"; filename=\"audio.webm\"\r\n";
+        $body .= "Content-Type: audio/webm\r\n\r\n";
+        $body .= file_get_contents($tmpPath) . "\r\n";
+        // model field
+        $body .= "--{$boundary}\r\n";
+        $body .= "Content-Disposition: form-data; name=\"model\"\r\n\r\n";
+        $body .= "whisper-large-v3\r\n";
+        // language field
+        $body .= "--{$boundary}\r\n";
+        $body .= "Content-Disposition: form-data; name=\"language\"\r\n\r\n";
+        $body .= "fr\r\n";
+        $body .= "--{$boundary}--\r\n";
+
+        $context = stream_context_create([
+            'http' => [
+                'method'  => 'POST',
+                'header'  => "Authorization: Bearer {$apiKey}\r\nContent-Type: multipart/form-data; boundary={$boundary}\r\n",
+                'content' => $body,
+                'timeout' => 30,
+            ],
+            'ssl' => [
+                'verify_peer'      => false,
+                'verify_peer_name' => false,
+            ],
+        ]);
+
+        $result = @file_get_contents('https://api.groq.com/openai/v1/audio/transcriptions', false, $context);
+
+        if ($result === false) {
+            return new JsonResponse(['error' => 'Échec de la transcription. Vérifiez votre connexion.'], 502);
+        }
+
+        $data = json_decode($result, true);
+        $text = $data['text'] ?? '';
+
+        return new JsonResponse(['text' => $text]);
     }
 }

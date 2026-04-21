@@ -87,8 +87,9 @@
 </div>
 
 <script>
-/* ── Web Speech API – Reconnaissance vocale temps réel ── */
+/* ── Voice Recording – Web Speech API with Groq Whisper fallback ── */
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const TRANSCRIBE_URL = '{{ path("app_mentorat_transcribe") }}';
 
 function createVoiceRecorder(opts) {
     const btnId      = opts.btnId;
@@ -97,6 +98,9 @@ function createVoiceRecorder(opts) {
     const fieldId    = opts.fieldId;
     let recognition  = null;
     let active       = false;
+    let useFallback  = false;  // true if SpeechRecognition failed with network
+    let mediaRecorder = null;
+    let audioChunks   = [];
 
     function setUI(recording) {
         const btn   = document.getElementById(btnId);
@@ -112,9 +116,63 @@ function createVoiceRecorder(opts) {
         }
     }
 
-    function start() {
+    /* ── Fallback: MediaRecorder + Groq Whisper ── */
+    async function startFallback() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            audioChunks = [];
+            mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+
+            mediaRecorder.ondataavailable = function(e) {
+                if (e.data.size > 0) audioChunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = async function() {
+                stream.getTracks().forEach(t => t.stop());
+                const blob = new Blob(audioChunks, { type: 'audio/webm' });
+                const status = document.getElementById(statusId);
+                status.innerHTML = '<i class="bi bi-hourglass-split text-warning"></i> Transcription en cours...';
+
+                const formData = new FormData();
+                formData.append('audio', blob, 'audio.webm');
+
+                try {
+                    const resp = await fetch(TRANSCRIBE_URL, { method: 'POST', body: formData });
+                    const data = await resp.json();
+                    if (data.text) {
+                        const field = document.getElementById(fieldId);
+                        field.value = (field.value ? field.value + ' ' : '') + data.text;
+                        status.innerHTML = '<i class="bi bi-check-circle text-success"></i> Transcription ajoutée !';
+                    } else {
+                        status.textContent = data.error || 'Aucun texte détecté.';
+                    }
+                } catch (err) {
+                    status.textContent = 'Erreur de transcription : ' + err.message;
+                }
+            };
+
+            mediaRecorder.start();
+            active = true;
+            setUI(true);
+        } catch (err) {
+            document.getElementById(statusId).textContent = 'Accès au microphone refusé. Autorisez le micro dans votre navigateur.';
+        }
+    }
+
+    function stopFallback() {
+        if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+            mediaRecorder.stop();
+        }
+        active = false;
+        setUI(false);
+    }
+
+    /* ── Primary: Web Speech API ── */
+    function startSpeech() {
         if (!SpeechRecognition) {
-            document.getElementById(statusId).textContent = 'Votre navigateur ne supporte pas la reconnaissance vocale. Utilisez Chrome ou Edge.';
+            // No SpeechRecognition at all → use fallback directly
+            useFallback = true;
+            startFallback();
             return;
         }
         recognition = new SpeechRecognition();
@@ -136,7 +194,6 @@ function createVoiceRecorder(opts) {
                     interim += e.results[i][0].transcript;
                 }
             }
-            // Show interim text in grey, final in normal
             field.value = (startValue ? startValue + ' ' : '') + finalTranscript + interim;
             document.getElementById(statusId).innerHTML = '<i class="bi bi-soundwave text-danger"></i> Parlez maintenant... <span class="text-muted">(' + (finalTranscript.length + interim.length) + ' car.)</span>';
         };
@@ -144,7 +201,12 @@ function createVoiceRecorder(opts) {
         recognition.onerror = function(e) {
             active = false;
             setUI(false);
-            if (e.error === 'not-allowed') {
+            if (e.error === 'network' || e.error === 'service-not-allowed') {
+                // Switch to MediaRecorder + Groq Whisper fallback
+                useFallback = true;
+                document.getElementById(statusId).innerHTML = '<i class="bi bi-arrow-repeat text-info"></i> Basculement vers transcription serveur...';
+                setTimeout(function() { startFallback(); }, 300);
+            } else if (e.error === 'not-allowed') {
                 document.getElementById(statusId).textContent = 'Accès au microphone refusé. Autorisez le micro dans votre navigateur.';
             } else if (e.error === 'no-speech') {
                 document.getElementById(statusId).textContent = 'Aucune voix détectée. Réessayez.';
@@ -155,7 +217,6 @@ function createVoiceRecorder(opts) {
 
         recognition.onend = function() {
             if (active) {
-                // Ended naturally (timeout) — finalize
                 active = false;
                 setUI(false);
                 if (finalTranscript) {
@@ -172,7 +233,7 @@ function createVoiceRecorder(opts) {
         setUI(true);
     }
 
-    function stop() {
+    function stopSpeech() {
         if (recognition) {
             active = false;
             recognition.stop();
@@ -182,7 +243,11 @@ function createVoiceRecorder(opts) {
     }
 
     return function toggle() {
-        if (active) { stop(); } else { start(); }
+        if (active) {
+            useFallback ? stopFallback() : stopSpeech();
+        } else {
+            useFallback ? startFallback() : startSpeech();
+        }
     };
 }
 

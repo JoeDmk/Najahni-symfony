@@ -7,6 +7,7 @@ parameters:
     cours_documents_directory: '%kernel.project_dir%/var/uploads/documents'
     groq_url: '%env(string:GROQ_URL)%'
     groq_model: '%env(string:GROQ_MODEL)%'
+    app.groq_api_key: '%env(string:GROQ_API_KEY)%'
     profanity_api_url: '%env(string:PROFANITY_API_URL)%'
     profanity_api_host: '%env(string:PROFANITY_API_HOST)%'
 

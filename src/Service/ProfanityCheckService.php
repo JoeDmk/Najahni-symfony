@@ -23,34 +23,16 @@ class ProfanityCheckService
             return false;
         }
 
-        $response = $this->httpClient->request('GET', $this->rapidApiUrl, [
+        // Try direct PurgoMalum API first (free, no key needed)
+        $response = $this->httpClient->request('GET', 'https://www.purgomalum.com/service/containsprofanity', [
             'query' => ['text' => $text],
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'x-rapidapi-host' => $this->rapidApiHost,
-                'x-rapidapi-key' => $this->rapidApiKey,
-            ],
             'timeout' => 10,
             'verify_peer' => false,
             'verify_host' => false,
         ]);
 
-        $payload = $response->toArray(false);
+        $result = trim($response->getContent(false));
 
-        if (isset($payload['has_profanity'])) {
-            return (bool) $payload['has_profanity'];
-        }
-
-        if (isset($payload['is_profane'])) {
-            return (bool) $payload['is_profane'];
-        }
-
-        if (isset($payload['profanity']) && is_array($payload['profanity'])) {
-            return count($payload['profanity']) > 0;
-        }
-
-        $this->logger->warning('Unexpected profanity API payload.', ['payload' => $payload]);
-
-        return false;
+        return strtolower($result) === 'true';
     }
 }

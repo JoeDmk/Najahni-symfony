@@ -55,9 +55,9 @@
             <div class="card-body p-4">
                 <div class="mb-3" style="font-size:3rem">
                     {% if unlocked %}
-                        {{ badge.icone ?? '' }}
+                        <i class="bi {{ badge.icone ?? 'bi-award' }}" style="color:{{ badge.rarete == 'LEGENDAIRE' ? '#ffd166' : (badge.rarete == 'EPIQUE' ? '#ef476f' : (badge.rarete == 'RARE' ? '#4361ee' : '#6c757d')) }}"></i>
                     {% else %}
-                        🔒
+                        <i class="bi bi-lock-fill text-muted"></i>
                     {% endif %}
                 </div>
                 <h5 class="fw-bold mb-1">{{ badge.nom }}</h5>
