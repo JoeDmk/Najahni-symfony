@@ -61,9 +61,10 @@ class StripePaymentService
                 'currency' => strtoupper((string) $intent->currency),
             ];
         } catch (ApiErrorException $e) {
+            $stripeError = $e->getError();
             return [
                 'success' => false,
-                'error' => $e->getError()?->message ?? $e->getMessage(),
+                'error' => $stripeError !== null ? $stripeError->message : $e->getMessage(),
             ];
         } catch (\Throwable $e) {
             return [

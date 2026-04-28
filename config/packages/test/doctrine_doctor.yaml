@@ -1,0 +1,4 @@
+# Doctrine Doctor - Runtime Analysis for Doctrine ORM
+
+doctrine_doctor:
+    enabled: '%kernel.debug%'

@@ -5,11 +5,13 @@ namespace App\Controller;
 use App\Entity\InvestmentOffer;
 use App\Entity\InvestmentOpportunity;
 use App\Entity\Projet;
+use App\Entity\User;
 use App\Repository\ContractMilestoneRepository;
 use App\Repository\InvestmentContractRepository;
 use App\Repository\InvestmentOfferRepository;
 use App\Repository\InvestmentOpportunityRepository;
 use App\Repository\InvestorProfileRepository;
+use App\Repository\ProjetRepository;
 use App\Service\EmailService;
 use App\Service\NotificationService;
 use App\Service\Investment\StripePaymentService;
@@ -64,7 +66,7 @@ class InvestmentController extends AbstractController
         $welcomeData = null;
         $user = $this->getUser();
         $entrepreneurInboxCount = 0;
-        if ($user) {
+        if ($user instanceof User) {
             $welcomeData = [];
 
             if ($this->isGranted('ROLE_ENTREPRENEUR')) {
@@ -236,7 +238,7 @@ class InvestmentController extends AbstractController
         $notificationService->notify(
             $offer->getInvestor(),
             'Offre acceptee',
-            'Votre offre pour ' . ($opportunity->getProject()?->getTitre() ?? 'ce projet') . ' a ete acceptee. Negociez puis signez le contrat avant le paiement.',
+            'Votre offre pour ' . ($opportunity->getProject()->getTitre() ?? 'ce projet') . ' a ete acceptee. Negociez puis signez le contrat avant le paiement.',
             'CONTRACT',
             $contractUrl,
             'Ouvrir le contrat'
@@ -277,7 +279,7 @@ class InvestmentController extends AbstractController
         $notificationService->notify(
             $offer->getInvestor(),
             'Offre refusee',
-            'Votre offre pour ' . ($opportunity->getProject()?->getTitre() ?? 'ce projet') . ' a ete refusee.',
+            'Votre offre pour ' . ($opportunity->getProject()->getTitre() ?? 'ce projet') . ' a ete refusee.',
             'DANGER'
         );
         $em->flush();
@@ -307,6 +309,7 @@ class InvestmentController extends AbstractController
     #[IsGranted('ROLE_INVESTISSEUR')]
     public function makeOffer(InvestmentOpportunity $opp, Request $request, EntityManagerInterface $em, InvestmentOfferRepository $offerRepo, ValidatorInterface $validator): Response
     {
+        $user = $this->requireUser();
         $token = $request->request->get('_token');
         if (!$this->isCsrfTokenValid('invest_offer_' . $opp->getId(), $token)) {
             $this->addFlash('danger', 'Jeton de sécurité invalide.');
@@ -319,13 +322,13 @@ class InvestmentController extends AbstractController
         }
 
         // Prevent entrepreneur from investing in their own project
-        if ($opp->getProject() && $opp->getProject()->getUser() === $this->getUser()) {
+        if ($opp->getProject() && $opp->getProject()->getUser() === $user) {
             $this->addFlash('danger', 'Vous ne pouvez pas investir dans votre propre projet.');
             return $this->redirectToRoute('app_invest_opportunity_show', ['id' => $opp->getId()]);
         }
 
         // Prevent duplicate offers (same investor + same opportunity)
-        $existingOffer = $offerRepo->findExistingOffer($this->getUser(), $opp);
+        $existingOffer = $offerRepo->findExistingOffer($user, $opp);
         if ($existingOffer) {
             $this->addFlash('danger', 'Vous avez déjà soumis une offre pour cette opportunité.');
             return $this->redirectToRoute('app_invest_opportunity_show', ['id' => $opp->getId()]);
@@ -346,7 +349,7 @@ class InvestmentController extends AbstractController
 
         $offer = new InvestmentOffer();
         $offer->setOpportunity($opp);
-        $offer->setInvestor($this->getUser());
+        $offer->setInvestor($user);
         $offer->setProposedAmount((string) (float) $amount);
         $offer->setStatus('PENDING');
         $offer->setPaid(false);
@@ -809,14 +812,14 @@ class InvestmentController extends AbstractController
     #[IsGranted('ROLE_INVESTISSEUR')]
     public function myOffers(Request $request, InvestmentOfferRepository $repo, InvestmentContractRepository $contractRepo, PaginatorInterface $paginator): Response
     {
+        $user = $this->requireUser();
         $page = $request->query->getInt('page', 1);
-        $qb = $repo->findUnpaidByInvestorQuery($this->getUser());
+        $qb = $repo->findUnpaidByInvestorQuery($user);
         $pagination = $paginator->paginate($qb, $page, 6);
         $offers = iterator_to_array($pagination);
 
         // ── Compute nudge ──
         $nudge = ['message' => 'Toutes vos offres sont en bonne voie. Aucune action immediate requise.', 'link' => null, 'type' => 'success'];
-        $user = $this->getUser();
 
         // Priority 1: signed contract awaiting payment
         foreach ($offers as $off) {
@@ -950,7 +953,7 @@ class InvestmentController extends AbstractController
             throw $this->createAccessDeniedException('Le portfolio est reserve aux investisseurs.');
         }
 
-        $offers = $repo->findPaidByInvestor($this->getUser());
+        $offers = $repo->findPaidByInvestor($this->requireUser());
 
         // Build contract / milestone data for each offer
         $portfolioData = [];
@@ -964,6 +967,7 @@ class InvestmentController extends AbstractController
             $targetAmount = (float) $offer->getOpportunity()->getTargetAmount();
 
             // Build funding timeline events
+            /** @var list<array{date: \DateTimeInterface|null, label: string, icon: string, future?: bool}> $timeline */
             $timeline = [];
             $timeline[] = ['date' => $offer->getCreatedAt(), 'label' => 'Offre soumise', 'icon' => 'send'];
             if ($contract) {
@@ -990,10 +994,10 @@ class InvestmentController extends AbstractController
                     $timeline[] = ['date' => null, 'label' => $ms->getLabel(), 'icon' => 'flag', 'future' => true];
                 }
             }
-            usort($timeline, function ($a, $b) {
+            usort($timeline, function (array $a, array $b): int {
                 if ($a['date'] === null && $b['date'] === null) return 0;
                 if ($a['date'] === null) return 1;
-                if ($b['date'] === null) return 1;
+                if ($b['date'] === null) return -1;
                 return $a['date'] <=> $b['date'];
             });
 
@@ -1042,11 +1046,12 @@ class InvestmentController extends AbstractController
     #[IsGranted('ROLE_INVESTISSEUR')]
     public function myOffersAjax(Request $request, InvestmentOfferRepository $repo, PaginatorInterface $paginator): JsonResponse
     {
+        $user = $this->requireUser();
         $search = trim($request->query->get('q', ''));
         $statusFilter = $request->query->get('status', '');
         $page = $request->query->getInt('page', 1);
 
-        $qb = $repo->findUnpaidByInvestorQuery($this->getUser());
+        $qb = $repo->findUnpaidByInvestorQuery($user);
 
         if ($statusFilter !== '') {
             $qb->andWhere('o.status = :status')->setParameter('status', $statusFilter);
@@ -1101,6 +1106,7 @@ class InvestmentController extends AbstractController
         Request $request,
         EntityManagerInterface $em,
         StripePaymentService $paymentService,
+        InvestorProfileRepository $profileRepo,
         NotificationService $notificationService,
         EmailService $emailService,
         LoggerInterface $logger,
@@ -1165,6 +1171,13 @@ class InvestmentController extends AbstractController
         if ($contract->getStatus() !== \App\Entity\InvestmentContract::STATUS_FUNDED) {
             $contract->setStatus(\App\Entity\InvestmentContract::STATUS_FUNDED);
         }
+        $profile = $profileRepo->findByUser($offer->getInvestor());
+        if ($profile === null) {
+            $profile = new \App\Entity\InvestorProfile();
+            $profile->setUser($offer->getInvestor());
+        }
+        $profile->adaptFromInvestment($offer, $offer->getOpportunity());
+        $em->persist($profile);
         $this->markOpportunityFundedIfPaidOut($offer->getOpportunity());
         $contractUrl = $this->generateUrl('app_invest_contract_show', ['id' => $offer->getId()]);
         $notificationService->notify(
@@ -1215,6 +1228,8 @@ class InvestmentController extends AbstractController
             'status' => $result['status'] ?? 'succeeded',
             'amount' => number_format((float) $offer->getProposedAmount(), 0, ',', ' '),
             'projectTitle' => $offer->getOpportunity()->getProject()?->getTitre() ?? 'Projet',
+            'profileAdapted' => true,
+            'impliedRiskTolerance' => $profile->getImpliedRiskTolerance(),
         ]);
     }
 
@@ -1229,7 +1244,10 @@ class InvestmentController extends AbstractController
     #[IsGranted('ROLE_ENTREPRENEUR')]
     public function createOpportunity(Request $request, EntityManagerInterface $em, ValidatorInterface $validator): Response
     {
-        $projets = $em->getRepository(Projet::class)->findByUser($this->getUser());
+        $user = $this->requireUser();
+        /** @var ProjetRepository $projetRepository */
+        $projetRepository = $em->getRepository(Projet::class);
+        $projets = $projetRepository->findByUserWithFilters($user);
 
         if ($request->isMethod('POST')) {
             $token = $request->request->get('_token');
@@ -1238,8 +1256,8 @@ class InvestmentController extends AbstractController
                 return $this->render('front/investment/create_opportunity.html.twig', ['projets' => $projets]);
             }
 
-            $project = $em->getRepository(Projet::class)->find($request->request->get('project_id'));
-            if (!$project || $project->getUser() !== $this->getUser()) {
+            $project = $projetRepository->find($request->request->get('project_id'));
+            if (!$project || $project->getUser() !== $user) {
                 $this->addFlash('danger', 'Vous ne pouvez créer une opportunité que pour vos propres projets.');
                 return $this->render('front/investment/create_opportunity.html.twig', ['projets' => $projets]);
             }
@@ -1297,5 +1315,15 @@ class InvestmentController extends AbstractController
         }
 
         return $this->render('front/investment/create_opportunity.html.twig', ['projets' => $projets]);
+    }
+
+    private function requireUser(): User
+    {
+        $user = $this->getUser();
+        if (!$user instanceof User) {
+            throw $this->createAccessDeniedException('Authentification requise.');
+        }
+
+        return $user;
     }
 }

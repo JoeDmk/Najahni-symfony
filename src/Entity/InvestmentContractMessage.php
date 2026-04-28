@@ -8,6 +8,8 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: InvestmentContractMessageRepository::class)]
 #[ORM\Table(name: 'investment_contract_message')]
+#[ORM\Index(name: 'idx_investment_contract_message_contract', columns: ['contract_id'])]
+#[ORM\Index(name: 'idx_investment_contract_message_sender', columns: ['sender_id'])]
 class InvestmentContractMessage
 {
     #[ORM\Id]
@@ -23,14 +25,14 @@ class InvestmentContractMessage
     #[ORM\JoinColumn(name: 'sender_id', nullable: false, onDelete: 'CASCADE')]
     private ?User $sender = null;
 
-    #[ORM\Column(type: Types::TEXT)]
+    #[ORM\Column(type: Types::TEXT, nullable: false)]
     private string $body = '';
 
-    #[ORM\Column(options: ['default' => false])]
+    #[ORM\Column(options: ['default' => false], nullable: false)]
     private bool $systemMessage = false;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
-    private ?\DateTimeInterface $createdAt = null;
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false)]
+    private \DateTimeInterface $createdAt;
 
     public function __construct()
     {
@@ -46,5 +48,5 @@ class InvestmentContractMessage
     public function setBody(string $body): static { $this->body = $body; return $this; }
     public function isSystemMessage(): bool { return $this->systemMessage; }
     public function setSystemMessage(bool $systemMessage): static { $this->systemMessage = $systemMessage; return $this; }
-    public function getCreatedAt(): ?\DateTimeInterface { return $this->createdAt; }
+    public function getCreatedAt(): \DateTimeInterface { return $this->createdAt; }
 }

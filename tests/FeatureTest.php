@@ -3,6 +3,7 @@
 namespace App\Tests;
 
 use App\Entity\User;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 class FeatureTest extends WebTestCase
@@ -14,9 +15,7 @@ class FeatureTest extends WebTestCase
         $client->loginUser($user);
     }
 
-    /**
-     * @dataProvider searchRouteProvider
-     */
+    #[DataProvider('searchRouteProvider')]
     public function testSearchFunctionality(string $url): void
     {
         $client = static::createClient();

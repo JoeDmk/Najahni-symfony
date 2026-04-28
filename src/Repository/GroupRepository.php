@@ -6,6 +6,11 @@ use Doctrine\Persistence\ManagerRegistry;
 class GroupRepository extends ServiceEntityRepository {
     public function __construct(ManagerRegistry $registry) { parent::__construct($registry, Group::class); }
 
+    private function hasJoinRequestTable(): bool
+    {
+        return $this->getEntityManager()->getConnection()->createSchemaManager()->tablesExist(['group_join_request']);
+    }
+
     public function findCommunityGroups(): array
     {
         return $this->createQueryBuilder('g')
@@ -36,6 +41,10 @@ class GroupRepository extends ServiceEntityRepository {
             return false;
         }
 
+        if (!$this->hasJoinRequestTable()) {
+            return false;
+        }
+
         return $this->getEntityManager()->getConnection()->fetchOne(
             "SELECT 1 FROM group_join_request WHERE group_id = :group_id AND user_id = :user_id AND status = 'PENDING' LIMIT 1",
             ['group_id' => $groupId, 'user_id' => $userId],
@@ -46,6 +55,10 @@ class GroupRepository extends ServiceEntityRepository {
     public function findPendingRequestGroupIdsForUser(int $userId): array
     {
         if ($userId <= 0) {
+            return [];
+        }
+
+        if (!$this->hasJoinRequestTable()) {
             return [];
         }
 
@@ -66,6 +79,10 @@ class GroupRepository extends ServiceEntityRepository {
     public function findPendingRequestsForGroup(int $groupId): array
     {
         if ($groupId <= 0) {
+            return [];
+        }
+
+        if (!$this->hasJoinRequestTable()) {
             return [];
         }
 
@@ -97,6 +114,10 @@ class GroupRepository extends ServiceEntityRepository {
             return;
         }
 
+        if (!$this->hasJoinRequestTable()) {
+            return;
+        }
+
         if ($this->hasPendingRequest($groupId, $userId)) {
             return;
         }
@@ -110,6 +131,10 @@ class GroupRepository extends ServiceEntityRepository {
 
     public function cancelPendingRequest(int $groupId, int $userId): void
     {
+        if (!$this->hasJoinRequestTable()) {
+            return;
+        }
+
         $this->getEntityManager()->getConnection()->executeStatement(
             "DELETE FROM group_join_request WHERE group_id = :group_id AND user_id = :user_id AND status = 'PENDING'",
             ['group_id' => $groupId, 'user_id' => $userId],
@@ -119,6 +144,10 @@ class GroupRepository extends ServiceEntityRepository {
     public function approveRequest(int $groupId, int $requestId): ?array
     {
         $connection = $this->getEntityManager()->getConnection();
+
+        if (!$this->hasJoinRequestTable()) {
+            return null;
+        }
 
         return $connection->transactional(function () use ($connection, $groupId, $requestId): ?array {
             $request = $connection->fetchAssociative(
@@ -156,6 +185,10 @@ class GroupRepository extends ServiceEntityRepository {
 
     public function rejectRequest(int $groupId, int $requestId): void
     {
+        if (!$this->hasJoinRequestTable()) {
+            return;
+        }
+
         $this->getEntityManager()->getConnection()->executeStatement(
             "UPDATE group_join_request SET status = 'REJECTED' WHERE id = :id AND group_id = :group_id AND status = 'PENDING'",
             ['id' => $requestId, 'group_id' => $groupId],

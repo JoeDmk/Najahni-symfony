@@ -13,6 +13,7 @@ use App\Entity\Post;
 use App\Entity\Group;
 use App\Entity\Event;
 use App\Entity\Thread;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 class EntityRouteTest extends WebTestCase
@@ -31,9 +32,7 @@ class EntityRouteTest extends WebTestCase
         return $entity?->getId();
     }
 
-    /**
-     * @dataProvider entityDetailRouteProvider
-     */
+    #[DataProvider('entityDetailRouteProvider')]
     public function testEntityDetailRoutes(string $entityClass, string $urlPattern, bool $admin = false): void
     {
         $client = static::createClient();

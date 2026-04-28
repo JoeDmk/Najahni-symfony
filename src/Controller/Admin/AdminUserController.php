@@ -220,7 +220,7 @@ class AdminUserController extends AbstractController
 
         $response = new StreamedResponse(function () use ($users) {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['ID', 'Prénom', 'Nom', 'Email', 'Téléphone', 'Rôle', 'Vérifié', 'Actif', 'Banni', 'Inscrit le']);
+            fputcsv($handle, ['ID', 'Prénom', 'Nom', 'Email', 'Téléphone', 'Rôle', 'Vérifié', 'Actif', 'Banni', 'Inscrit le'], ',', '"', '');
             foreach ($users as $user) {
                 fputcsv($handle, [
                     $user->getId(),
@@ -233,7 +233,7 @@ class AdminUserController extends AbstractController
                     $user->getIsActive() ? 'Oui' : 'Non',
                     $user->getIsBanned() ? 'Oui' : 'Non',
                     $user->getCreatedAt()->format('d/m/Y H:i'),
-                ]);
+                ], ',', '"', '');
             }
             fclose($handle);
         });

@@ -43,6 +43,14 @@ services:
         arguments:
             $hfToken: '%env(HF_TOKEN)%'
 
+    App\Service\Investment\NegotiationSentimentService:
+        arguments:
+            $hfToken: '%env(HF_TOKEN)%'
+
+    App\Service\Investment\MLPredictionService:
+        arguments:
+            $predictionUrl: '%env(string:ML_PREDICTION_URL)%'
+
     App\Service\Investment\StripePaymentService:
         arguments:
             $stripeSecretKey: '%env(STRIPE_SECRET_KEY)%'

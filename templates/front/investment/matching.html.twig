@@ -9,6 +9,18 @@
     <a href="{{ path('app_invest_opportunities') }}" class="btn btn-outline-primary"><i class="bi bi-arrow-left me-1"></i>Retour</a>
 </div>
 
+{% if profileAdapted %}
+<div class="alert border-0 shadow-sm mb-4" style="background:#ecfdf5;color:#166534;border-radius:1rem;">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <div class="fw-semibold">Profil récemment ajusté</div>
+            <div class="small">Vos derniers signaux d'investissement ont été pris en compte. Tendance implicite actuelle : {{ profile ? profile.impliedRiskTolerance : 'Modere' }}.</div>
+        </div>
+        <div class="small fw-semibold">Fenêtre active : 48 heures</div>
+    </div>
+</div>
+{% endif %}
+
 <style>
 .flip-card-container { perspective: 1000px; margin-bottom: 1rem; }
 .flip-card-inner {

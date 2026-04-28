@@ -165,6 +165,94 @@
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
 }
+
+.ml-prediction-card {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid #dbeafe;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, #f8fafc 0%, #ffffff 55%, #eef6ff 100%);
+    padding: 1rem 1.1rem;
+    box-shadow: 0 12px 30px rgba(37, 99, 235, 0.08);
+}
+
+.ml-prediction-card::after {
+    content: '';
+    position: absolute;
+    inset: auto -20% -35% auto;
+    width: 140px;
+    height: 140px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.18), rgba(59, 130, 246, 0));
+    pointer-events: none;
+}
+
+.ml-prediction-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: .75rem;
+    margin-bottom: .9rem;
+}
+
+.ml-prediction-title {
+    font-size: .94rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin-bottom: .2rem;
+}
+
+.ml-prediction-copy {
+    font-size: .8rem;
+    color: #64748b;
+}
+
+.ml-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    padding: .2rem .6rem;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.12);
+    color: #1d4ed8;
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    animation: mlPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes mlPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.12); }
+    50% { box-shadow: 0 0 0 10px rgba(37, 99, 235, 0); }
+}
+
+.ml-prediction-value {
+    font-size: 2.5rem;
+    line-height: 1;
+    font-weight: 800;
+    color: #16a34a;
+    margin-bottom: .35rem;
+}
+
+.ml-prediction-confidence {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .3rem .75rem;
+    border-radius: 999px;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-size: .78rem;
+    font-weight: 700;
+}
+
+.ml-prediction-explanation {
+    margin-top: .8rem;
+    color: #475569;
+    font-size: .88rem;
+    line-height: 1.6;
+}
 .risk-context-banner { background: #1e293b; border-radius: .5rem; padding: .55rem 1rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
 .risk-context-banner .rcb-left { display: flex; align-items: center; gap: .5rem; font-size: .82rem; color: #e2e8f0; }
 .risk-context-banner .rcb-left i { color: #60a5fa; font-size: .9rem; }
@@ -307,6 +395,19 @@
                         <canvas id="riskRadarCanvas" width="320" height="320" style="max-width:320px;margin:0 auto"></canvas>
                     </div>
 
+                    <div id="mlPredictionCard" class="ml-prediction-card d-none mb-4">
+                        <div class="ml-prediction-header">
+                            <div>
+                                <div class="ml-prediction-title">Prediction ML - Probabilite de succes</div>
+                                <div class="ml-prediction-copy">Projection d'issue financee basee sur un vrai modele appris.</div>
+                            </div>
+                            <span class="ml-badge">ML</span>
+                        </div>
+                        <div class="ml-prediction-value" id="mlPredictionValue">0.0%</div>
+                        <div class="ml-prediction-confidence" id="mlPredictionConfidence">Confiance faible</div>
+                        <div class="ml-prediction-explanation" id="mlPredictionExplanation"></div>
+                    </div>
+
                     <div class="risk-verdict mb-4" id="verdictCard">
                         <div class="risk-verdict-title">
                             <i class="bi bi-compass" id="verdictIcon"></i>
@@ -412,10 +513,23 @@
 document.addEventListener('DOMContentLoaded', function() {
     const oppId = {{ opportunity.id }};
     const riskCountry = document.getElementById('riskCountry');
+    const briefDownloadLink = document.getElementById('briefDownloadLink');
     const aiResult = document.getElementById('aiResult');
     const aiAnalysisCard = document.getElementById('aiAnalysisCard');
     const aiSpinner = document.getElementById('aiSpinner');
+    const mlPredictionCard = document.getElementById('mlPredictionCard');
+    const mlPredictionValue = document.getElementById('mlPredictionValue');
+    const mlPredictionConfidence = document.getElementById('mlPredictionConfidence');
+    const mlPredictionExplanation = document.getElementById('mlPredictionExplanation');
     var riskRadarChart = null;
+
+    function updateBriefLink() {
+        if (!briefDownloadLink || !riskCountry) {
+            return;
+        }
+
+        briefDownloadLink.href = '{{ path("app_invest_brief", {id: opportunity.id}) }}?country=' + encodeURIComponent(riskCountry.value || 'TN');
+    }
 
     function escapeHtml(text) {
         const div = document.createElement('div');
@@ -509,7 +623,57 @@ document.addEventListener('DOMContentLoaded', function() {
         return html.join('');
     }
 
+    function hideMlPrediction() {
+        if (!mlPredictionCard) {
+            return;
+        }
+
+        mlPredictionCard.classList.add('d-none');
+    }
+
+    function renderMlPrediction(prediction) {
+        if (!mlPredictionCard || !prediction || typeof prediction.probability === 'undefined') {
+            hideMlPrediction();
+            return;
+        }
+
+        const probability = Math.max(0, Math.min(100, Math.round((Number(prediction.probability) || 0) * 1000) / 10));
+        const color = probability > 65 ? '#16a34a' : (probability >= 40 ? '#d97706' : '#dc2626');
+        const confidenceMap = {
+            high: 'Confiance elevee',
+            medium: 'Confiance moyenne',
+            low: 'Confiance faible'
+        };
+
+        mlPredictionCard.style.borderColor = color + '33';
+        mlPredictionValue.style.color = color;
+        mlPredictionConfidence.textContent = confidenceMap[prediction.confidence] || confidenceMap.low;
+        mlPredictionConfidence.style.color = color;
+        mlPredictionConfidence.style.background = color + '12';
+        mlPredictionExplanation.textContent = prediction.synthetic
+            ? 'Base sur des donnees synthetiques - modele en apprentissage'
+            : 'Base sur l\'analyse de projets similaires sur la plateforme';
+
+        const startTime = performance.now();
+        const duration = 800;
+        function animateProbability(now) {
+            const elapsed = now - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            mlPredictionValue.textContent = (probability * eased).toFixed(1) + '%';
+            if (progress < 1) {
+                requestAnimationFrame(animateProbability);
+            }
+        }
+
+        mlPredictionValue.textContent = '0.0%';
+        mlPredictionCard.classList.remove('d-none');
+        requestAnimationFrame(animateProbability);
+    }
+
     function loadRisk() {
+        updateBriefLink();
+        hideMlPrediction();
         document.getElementById('riskSpinner').classList.remove('d-none');
         document.getElementById('riskResult').classList.add('d-none');
 
@@ -620,6 +784,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     document.getElementById('ecoInfl').textContent = data.economicData.inflation;
                 }
 
+                if (data.mlPrediction) {
+                    renderMlPrediction(data.mlPrediction);
+                } else {
+                    hideMlPrediction();
+                }
+
                 document.getElementById('riskSpinner').classList.add('d-none');
                 document.getElementById('riskResult').classList.remove('d-none');
 
@@ -685,6 +855,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     riskCountry.addEventListener('change', loadRisk);
+    updateBriefLink();
     loadRisk();
 
     // Chatbot with context, memory, chips, typewriter, markdown, typing indicator
@@ -1023,6 +1194,13 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     </div>
 </div>
+{% if is_granted('ROLE_INVESTISSEUR') %}
+<div class="text-center mb-3">
+    <a href="{{ path('app_invest_brief', {id: opportunity.id}) }}?country=TN" id="briefDownloadLink" class="btn btn-nj btn-lg px-4">
+        <i class="bi bi-file-earmark-pdf me-2"></i>Générer mon brief d'investissement
+    </a>
+</div>
+{% endif %}
 <p class="text-muted text-center small mb-4" style="font-size:.76rem">L'evaluation de risque est une estimation basee sur des indicateurs economiques. Exercez toujours votre propre jugement.</p>
 
 {% endblock %}

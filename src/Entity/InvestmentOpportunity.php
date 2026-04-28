@@ -22,11 +22,11 @@ class InvestmentOpportunity
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(type: Types::DECIMAL, precision: 15, scale: 2)]
+    #[ORM\Column(type: Types::DECIMAL, precision: 15, scale: 2, nullable: false)]
     #[Assert\NotBlank(message: 'Le montant cible est obligatoire.')]
     #[Assert\Positive(message: 'Le montant doit être positif.')]
     #[Assert\GreaterThanOrEqual(value: 100, message: 'Le montant cible doit être au minimum 100 DT.')]
-    private ?string $targetAmount = null;
+    private string $targetAmount = '';
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     #[Assert\NotBlank(message: 'La description est obligatoire.')]
@@ -37,7 +37,7 @@ class InvestmentOpportunity
     #[Assert\NotNull(message: 'La date limite est obligatoire.')]
     private ?\DateTimeInterface $deadline = null;
 
-    #[ORM\Column(length: 20, columnDefinition: "ENUM('OPEN','CLOSED','FUNDED') DEFAULT 'OPEN'")]
+    #[ORM\Column(length: 20, columnDefinition: "ENUM('OPEN','CLOSED','FUNDED') DEFAULT 'OPEN'", nullable: false)]
     private string $status = self::STATUS_OPEN;
 
     #[ORM\ManyToOne(targetEntity: Projet::class, inversedBy: 'opportunities')]
@@ -50,13 +50,13 @@ class InvestmentOpportunity
     #[ORM\Column(length: 50, nullable: true)]
     private ?string $riskLabel = null;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
-    private ?\DateTimeInterface $createdAt = null;
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false)]
+    private \DateTimeInterface $createdAt;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
-    private ?\DateTimeInterface $updatedAt = null;
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false)]
+    private \DateTimeInterface $updatedAt;
 
-    #[ORM\OneToMany(targetEntity: InvestmentOffer::class, mappedBy: 'opportunity')]
+    #[ORM\OneToMany(targetEntity: InvestmentOffer::class, mappedBy: 'opportunity', cascade: ['remove'], orphanRemoval: true)]
     private Collection $offers;
 
     public function __construct()
@@ -70,7 +70,7 @@ class InvestmentOpportunity
     public function onPreUpdate(): void { $this->updatedAt = new \DateTime(); }
 
     public function getId(): ?int { return $this->id; }
-    public function getTargetAmount(): ?string { return $this->targetAmount; }
+    public function getTargetAmount(): string { return $this->targetAmount; }
     public function setTargetAmount(string $v): static { $this->targetAmount = $v; return $this; }
     public function getDescription(): ?string { return $this->description; }
     public function setDescription(?string $v): static { $this->description = $v; return $this; }
@@ -84,8 +84,8 @@ class InvestmentOpportunity
     public function setRiskScore(?float $v): static { $this->riskScore = $v; return $this; }
     public function getRiskLabel(): ?string { return $this->riskLabel; }
     public function setRiskLabel(?string $v): static { $this->riskLabel = $v; return $this; }
-    public function getCreatedAt(): ?\DateTimeInterface { return $this->createdAt; }
-    public function getUpdatedAt(): ?\DateTimeInterface { return $this->updatedAt; }
+    public function getCreatedAt(): \DateTimeInterface { return $this->createdAt; }
+    public function getUpdatedAt(): \DateTimeInterface { return $this->updatedAt; }
     /** @return Collection<int, InvestmentOffer> */
     public function getOffers(): Collection { return $this->offers; }
 

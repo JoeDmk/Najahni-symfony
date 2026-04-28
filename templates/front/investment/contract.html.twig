@@ -343,6 +343,78 @@
     line-height: 1.55;
 }
 
+.ai-suggest-verify {
+    margin-top: .65rem;
+    font-size: .76rem;
+    color: #475569;
+}
+
+.ai-suggest-panel-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: .6rem;
+    margin-top: .85rem;
+    flex-wrap: wrap;
+}
+
+.ai-suggest-apply-btn {
+    padding: .5rem 1rem;
+    border: 0;
+    border-radius: .75rem;
+    background: linear-gradient(135deg, #0f766e, #14b8a6);
+    color: #fff;
+    font-size: .84rem;
+    font-weight: 700;
+    box-shadow: 0 10px 22px rgba(20, 184, 166, .22);
+}
+
+.ai-suggest-apply-btn:hover {
+    background: linear-gradient(135deg, #115e59, #0f766e);
+    color: #fff;
+}
+
+.ai-suggest-ignore-btn {
+    border-radius: .7rem;
+    font-size: .78rem;
+    padding-inline: .9rem;
+}
+
+.ai-input-flash {
+    animation: aiInputFlash 800ms ease;
+}
+
+@keyframes aiInputFlash {
+    0% {
+        border-color: #22c55e;
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, .35);
+    }
+    40% {
+        border-color: #16a34a;
+        box-shadow: 0 0 0 4px rgba(34, 197, 94, .18);
+    }
+    100% {
+        border-color: #ced4da;
+        box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+    }
+}
+
+.ai-terms-notice {
+    margin-bottom: .6rem;
+    padding: .7rem .9rem;
+    border-radius: .8rem;
+    border: 1px solid #fbbf24;
+    background: #fffbeb;
+    color: #92400e;
+    font-size: .84rem;
+    font-weight: 600;
+}
+
+.milestone-amount-preview {
+    color: #64748b;
+    font-size: .76rem;
+    padding-left: .15rem;
+}
+
 .ai-suggest-btn:hover {
     color: #3b82f6 !important;
 }
@@ -368,6 +440,67 @@
 
 .deal-temp-hot {
     animation: dealTempPulse 2s ease-in-out infinite;
+}
+
+.sentiment-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: .45rem;
+    padding: .45rem .8rem;
+    border-radius: 999px;
+    font-size: .8rem;
+    font-weight: 700;
+    border: 1px solid transparent;
+    background: rgba(255,255,255,.14);
+    color: #e2e8f0;
+}
+
+.sentiment-pill .sentiment-score {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    padding: .1rem .4rem;
+    border-radius: 999px;
+    background: rgba(15,23,42,.14);
+    font-size: .72rem;
+}
+
+.sentiment-positive {
+    background: rgba(34,197,94,.18);
+    color: #dcfce7;
+    border-color: rgba(34,197,94,.28);
+}
+
+.sentiment-neutral {
+    background: rgba(125,211,252,.16);
+    color: #e0f2fe;
+    border-color: rgba(125,211,252,.24);
+}
+
+.sentiment-negative {
+    background: rgba(248,113,113,.18);
+    color: #fee2e2;
+    border-color: rgba(248,113,113,.3);
+}
+
+.sentiment-sparkline {
+    width: 60px;
+    height: 20px;
+    overflow: visible;
+}
+
+.sentiment-sparkline path {
+    fill: none;
+    stroke: rgba(255,255,255,.85);
+    stroke-width: 2.4;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.sentiment-summary {
+    color: #cbd5e1;
+    font-size: .8rem;
 }
 
 @keyframes dealTempPulse {
@@ -856,7 +989,7 @@
 
                 {# Deal Temperature #}
                 {% if dealTemperatureLabel is defined %}
-                <div class="d-flex align-items-center gap-2 mt-3">
+                <div class="d-flex align-items-center gap-2 mt-3 flex-wrap">
                     {% if dealTemperatureLabel == 'hot' %}
                         <span class="d-inline-flex align-items-center gap-1 px-3 py-1 rounded-pill deal-temp-hot" style="background:#fef3c7;color:#92400e;font-size:.82rem;font-weight:600">
                             <i class="bi bi-fire"></i>Hot ({{ dealTemperature }})
@@ -870,6 +1003,16 @@
                             <i class="bi bi-snow"></i>Froid ({{ dealTemperature }})
                         </span>
                     {% endif %}
+                    <div class="d-inline-flex align-items-center gap-2" id="contractSentimentWidget">
+                        <span class="sentiment-pill sentiment-neutral" id="contractSentimentPill" title="Analyse en temps reel des 10 derniers messages de negociation." data-bs-toggle="tooltip" data-bs-placement="top">
+                            <i class="bi bi-emoji-neutral" id="contractSentimentIcon"></i>
+                            <span id="contractSentimentLabel">Sentiment neutre</span>
+                            <span class="sentiment-score" id="contractSentimentScore">0</span>
+                        </span>
+                        <svg class="sentiment-sparkline" viewBox="0 0 60 20" aria-hidden="true">
+                            <path id="contractSentimentSparklinePath" d="M 0 10 L 60 10"></path>
+                        </svg>
+                    </div>
                     <span class="small" style="color:#64748b">
                         {% if lastMessageAt %}
                             {% set hoursDiff = ((date().timestamp - lastMessageAt.timestamp) / 3600)|round(0, 'floor') %}
@@ -888,6 +1031,7 @@
                         {% endif %}
                     </span>
                 </div>
+                <div class="sentiment-summary mt-2" id="contractSentimentSummary">Analyse IA des derniers messages en cours...</div>
                 {% endif %}
                 <div class="row g-3 mt-1">
                     <div class="col-md-4">
@@ -958,7 +1102,7 @@
                                 <label class="form-label fw-semibold mb-0">Participation au capital (%)</label>
                                 <button type="button" class="btn btn-sm p-0 border-0 text-muted ai-suggest-btn" data-field="equity" title="Suggestion IA" style="font-size:.95rem;line-height:1"><i class="bi bi-stars"></i></button>
                             </div>
-                            <input type="number" step="0.01" min="0" max="100" name="equity_percentage" class="form-control" value="{{ contract.equityPercentage }}" placeholder="Ex: 8.5">
+                            <input type="number" step="0.01" min="0" max="100" name="equity_percentage" id="contractEquityInput" class="form-control" value="{{ contract.equityPercentage }}" placeholder="Ex: 8.5">
                             <div class="ai-suggest-panel d-none" id="aiSuggestEquity"></div>
                         </div>
                         <div class="col-md-8">
@@ -970,7 +1114,7 @@
                                 <label class="form-label fw-semibold mb-0">Etapes et obligations</label>
                                 <button type="button" class="btn btn-sm p-0 border-0 text-muted ai-suggest-btn" data-field="milestones" title="Suggestion IA" style="font-size:.95rem;line-height:1"><i class="bi bi-stars"></i></button>
                             </div>
-                            <textarea name="milestones" rows="3" class="form-control" placeholder="Decrivez les livrables, etapes de versement ou conditions de release...">{{ contract.milestones }}</textarea>
+                            <textarea name="milestones" rows="3" id="contractMilestonesTextarea" class="form-control" placeholder="Decrivez les livrables, etapes de versement ou conditions de release...">{{ contract.milestones }}</textarea>
                             <div class="ai-suggest-panel d-none" id="aiSuggestMilestones"></div>
                         </div>
                         <div class="col-12">
@@ -978,7 +1122,8 @@
                                 <label class="form-label fw-semibold mb-0">Termes detailles</label>
                                 <button type="button" class="btn btn-sm p-0 border-0 text-muted ai-suggest-btn" data-field="terms" title="Suggestion IA" style="font-size:.95rem;line-height:1"><i class="bi bi-stars"></i></button>
                             </div>
-                            <textarea name="terms" rows="10" class="form-control" required>{{ contract.terms }}</textarea>
+                            <div class="ai-terms-notice d-none" id="aiTermsAppliedNotice">Termes suggérés appliqués — relisez avant de signer</div>
+                            <textarea name="terms" rows="10" id="contractTermsTextarea" class="form-control" required>{{ contract.terms }}</textarea>
                             <div class="ai-suggest-panel d-none" id="aiSuggestTerms"></div>
                         </div>
                     </div>
@@ -1349,8 +1494,18 @@
     var contractSignatureName = document.getElementById('contractSignatureName');
     var messageUrl = '{{ path('app_invest_contract_messages', {id: offer.id}) }}';
     var sendUrl = '{{ path('app_invest_contract_send_message', {id: offer.id}) }}';
+    var sentimentUrl = '{{ path('app_invest_contract_sentiment', {id: contract.id}) }}';
+    var sentimentPill = document.getElementById('contractSentimentPill');
+    var sentimentIcon = document.getElementById('contractSentimentIcon');
+    var sentimentLabel = document.getElementById('contractSentimentLabel');
+    var sentimentScore = document.getElementById('contractSentimentScore');
+    var sentimentSummary = document.getElementById('contractSentimentSummary');
+    var sentimentSparklinePath = document.getElementById('contractSentimentSparklinePath');
     var lastMessageNode = chatList.querySelector('[data-message-id]:last-of-type');
     var lastMessageId = lastMessageNode ? Number(lastMessageNode.getAttribute('data-message-id')) : 0;
+    var sentimentHistory = [];
+    var lastSentimentFingerprint = null;
+    var sentimentTooltip = null;
 
     function escapeHtml(text) {
         return String(text == null ? '' : text)
@@ -1363,6 +1518,120 @@
 
     function scrollToBottom() {
         chatList.scrollTop = chatList.scrollHeight;
+    }
+
+    function setSentimentTooltip(text) {
+        if (!sentimentPill) {
+            return;
+        }
+
+        sentimentPill.setAttribute('title', text);
+        sentimentPill.setAttribute('data-bs-original-title', text);
+
+        if (window.bootstrap && window.bootstrap.Tooltip) {
+            if (sentimentTooltip) {
+                sentimentTooltip.dispose();
+            }
+            sentimentTooltip = new window.bootstrap.Tooltip(sentimentPill);
+        }
+    }
+
+    function drawSentimentSparkline() {
+        if (!sentimentSparklinePath) {
+            return;
+        }
+
+        var values = sentimentHistory.length ? sentimentHistory.slice() : [50, 50];
+        var width = 60;
+        var height = 20;
+        var innerHeight = height - 4;
+        var step = values.length > 1 ? width / (values.length - 1) : width;
+        var d = values.map(function(value, index) {
+            var normalized = Math.max(0, Math.min(100, Number(value) || 50));
+            var x = values.length === 1 ? width / 2 : index * step;
+            var y = height - 2 - ((normalized / 100) * innerHeight);
+            return (index === 0 ? 'M ' : ' L ') + x.toFixed(2) + ' ' + y.toFixed(2);
+        }).join('');
+
+        sentimentSparklinePath.setAttribute('d', d);
+    }
+
+    function pushSentimentPoint(sentiment) {
+        var fingerprint = sentiment && sentiment.latestMessageId !== null ? 'msg-' + sentiment.latestMessageId : 'msg-empty';
+        if (fingerprint === lastSentimentFingerprint && sentimentHistory.length) {
+            return;
+        }
+
+        lastSentimentFingerprint = fingerprint;
+        sentimentHistory.push(Math.max(0, Math.min(100, Number(sentiment && sentiment.normalizedScore) || 50)));
+        if (sentimentHistory.length > 5) {
+            sentimentHistory = sentimentHistory.slice(-5);
+        }
+        drawSentimentSparkline();
+    }
+
+    function applySentimentState(sentiment, trackHistory) {
+        if (!sentimentPill || !sentimentLabel || !sentimentScore || !sentimentSummary || !sentimentIcon) {
+            return;
+        }
+
+        var label = sentiment && sentiment.label ? sentiment.label : 'neutral';
+        var score = Math.max(-100, Math.min(100, Number(sentiment && sentiment.score) || 0));
+        var labelMap = {
+            positive: 'Sentiment positif',
+            neutral: 'Sentiment neutre',
+            negative: 'Sentiment tendu'
+        };
+        var iconMap = {
+            positive: 'bi-emoji-smile',
+            neutral: 'bi-emoji-neutral',
+            negative: 'bi-emoji-frown'
+        };
+
+        sentimentPill.className = 'sentiment-pill sentiment-' + label;
+        sentimentLabel.textContent = labelMap[label] || labelMap.neutral;
+        sentimentScore.textContent = (score > 0 ? '+' : '') + score;
+        sentimentIcon.className = 'bi ' + (iconMap[label] || iconMap.neutral);
+        sentimentSummary.textContent = sentiment && sentiment.summary ? sentiment.summary : 'Analyse IA temporairement indisponible.';
+
+        setSentimentTooltip(
+            sentiment && sentiment.source === 'fallback'
+                ? 'Analyse en temps reel des 10 derniers messages de negociation. Service IA indisponible, affichage neutre par defaut.'
+                : 'Analyse en temps reel des 10 derniers messages de negociation.'
+        );
+
+        if (trackHistory !== false) {
+            pushSentimentPoint(sentiment || { normalizedScore: 50, latestMessageId: null });
+        }
+    }
+
+    function refreshSentiment(trackHistory) {
+        if (!sentimentUrl) {
+            return;
+        }
+
+        fetch(sentimentUrl, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function(response) {
+            if (!response.ok) {
+                throw new Error('sentiment_unavailable');
+            }
+            return response.json();
+        })
+        .then(function(data) {
+            applySentimentState(data || null, trackHistory);
+        })
+        .catch(function() {
+            applySentimentState({
+                label: 'neutral',
+                score: 0,
+                normalizedScore: 50,
+                summary: 'Analyse IA temporairement indisponible.',
+                source: 'fallback',
+                latestMessageId: null
+            }, false);
+        });
     }
 
     function renderMessage(message) {
@@ -1404,7 +1673,7 @@
 
     function appendMessages(messages) {
         if (!messages || !messages.length) {
-            return;
+            return false;
         }
 
         var emptyState = document.getElementById('chatEmptyState');
@@ -1412,13 +1681,17 @@
             emptyState.remove();
         }
 
+        var appended = false;
         messages.forEach(function(message) {
             if (message.id > lastMessageId) {
                 lastMessageId = message.id;
+                appended = true;
             }
             chatList.insertAdjacentHTML('beforeend', renderMessage(message));
         });
         scrollToBottom();
+
+        return appended;
     }
 
     function pollMessages() {
@@ -1427,8 +1700,11 @@
         })
         .then(function(response) { return response.json(); })
         .then(function(data) {
-            appendMessages(data.messages || []);
+            var appended = appendMessages(data.messages || []);
             applyContractState(data.contract || null);
+            if (appended) {
+                refreshSentiment(true);
+            }
         })
         .catch(function() {});
     }
@@ -1465,6 +1741,7 @@
 
             appendMessages([data.message]);
             applyContractState(data.contract || null);
+            refreshSentiment(true);
             chatInput.value = '';
             chatSubmit.disabled = false;
         })
@@ -1476,8 +1753,13 @@
     });
 
     scrollToBottom();
+    setSentimentTooltip('Analyse en temps reel des 10 derniers messages de negociation.');
+    drawSentimentSparkline();
+    refreshSentiment(true);
     setInterval(pollMessages, 4000);
 })();
+
+window.contractMilestoneUi = { hasEditableForm: false };
 
 // Milestone form logic
 (function() {
@@ -1487,6 +1769,41 @@
     var container = document.getElementById('milestoneRows');
     var addBtn = document.getElementById('addMilestoneRow');
     var totalLabel = document.getElementById('milestoneTotalLabel');
+    var acceptedAmount = parseFloat({{ offer.proposedAmount|default('0')|json_encode|raw }}) || 0;
+
+    function formatAmount(amount) {
+        return new Intl.NumberFormat('fr-FR', {
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 2
+        }).format(amount);
+    }
+
+    function ensureAmountPreview(row) {
+        var preview = row.querySelector('.milestone-amount-preview');
+        if (preview) {
+            return preview;
+        }
+
+        var previewCol = document.createElement('div');
+        previewCol.className = 'col-12';
+        preview = document.createElement('div');
+        preview.className = 'milestone-amount-preview';
+        previewCol.appendChild(preview);
+        row.appendChild(previewCol);
+
+        return preview;
+    }
+
+    function updateAmountPreviews() {
+        container.querySelectorAll('.milestone-row').forEach(function(row) {
+            var pctInput = row.querySelector('.milestone-pct');
+            var percentage = parseFloat(pctInput ? pctInput.value : '') || 0;
+            var preview = ensureAmountPreview(row);
+            preview.textContent = percentage > 0
+                ? 'Montant estimé : ' + formatAmount(acceptedAmount * percentage / 100) + ' DT'
+                : 'Montant estimé : à définir';
+        });
+    }
 
     function updateTotal() {
         var pcts = container.querySelectorAll('.milestone-pct');
@@ -1504,6 +1821,50 @@
         });
     }
 
+    function setRowCount(targetCount) {
+        var rows = container.querySelectorAll('.milestone-row');
+        while (rows.length < targetCount) {
+            var clone = rows[0].cloneNode(true);
+            clone.querySelectorAll('input').forEach(function(inp) { inp.value = ''; });
+            container.appendChild(clone);
+            rows = container.querySelectorAll('.milestone-row');
+        }
+
+        while (rows.length > targetCount) {
+            rows[rows.length - 1].remove();
+            rows = container.querySelectorAll('.milestone-row');
+        }
+
+        addBtn.disabled = targetCount >= 4;
+        updateRemoveButtons();
+        updateTotal();
+        updateAmountPreviews();
+    }
+
+    function setRows(entries) {
+        setRowCount(entries.length);
+
+        container.querySelectorAll('.milestone-row').forEach(function(row, index) {
+            var entry = entries[index];
+            if (!entry) {
+                return;
+            }
+
+            var labelInput = row.querySelector('[name="milestone_label[]"]');
+            var pctInput = row.querySelector('[name="milestone_percentage[]"]');
+            if (labelInput) {
+                labelInput.value = entry.label;
+            }
+            if (pctInput) {
+                pctInput.value = entry.percentage;
+            }
+        });
+
+        updateTotal();
+        updateAmountPreviews();
+        form.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
     addBtn.addEventListener('click', function() {
         var rows = container.querySelectorAll('.milestone-row');
         if (rows.length >= 4) return;
@@ -1511,6 +1872,7 @@
         clone.querySelectorAll('input').forEach(function(inp) { inp.value = ''; });
         container.appendChild(clone);
         updateRemoveButtons();
+        updateAmountPreviews();
         if (rows.length + 1 >= 4) addBtn.disabled = true;
     });
 
@@ -1526,17 +1888,213 @@
     });
 
     container.addEventListener('input', function(e) {
-        if (e.target.classList.contains('milestone-pct')) updateTotal();
+        if (e.target.classList.contains('milestone-pct')) {
+            updateTotal();
+            updateAmountPreviews();
+        }
     });
+
+    window.contractMilestoneUi = {
+        hasEditableForm: true,
+        setRows: setRows,
+        updateAmountPreviews: updateAmountPreviews
+    };
 
     updateRemoveButtons();
     updateTotal();
+    updateAmountPreviews();
 })();
 
 // AI Suggest logic
 (function() {
     var suggestUrl = '{{ path('app_invest_contract_ai_suggest', {id: offer.id}) }}';
-    var csrfToken = '{{ csrf_token('contract_ai_suggest_' ~ offer.id) }}';
+    var equityInput = document.getElementById('contractEquityInput');
+    var milestonesTextarea = document.getElementById('contractMilestonesTextarea');
+    var termsTextarea = document.getElementById('contractTermsTextarea');
+    var termsNotice = document.getElementById('aiTermsAppliedNotice');
+
+    function escapeHtml(text) {
+        return String(text == null ? '' : text)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function normalizeNumber(value) {
+        return (Math.round(value * 100) / 100)
+            .toString()
+            .replace(/\.00$/, '')
+            .replace(/(\.\d)0$/, '$1');
+    }
+
+    function flashField(field) {
+        if (!field) {
+            return;
+        }
+
+        field.classList.remove('ai-input-flash');
+        void field.offsetWidth;
+        field.classList.add('ai-input-flash');
+        window.setTimeout(function() {
+            field.classList.remove('ai-input-flash');
+        }, 800);
+    }
+
+    function showTermsNotice() {
+        if (!termsNotice) {
+            return;
+        }
+
+        termsNotice.classList.remove('d-none');
+        window.clearTimeout(showTermsNotice.timerId);
+        showTermsNotice.timerId = window.setTimeout(function() {
+            termsNotice.classList.add('d-none');
+        }, 3000);
+    }
+
+    function extractEquityValue(text) {
+        var rangeMatch = text.match(/(\d+(?:\.\d+)?)\s*%\s*(?:a|à|to|[-–])\s*(\d+(?:\.\d+)?)\s*%/i);
+        if (rangeMatch) {
+            return (parseFloat(rangeMatch[1]) + parseFloat(rangeMatch[2])) / 2;
+        }
+
+        var singleMatch = text.match(/(\d+(?:\.\d+)?)\s*%/);
+        return singleMatch ? parseFloat(singleMatch[1]) : null;
+    }
+
+    function extractMilestoneLabel(text, match, index) {
+        var start = match.index;
+        var end = match.index + match[0].length;
+
+        while (start > 0 && !/[\n\r.;:,]/.test(text.charAt(start - 1))) {
+            start -= 1;
+        }
+        while (end < text.length && !/[\n\r.;,]/.test(text.charAt(end))) {
+            end += 1;
+        }
+
+        var segment = text.slice(start, end)
+            .replace(/^[\s\-–,]*(?:\(?\d+\)?[\).:-]?\s*)?/, '')
+            .replace(/(\d+(?:\.\d+)?)\s*%/, '')
+            .trim();
+
+        segment = segment
+            .replace(/^(?:a|à|au|aux|de|du|des|pour|vers|sur|phase|étape|etape|jalon)\s+/i, '')
+            .replace(/^[\s,:-]+|[\s,:-]+$/g, '');
+
+        if (!segment) {
+            return 'Jalon ' + (index + 1);
+        }
+
+        return segment.charAt(0).toUpperCase() + segment.slice(1);
+    }
+
+    function extractMilestones(text) {
+        var matches = Array.from(text.matchAll(/(\d+(?:\.\d+)?)\s*%/g));
+        if (matches.length < 2 || matches.length > 4) {
+            return [];
+        }
+
+        var entries = matches.map(function(match, index) {
+            var percentage = parseFloat(match[1]);
+            return {
+                label: extractMilestoneLabel(text, match, index),
+                percentage: percentage
+            };
+        });
+
+        var validPercentages = entries.every(function(entry) {
+            return entry.percentage >= 5 && entry.percentage <= 80;
+        });
+        if (!validPercentages) {
+            return [];
+        }
+
+        var total = entries.reduce(function(sum, entry) {
+            return sum + entry.percentage;
+        }, 0);
+
+        if (Math.abs(total - 100) > 1.5) {
+            return [];
+        }
+
+        return entries.map(function(entry) {
+            return {
+                label: entry.label,
+                percentage: normalizeNumber(entry.percentage),
+                amount: entry.percentage
+            };
+        });
+    }
+
+    function applyMilestonesSuggestion(suggestion) {
+        var entries = extractMilestones(suggestion);
+        if (entries.length >= 2 && window.contractMilestoneUi && typeof window.contractMilestoneUi.setRows === 'function') {
+            window.contractMilestoneUi.setRows(entries);
+            return true;
+        }
+
+        if (milestonesTextarea) {
+            milestonesTextarea.value = suggestion.trim();
+            flashField(milestonesTextarea);
+            return true;
+        }
+
+        return false;
+    }
+
+    function applySuggestion(field, suggestion) {
+        if (field === 'equity') {
+            var equityValue = extractEquityValue(suggestion);
+            if (equityValue !== null && equityInput) {
+                equityInput.value = normalizeNumber(equityValue);
+                flashField(equityInput);
+                return true;
+            }
+
+            return false;
+        }
+
+        if (field === 'milestones') {
+            return applyMilestonesSuggestion(suggestion);
+        }
+
+        if (field === 'terms') {
+            if (!termsTextarea) {
+                return false;
+            }
+
+            termsTextarea.value = suggestion.trim();
+            flashField(termsTextarea);
+            showTermsNotice();
+            return true;
+        }
+
+        return false;
+    }
+
+    function renderPanel(panel, field, suggestion, canApply) {
+        panel.innerHTML = '<div class="ai-suggest-disclaimer"><i class="bi bi-stars me-1"></i>Suggestion IA — a titre indicatif uniquement</div>'
+            + '<div class="ai-suggest-body">' + escapeHtml(suggestion) + '</div>'
+            + '<div class="ai-suggest-verify">Vérifiez toujours les valeurs suggérées avant de signer.</div>'
+            + '<div class="ai-suggest-panel-actions">'
+            + (canApply ? '<button type="button" class="btn ai-suggest-apply-btn">Appliquer cette suggestion</button>' : '')
+            + '<button type="button" class="btn btn-sm btn-outline-secondary ai-suggest-ignore-btn">Ignorer</button>'
+            + '</div>';
+
+        if (canApply) {
+            panel.querySelector('.ai-suggest-apply-btn').addEventListener('click', function() {
+                applySuggestion(field, suggestion);
+            });
+        }
+
+        panel.querySelector('.ai-suggest-ignore-btn').addEventListener('click', function() {
+            panel.classList.add('d-none');
+            panel.innerHTML = '';
+        });
+    }
 
     document.querySelectorAll('.ai-suggest-btn').forEach(function(btn) {
         btn.addEventListener('click', function() {
@@ -1567,36 +2125,13 @@
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 var suggestion = data.suggestion || 'Aucune suggestion disponible.';
-                panel.innerHTML = '<div class="ai-suggest-disclaimer"><i class="bi bi-stars me-1"></i>Suggestion IA — a titre indicatif uniquement</div>'
-                    + '<div class="ai-suggest-body">' + escapeHtml(suggestion) + '</div>'
-                    + '<div class="text-end mt-2"><button type="button" class="btn btn-sm btn-outline-secondary ai-suggest-dismiss" style="font-size:.78rem">Fermer</button></div>';
-
-                panel.querySelector('.ai-suggest-dismiss').addEventListener('click', function() {
-                    panel.classList.add('d-none');
-                    panel.innerHTML = '';
-                });
+                renderPanel(panel, field, suggestion, true);
             })
             .catch(function() {
-                panel.innerHTML = '<div class="ai-suggest-disclaimer"><i class="bi bi-stars me-1"></i>Suggestion IA — a titre indicatif uniquement</div>'
-                    + '<div class="ai-suggest-body">Suggestion non disponible pour le moment.</div>'
-                    + '<div class="text-end mt-2"><button type="button" class="btn btn-sm btn-outline-secondary ai-suggest-dismiss" style="font-size:.78rem">Fermer</button></div>';
-
-                panel.querySelector('.ai-suggest-dismiss').addEventListener('click', function() {
-                    panel.classList.add('d-none');
-                    panel.innerHTML = '';
-                });
+                renderPanel(panel, field, 'Suggestion non disponible pour le moment.', false);
             });
         });
     });
-
-    function escapeHtml(text) {
-        return String(text == null ? '' : text)
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-    }
 })();
 
 // Particle Network

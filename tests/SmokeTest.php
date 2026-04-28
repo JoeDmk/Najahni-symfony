@@ -3,6 +3,7 @@
 namespace App\Tests;
 
 use App\Entity\User;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Symfony\Bundle\FrameworkBundle\Test\WebTestCase;
 
 class SmokeTest extends WebTestCase
@@ -14,9 +15,7 @@ class SmokeTest extends WebTestCase
         $client->loginUser($user);
     }
 
-    /**
-     * @dataProvider publicUrlProvider
-     */
+    #[DataProvider('publicUrlProvider')]
     public function testPublicPagesLoad(string $url): void
     {
         $client = static::createClient();
@@ -33,9 +32,7 @@ class SmokeTest extends WebTestCase
         yield 'forgot-password' => ['/forgot-password'];
     }
 
-    /**
-     * @dataProvider authenticatedUrlProvider
-     */
+    #[DataProvider('authenticatedUrlProvider')]
     public function testAuthenticatedPagesLoad(string $url): void
     {
         $client = static::createClient();

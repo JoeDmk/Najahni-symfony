@@ -35,4 +35,19 @@ class InvestmentContractMessageRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    public function findLatestConversationMessages(InvestmentContract $contract, int $limit = 10): array
+    {
+        $messages = $this->createQueryBuilder('m')
+            ->where('m.contract = :contract')
+            ->andWhere('m.systemMessage = :systemMessage')
+            ->setParameter('contract', $contract)
+            ->setParameter('systemMessage', false)
+            ->orderBy('m.id', 'DESC')
+            ->setMaxResults($limit)
+            ->getQuery()
+            ->getResult();
+
+        return array_reverse($messages);
+    }
 }

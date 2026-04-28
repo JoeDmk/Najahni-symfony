@@ -8,6 +8,8 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: InvestmentOfferRepository::class)]
 #[ORM\Table(name: 'investment_offer')]
+#[ORM\Index(name: 'idx_investment_offer_investor', columns: ['investor_id'])]
+#[ORM\Index(name: 'idx_investment_offer_opportunity', columns: ['opportunity_id'])]
 #[ORM\UniqueConstraint(name: 'unique_investment_offer_investor_opportunity', columns: ['investor_id', 'opportunity_id'])]
 #[ORM\HasLifecycleCallbacks]
 class InvestmentOffer
@@ -21,12 +23,12 @@ class InvestmentOffer
     #[ORM\Column]
     private ?int $id = null;
 
-    #[ORM\Column(type: Types::DECIMAL, precision: 15, scale: 2)]
+    #[ORM\Column(type: Types::DECIMAL, precision: 15, scale: 2, nullable: false)]
     #[Assert\NotBlank(message: 'Le montant proposé est obligatoire.')]
     #[Assert\Positive(message: 'Le montant doit être positif.')]
-    private ?string $proposedAmount = null;
+    private string $proposedAmount = '';
 
-    #[ORM\Column(length: 20, columnDefinition: "ENUM('PENDING','ACCEPTED','REJECTED') DEFAULT 'PENDING'")]
+    #[ORM\Column(length: 20, columnDefinition: "ENUM('PENDING','ACCEPTED','REJECTED') DEFAULT 'PENDING'", nullable: false)]
     private string $status = self::STATUS_PENDING;
 
     #[ORM\ManyToOne(targetEntity: User::class)]
@@ -37,7 +39,7 @@ class InvestmentOffer
     #[ORM\JoinColumn(name: 'opportunity_id', nullable: false, onDelete: 'CASCADE')]
     private ?InvestmentOpportunity $opportunity = null;
 
-    #[ORM\Column]
+    #[ORM\Column(nullable: false)]
     private bool $paid = false;
 
     #[ORM\Column(length: 255, nullable: true)]
@@ -46,13 +48,13 @@ class InvestmentOffer
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $paidAt = null;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
-    private ?\DateTimeInterface $createdAt = null;
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false)]
+    private \DateTimeInterface $createdAt;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
-    private ?\DateTimeInterface $updatedAt = null;
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false)]
+    private \DateTimeInterface $updatedAt;
 
-    #[ORM\Column(type: 'boolean', options: ['default' => false])]
+    #[ORM\Column(type: 'boolean', options: ['default' => false], nullable: false)]
     private bool $riskAcknowledged = false;
 
     #[ORM\OneToOne(mappedBy: 'offer', targetEntity: InvestmentContract::class, cascade: ['remove'])]
@@ -68,7 +70,7 @@ class InvestmentOffer
     public function onPreUpdate(): void { $this->updatedAt = new \DateTime(); }
 
     public function getId(): ?int { return $this->id; }
-    public function getProposedAmount(): ?string { return $this->proposedAmount; }
+    public function getProposedAmount(): string { return $this->proposedAmount; }
     public function setProposedAmount(string $v): static { $this->proposedAmount = $v; return $this; }
     public function getStatus(): string { return $this->status; }
     public function setStatus(string $v): static { $this->status = $v; return $this; }
@@ -82,8 +84,8 @@ class InvestmentOffer
     public function setPaymentIntentId(?string $v): static { $this->paymentIntentId = $v; return $this; }
     public function getPaidAt(): ?\DateTimeInterface { return $this->paidAt; }
     public function setPaidAt(?\DateTimeInterface $v): static { $this->paidAt = $v; return $this; }
-    public function getCreatedAt(): ?\DateTimeInterface { return $this->createdAt; }
-    public function getUpdatedAt(): ?\DateTimeInterface { return $this->updatedAt; }
+    public function getCreatedAt(): \DateTimeInterface { return $this->createdAt; }
+    public function getUpdatedAt(): \DateTimeInterface { return $this->updatedAt; }
     public function getContract(): ?InvestmentContract { return $this->contract; }
     public function setContract(?InvestmentContract $contract): static { $this->contract = $contract; return $this; }
     public function isRiskAcknowledged(): bool { return $this->riskAcknowledged; }

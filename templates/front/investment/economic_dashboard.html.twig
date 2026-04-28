@@ -43,6 +43,53 @@
     </div>
 </div>
 
+{% if outlook is defined %}
+<div class="card border-0 shadow-sm mb-4" style="border-radius:1rem;border-left:4px solid {% if outlook.tone == 'constructive' %}#16a34a{% elseif outlook.tone == 'selective' %}#d97706{% else %}#dc2626{% endif %};">
+    <div class="card-body py-4 px-4">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
+            <div>
+                <div class="small text-uppercase fw-semibold text-muted">Perspectives 30 jours</div>
+                <h4 class="fw-bold mb-2">{{ outlook.headline }}</h4>
+                <p class="text-muted mb-0" style="max-width:860px;line-height:1.6">{{ outlook.summary }}</p>
+            </div>
+            <span class="badge rounded-pill px-3 py-2" style="font-size:.8rem;background:{% if outlook.tone == 'constructive' %}#dcfce7;color:#166534{% elseif outlook.tone == 'selective' %}#fef3c7;color:#92400e{% else %}#fee2e2;color:#991b1b{% endif %};">
+                {{ outlook.toneLabel }}
+            </span>
+        </div>
+
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <div class="p-3 rounded-3 h-100" style="background:#f8fafc;border:1px solid #e2e8f0;">
+                    <div class="small text-muted mb-1">Secteur a surveiller</div>
+                    <div class="fw-bold" style="font-size:1.05rem">{{ outlook.dominantSector }}</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3 rounded-3 h-100" style="background:#f8fafc;border:1px solid #e2e8f0;">
+                    <div class="small text-muted mb-1">Opportunites a risque eleve</div>
+                    <div class="fw-bold" style="font-size:1.05rem">{{ outlook.highRiskCount }}</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-3 rounded-3 h-100" style="background:#f8fafc;border:1px solid #e2e8f0;">
+                    <div class="small text-muted mb-1">Echeances sous 30 jours</div>
+                    <div class="fw-bold" style="font-size:1.05rem">{{ outlook.expiringSoon }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="d-flex flex-column gap-2">
+            {% for signal in outlook.signals %}
+            <div class="d-flex align-items-start gap-2 p-3 rounded-3" style="background:#f8fafc;border:1px solid #e2e8f0;">
+                <i class="bi bi-stars mt-1 text-primary"></i>
+                <div style="line-height:1.5">{{ signal }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
 {# ── Impact on Active Opportunities ── #}
 <div class="card border-0 shadow-sm mb-4" style="border-radius:1rem;border-left:4px solid #0f172a">
     <div class="card-body py-4 px-4">

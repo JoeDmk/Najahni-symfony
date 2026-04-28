@@ -116,10 +116,10 @@ class EconomicApiService
         }
 
         foreach ($json[1] as $entry) {
-            if (isset($entry['value']) && $entry['value'] !== null) {
+            if (is_array($entry) && array_key_exists('value', $entry) && is_numeric($entry['value'])) {
                 return [
                     'value' => (float) $entry['value'],
-                    'date' => $entry['date'] ?? null,
+                    'date' => isset($entry['date']) && is_string($entry['date']) ? $entry['date'] : null,
                 ];
             }
         }

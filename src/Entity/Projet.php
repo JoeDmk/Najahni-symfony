@@ -71,7 +71,7 @@ class Projet
     #[ORM\OneToOne(targetEntity: DonneesBusiness::class, mappedBy: 'projet', cascade: ['persist', 'remove'])]
     private ?DonneesBusiness $donneesBusiness = null;
 
-    #[ORM\OneToMany(targetEntity: InvestmentOpportunity::class, mappedBy: 'project')]
+    #[ORM\OneToMany(targetEntity: InvestmentOpportunity::class, mappedBy: 'project', cascade: ['remove'], orphanRemoval: true)]
     private Collection $opportunities;
 
     public function __construct()

@@ -157,9 +157,10 @@ PROMPT;
     private function buildContextualSystemPrompt(array $ctx): string
     {
         $mode = $ctx['mode'] ?? 'risk';
+        $customInstruction = trim((string) ($ctx['customInstruction'] ?? ''));
 
         if ($mode === 'contract') {
-            return sprintf(
+            $prompt = sprintf(
                 "You are a deal advisor on Najahni, a Tunisian investment platform. You are advising parties on a live contract negotiation. Here is the contract context:\n\n"
                 . "Project: %s\n"
                 . "Sector: %s\n"
@@ -179,9 +180,15 @@ PROMPT;
                 $ctx['messageCount'] ?? '0',
                 $ctx['bothSigned'] ?? 'no',
             );
+
+            if ($customInstruction !== '') {
+                $prompt .= "\n\nAdditional instructions:\n" . $customInstruction;
+            }
+
+            return $prompt;
         }
 
-        return sprintf(
+        $prompt = sprintf(
             "You are an expert investment advisor on Najahni, a Tunisian investment platform connecting small businesses with investors. You are currently advising an investor who is evaluating a specific investment opportunity. Here is the context you must use to answer their questions:\n\n"
             . "Project: %s\n"
             . "Sector: %s\n"
@@ -205,6 +212,12 @@ PROMPT;
             $ctx['investorPreferredSectors'] ?? 'N/A',
             $ctx['investorRiskTolerance'] ?? 'N/A',
         );
+
+        if ($customInstruction !== '') {
+            $prompt .= "\n\nAdditional instructions:\n" . $customInstruction;
+        }
+
+        return $prompt;
     }
 
     public function clearHistory(): void

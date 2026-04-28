@@ -3,6 +3,7 @@ namespace App\Repository;
 
 use App\Entity\Projet;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\QueryBuilder;
 use Doctrine\Persistence\ManagerRegistry;
 
 class ProjetRepository extends ServiceEntityRepository
@@ -16,6 +17,14 @@ class ProjetRepository extends ServiceEntityRepository
     {
         return $this->createQueryBuilder('p')
             ->where('p.user IS NOT NULL');
+    }
+
+    public function findBySearch(string $search): QueryBuilder
+    {
+        return $this->createQueryBuilder('p')
+            ->andWhere('p.titre LIKE :q OR p.description LIKE :q OR p.secteur LIKE :q')
+            ->setParameter('q', '%' . $search . '%')
+            ->orderBy('p.dateCreation', 'DESC');
     }
 
     public function findByUserWithFilters($user, ?string $search = null, ?string $secteur = null, string $sort = 'dateCreation', string $direction = 'DESC'): array

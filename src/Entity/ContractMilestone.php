@@ -8,6 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: ContractMilestoneRepository::class)]
 #[ORM\Table(name: 'contract_milestone')]
+#[ORM\Index(name: 'idx_contract_milestone_contract', columns: ['contract_id'])]
 #[ORM\HasLifecycleCallbacks]
 class ContractMilestone
 {
@@ -25,19 +26,19 @@ class ContractMilestone
     #[ORM\JoinColumn(name: 'contract_id', nullable: false, onDelete: 'CASCADE')]
     private ?InvestmentContract $contract = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, nullable: false)]
     private string $label = '';
 
-    #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2)]
+    #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2, nullable: false)]
     private string $percentage = '0.00';
 
-    #[ORM\Column(type: Types::DECIMAL, precision: 15, scale: 2)]
+    #[ORM\Column(type: Types::DECIMAL, precision: 15, scale: 2, nullable: false)]
     private string $amount = '0.00';
 
-    #[ORM\Column(length: 20, options: ['default' => self::STATUS_PENDING])]
+    #[ORM\Column(length: 20, options: ['default' => self::STATUS_PENDING], nullable: false)]
     private string $status = self::STATUS_PENDING;
 
-    #[ORM\Column(type: Types::INTEGER)]
+    #[ORM\Column(type: Types::INTEGER, nullable: false)]
     private int $position = 0;
 
     #[ORM\Column(length: 255, nullable: true)]
@@ -52,8 +53,8 @@ class ContractMilestone
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $releasedAt = null;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
-    private ?\DateTimeInterface $createdAt = null;
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false)]
+    private \DateTimeInterface $createdAt;
 
     public function __construct()
     {
@@ -95,7 +96,7 @@ class ContractMilestone
     public function getReleasedAt(): ?\DateTimeInterface { return $this->releasedAt; }
     public function setReleasedAt(?\DateTimeInterface $releasedAt): static { $this->releasedAt = $releasedAt; return $this; }
 
-    public function getCreatedAt(): ?\DateTimeInterface { return $this->createdAt; }
+    public function getCreatedAt(): \DateTimeInterface { return $this->createdAt; }
 
     public function isReleased(): bool
     {

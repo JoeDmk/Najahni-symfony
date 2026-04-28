@@ -959,7 +959,7 @@ class InvestmentContractController extends AbstractController
         return [
             'id' => $message->getId(),
             'body' => $message->getBody(),
-            'createdAt' => $message->getCreatedAt()?->format('d/m/Y H:i'),
+            'createdAt' => $message->getCreatedAt()->format('d/m/Y H:i'),
             'system' => $message->isSystemMessage(),
             'mine' => $message->getSender()?->getId() === $currentUser->getId(),
             'senderName' => $message->getSender()?->getFullName() ?? 'Utilisateur',
@@ -1008,10 +1008,6 @@ class InvestmentContractController extends AbstractController
         return [$investor, $entrepreneur];
     }
 
-    /**
-     * Compute deal temperature from behavioral signals already in the database.
-     * @return array{int, string, ?\DateTimeInterface} [score 0-100, label, lastMessageAt]
-     */
     private function buildQrBase64(InvestmentContract $contract, ContractQrCodeService $contractQrCodeService): string
     {
         $verifyUrl = $contractQrCodeService->resolveVerificationUrl(
@@ -1021,6 +1017,11 @@ class InvestmentContractController extends AbstractController
         return $contractQrCodeService->buildDataUri($contract, $verifyUrl, 200, 6);
     }
 
+    /**
+     * Compute deal temperature from behavioral signals already in the database.
+     * @param list<InvestmentContractMessage> $messages
+     * @return array{int, string, ?\DateTimeInterface} [score 0-100, label, lastMessageAt]
+     */
     private function computeDealTemperature(InvestmentContract $contract, array $messages): array
     {
         $now = new \DateTimeImmutable();
@@ -1031,7 +1032,7 @@ class InvestmentContractController extends AbstractController
         $senderIds = [];
         foreach ($messages as $msg) {
             $msgDate = $msg->getCreatedAt();
-            if ($msgDate && (!$lastMessageAt || $msgDate > $lastMessageAt)) {
+            if (!$lastMessageAt || $msgDate > $lastMessageAt) {
                 $lastMessageAt = $msgDate;
             }
             if ($msg->getSender()) {
@@ -1057,11 +1058,9 @@ class InvestmentContractController extends AbstractController
         // +15 if terms were edited (updatedAt differs from createdAt by >1 min)
         $created = $contract->getCreatedAt();
         $updated = $contract->getUpdatedAt();
-        if ($created && $updated) {
-            $editDiff = abs($updated->getTimestamp() - $created->getTimestamp());
-            if ($editDiff > 60) {
-                $score += 15;
-            }
+        $editDiff = abs($updated->getTimestamp() - $created->getTimestamp());
+        if ($editDiff > 60) {
+            $score += 15;
         }
 
         // +15 if both parties have viewed (both sent messages, or at least one has signed)

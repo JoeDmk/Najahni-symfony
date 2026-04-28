@@ -10,6 +10,8 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: InvestmentContractRepository::class)]
 #[ORM\Table(name: 'investment_contract')]
+#[ORM\Index(name: 'idx_investment_contract_investor', columns: ['investor_id'])]
+#[ORM\Index(name: 'idx_investment_contract_entrepreneur', columns: ['entrepreneur_id'])]
 #[ORM\HasLifecycleCallbacks]
 class InvestmentContract
 {
@@ -35,10 +37,10 @@ class InvestmentContract
     #[ORM\JoinColumn(name: 'entrepreneur_id', nullable: false, onDelete: 'CASCADE')]
     private ?User $entrepreneur = null;
 
-    #[ORM\Column(length: 255)]
+    #[ORM\Column(length: 255, nullable: false)]
     private string $title = '';
 
-    #[ORM\Column(type: Types::TEXT)]
+    #[ORM\Column(type: Types::TEXT, nullable: false)]
     private string $terms = '';
 
     #[ORM\Column(type: Types::DECIMAL, precision: 5, scale: 2, nullable: true)]
@@ -50,10 +52,10 @@ class InvestmentContract
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $milestones = null;
 
-    #[ORM\Column(length: 20, options: ['default' => self::STATUS_NEGOTIATING])]
+    #[ORM\Column(length: 20, options: ['default' => self::STATUS_NEGOTIATING], nullable: false)]
     private string $status = self::STATUS_NEGOTIATING;
 
-    #[ORM\Column(length: 64)]
+    #[ORM\Column(length: 64, nullable: false)]
     private string $termsDigest = '0000000000000000000000000000000000000000000000000000000000000000';
 
     #[ORM\Column(length: 150, nullable: true)]
@@ -83,13 +85,13 @@ class InvestmentContract
     #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: true)]
     private ?\DateTimeInterface $lastMessageAt = null;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
-    private ?\DateTimeInterface $createdAt = null;
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false)]
+    private \DateTimeInterface $createdAt;
 
-    #[ORM\Column(type: Types::DATETIME_MUTABLE)]
-    private ?\DateTimeInterface $updatedAt = null;
+    #[ORM\Column(type: Types::DATETIME_MUTABLE, nullable: false)]
+    private \DateTimeInterface $updatedAt;
 
-    #[ORM\OneToMany(targetEntity: InvestmentContractMessage::class, mappedBy: 'contract', orphanRemoval: true)]
+    #[ORM\OneToMany(targetEntity: InvestmentContractMessage::class, mappedBy: 'contract', orphanRemoval: true, cascade: ['persist'])]
     #[ORM\OrderBy(['id' => 'ASC'])]
     private Collection $messages;
 
@@ -159,8 +161,8 @@ class InvestmentContract
     public function setEntrepreneurSignatureImage(?string $entrepreneurSignatureImage): static { $this->entrepreneurSignatureImage = $entrepreneurSignatureImage; return $this; }
     public function getLastMessageAt(): ?\DateTimeInterface { return $this->lastMessageAt; }
     public function setLastMessageAt(?\DateTimeInterface $lastMessageAt): static { $this->lastMessageAt = $lastMessageAt; return $this; }
-    public function getCreatedAt(): ?\DateTimeInterface { return $this->createdAt; }
-    public function getUpdatedAt(): ?\DateTimeInterface { return $this->updatedAt; }
+    public function getCreatedAt(): \DateTimeInterface { return $this->createdAt; }
+    public function getUpdatedAt(): \DateTimeInterface { return $this->updatedAt; }
 
     /** @return Collection<int, InvestmentContractMessage> */
     public function getMessages(): Collection

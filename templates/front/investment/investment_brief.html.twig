@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Brief d'investissement</title>
+    <style>
+        @page {
+            margin: 32px 36px 44px;
+        }
+
+        body {
+            font-family: Helvetica, Arial, sans-serif;
+            color: #1f2937;
+            font-size: 13px;
+            line-height: 1.55;
+        }
+
+        .brief-header {
+            border-bottom: 2px solid #1d4ed8;
+            padding-bottom: 12px;
+            margin-bottom: 20px;
+        }
+
+        .brief-brand {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1d4ed8;
+            letter-spacing: .5px;
+        }
+
+        .brief-subtitle {
+            font-size: 12px;
+            color: #64748b;
+            margin-top: 4px;
+        }
+
+        .brief-title {
+            font-size: 21px;
+            font-weight: 700;
+            margin: 18px 0 6px;
+            color: #0f172a;
+        }
+
+        .brief-meta {
+            font-size: 12px;
+            color: #475569;
+        }
+
+        .summary-grid {
+            width: 100%;
+            margin: 18px 0 20px;
+            border-collapse: separate;
+            border-spacing: 12px 0;
+        }
+
+        .summary-card {
+            width: 50%;
+            vertical-align: top;
+            background: #f8fafc;
+            border: 1px solid #dbeafe;
+            border-radius: 12px;
+            padding: 14px 16px;
+        }
+
+        .summary-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+
+        .risk-score {
+            font-size: 32px;
+            font-weight: 800;
+            color: {% if riskScore <= 33 %}#15803d{% elseif riskScore <= 66 %}#b45309{% else %}#b91c1c{% endif %};
+            margin-bottom: 4px;
+        }
+
+        .risk-level {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            background: {% if riskScore <= 33 %}#dcfce7{% elseif riskScore <= 66 %}#fef3c7{% else %}#fee2e2{% endif %};
+            color: {% if riskScore <= 33 %}#166534{% elseif riskScore <= 66 %}#92400e{% else %}#991b1b{% endif %};
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #0f172a;
+            margin: 18px 0 8px;
+        }
+
+        .brief-paragraph {
+            margin: 0 0 12px;
+            text-align: justify;
+        }
+
+        .metrics-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+
+        .metrics-table th,
+        .metrics-table td {
+            border: 1px solid #e2e8f0;
+            padding: 9px 10px;
+            text-align: left;
+        }
+
+        .metrics-table th {
+            width: 32%;
+            background: #eff6ff;
+            color: #1e3a8a;
+            font-size: 12px;
+        }
+
+        .match-note {
+            margin-top: 14px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid {% if matchData.matched %}#86efac{% else %}#cbd5e1{% endif %};
+            background: {% if matchData.matched %}#f0fdf4{% else %}#f8fafc{% endif %};
+            color: #334155;
+            font-size: 12px;
+        }
+
+        .footer {
+            position: fixed;
+            bottom: -24px;
+            left: 0;
+            right: 0;
+            font-size: 10px;
+            color: #64748b;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="brief-header">
+        <div class="brief-brand">Najahni</div>
+        <div class="brief-subtitle">Brief d'investissement personnalisé</div>
+        <div class="brief-title">{{ opportunity.project ? opportunity.project.titre : 'Opportunite d\'investissement' }}</div>
+        <div class="brief-meta">
+            Généré le {{ generatedAt|date('d/m/Y') }} pour {{ investorDisplayName }}
+        </div>
+    </div>
+
+    <table class="summary-grid">
+        <tr>
+            <td class="summary-card">
+                <div class="summary-label">Visualisation du risque</div>
+                <div class="risk-score">{{ riskScore }}/100</div>
+                <div class="risk-level">{{ riskLevel }}</div>
+                <div style="margin-top:10px;color:#475569;font-size:12px;">
+                    Montant : {{ riskFactors.amount|number_format(1, ',', ' ') }}/100<br>
+                    Durée : {{ riskFactors.duration|number_format(1, ',', ' ') }}/100<br>
+                    Economique : {{ riskFactors.economic|number_format(1, ',', ' ') }}/100
+                </div>
+            </td>
+            <td class="summary-card">
+                <div class="summary-label">Contexte économique</div>
+                <div><strong>Pays :</strong> {{ economicData.countryName ?? economicData.country ?? 'N/A' }}</div>
+                <div><strong>Inflation :</strong> {{ (economicData.inflationRate ?? 0)|number_format(1, ',', ' ') }}%</div>
+                <div><strong>PIB :</strong> {{ (economicData.gdpBillions ?? 0)|number_format(1, ',', ' ') }} Mrd $</div>
+                <div><strong>EUR/USD :</strong> {{ (economicData.exchangeRateEurUsd ?? 0)|number_format(4, ',', ' ') }}</div>
+            </td>
+        </tr>
+    </table>
+
+    <div class="section-title">Brief d'analyse</div>
+    {% for paragraph in briefParagraphs %}
+        <p class="brief-paragraph">{{ paragraph }}</p>
+    {% endfor %}
+
+    <div class="section-title">Indicateurs clés</div>
+    <table class="metrics-table">
+        <tr>
+            <th>Montant cible</th>
+            <td>{{ opportunity.targetAmount|number_format(0, ',', ' ') }} DT</td>
+        </tr>
+        <tr>
+            <th>Secteur</th>
+            <td>{{ opportunity.project ? opportunity.project.secteur : 'N/A' }}</td>
+        </tr>
+        <tr>
+            <th>Deadline</th>
+            <td>{{ opportunity.deadline ? opportunity.deadline|date('d/m/Y') : 'N/A' }}</td>
+        </tr>
+        <tr>
+            <th>Participation / equity</th>
+            <td>{{ equityMetric ? equityMetric|number_format(2, ',', ' ') ~ ' %' : 'Non définie à ce stade' }}</td>
+        </tr>
+    </table>
+
+    {% if profile %}
+        <div class="match-note">
+            <strong>Lecture du profil investisseur :</strong>
+            Budget {{ profile.budgetMin|number_format(0, ',', ' ') }} à {{ profile.budgetMax|number_format(0, ',', ' ') }} DT,
+            tolérance au risque {{ profile.riskTolerance }}/10,
+            horizon {{ profile.horizonMonths }} mois,
+            secteurs préférés : {{ profile.preferredSectors ?: 'non renseignés' }}.
+            {% if matchData.matched %}
+                Compatibilité détectée{% if matchData.score is not null %} : {{ matchData.score }}/100{% endif %}{% if matchData.explanation %} ({{ matchData.explanation }}){% endif %}.
+            {% else %}
+                Cette opportunité n'apparaît pas parmi les meilleures correspondances actuelles du moteur de matching.
+            {% endif %}
+        </div>
+    {% endif %}
+
+    <div class="footer">
+        Ce document est généré automatiquement à titre informatif. Il ne constitue pas un conseil financier.
+    </div>
+</body>
+</html>
