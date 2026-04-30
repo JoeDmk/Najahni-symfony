@@ -93,6 +93,7 @@
         .badge-role-MENTOR{background:var(--nj-accent);color:#fff} .badge-role-INVESTISSEUR{background:var(--nj-secondary);color:#fff}
     </style>
     {% block stylesheets %}{% endblock %}
+    {{ importmap('app') }}
 </head>
 <body {% block body_attributes %}{% endblock %}>
     {% for label, messages in app.flashes %}

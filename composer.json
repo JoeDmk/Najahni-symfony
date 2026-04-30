@@ -60,6 +60,9 @@
             "symfony/flex": true,
             "symfony/runtime": true
         },
+        "platform": {
+            "php": "8.3.30"
+        },
         "bump-after-update": true,
         "sort-packages": true
     },
