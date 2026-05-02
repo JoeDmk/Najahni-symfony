@@ -2,8 +2,9 @@
 # Full documentation: https://github.com/ahmed-bhs/doctrine-doctor/blob/main/docs/CONFIGURATION.md
 
 doctrine_doctor:
-    # Enable Doctrine Doctor (automatically enabled in dev/test environments)
-    enabled: '%kernel.debug%'
+    # Disable runtime analyzers in dev: they trigger expensive post-request DB scans
+    # and can push the built-in PHP server over the 30s execution limit.
+    enabled: false
 
 #    # Web Profiler integration
 #    profiler:
