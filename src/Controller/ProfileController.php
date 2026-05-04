@@ -17,6 +17,7 @@ use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 use Symfony\Component\String\Slugger\SluggerInterface;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 #[IsGranted('ROLE_USER')]
 class ProfileController extends AbstractController
@@ -35,7 +36,7 @@ class ProfileController extends AbstractController
     }
 
     #[Route('/profile/edit', name: 'app_profile_edit', methods: ['GET', 'POST'])]
-    public function edit(Request $request, EntityManagerInterface $em, SluggerInterface $slugger): Response
+    public function edit(Request $request, EntityManagerInterface $em, SluggerInterface $slugger, ValidatorInterface $validator): Response
     {
         /** @var User $user */
         $user = $this->getUser();
@@ -78,6 +79,18 @@ class ProfileController extends AbstractController
                 } catch (FileException $e) {
                     $this->addFlash('danger', 'Erreur lors du téléchargement de l\'image.');
                 }
+            }
+
+            $errors = $validator->validate($user);
+            if (count($errors) > 0) {
+                $fieldErrors = [];
+                foreach ($errors as $error) {
+                    $field = $error->getPropertyPath();
+                    if (!isset($fieldErrors[$field])) {
+                        $fieldErrors[$field] = $error->getMessage();
+                    }
+                }
+                return $this->render('front/profile/edit.html.twig', ['fieldErrors' => $fieldErrors]);
             }
 
             $em->flush();

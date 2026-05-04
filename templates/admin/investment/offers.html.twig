@@ -17,63 +17,156 @@
 
 {# Status filter #}
 <div class="card border-0 shadow-sm mb-4 p-3" style="border-radius:.75rem">
-    <form method="get" action="{{ path('admin_invest_offers') }}" class="row g-2 align-items-end">
-        <div class="col-md-4">
-            <label class="form-label small fw-semibold mb-1">Filtrer par statut</label>
+    <form method="get" action="{{ path('admin_invest_offers') }}" class="row g-2 align-items-end" id="offerFiltersForm">
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold mb-1">Recherche globale</label>
+            <input type="search" name="q" value="{{ filters.q ?? '' }}" class="form-control" placeholder="Projet, investisseur, entrepreneur...">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold mb-1">Statut</label>
             <select name="status" class="form-select">
                 <option value="">Tous les statuts</option>
-                <option value="PENDING" {{ statusFilter == 'PENDING' ? 'selected' }}>En attente</option>
-                <option value="ACCEPTED" {{ statusFilter == 'ACCEPTED' ? 'selected' }}>Acceptées</option>
-                <option value="REJECTED" {{ statusFilter == 'REJECTED' ? 'selected' }}>Rejetées</option>
+                <option value="PENDING" {{ (filters.status ?? '') == 'PENDING' ? 'selected' }}>En attente</option>
+                <option value="ACCEPTED" {{ (filters.status ?? '') == 'ACCEPTED' ? 'selected' }}>Acceptées</option>
+                <option value="REJECTED" {{ (filters.status ?? '') == 'REJECTED' ? 'selected' }}>Rejetées</option>
             </select>
         </div>
         <div class="col-md-2">
-            <button type="submit" class="btn btn-nj w-100"><i class="bi bi-funnel me-1"></i>Filtrer</button>
+            <label class="form-label small fw-semibold mb-1">Paiement</label>
+            <select name="paid" class="form-select">
+                <option value="">Tous</option>
+                <option value="paid" {{ (filters.paid ?? '') == 'paid' ? 'selected' }}>Payées</option>
+                <option value="unpaid" {{ (filters.paid ?? '') == 'unpaid' ? 'selected' }}>Non payées</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold mb-1">Investisseur</label>
+            <input type="text" name="investor" value="{{ filters.investor ?? '' }}" class="form-control" placeholder="Nom, email, société">
+        </div>
+        <div class="col-md-3">
+            <label class="form-label small fw-semibold mb-1">Entrepreneur</label>
+            <input type="text" name="entrepreneur" value="{{ filters.entrepreneur ?? '' }}" class="form-control" placeholder="Nom, email, société">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold mb-1">Montant min</label>
+            <input type="number" min="0" step="1" name="amount_min" value="{{ filters.amount_min ?? '' }}" class="form-control" placeholder="0">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold mb-1">Montant max</label>
+            <input type="number" min="0" step="1" name="amount_max" value="{{ filters.amount_max ?? '' }}" class="form-control" placeholder="250000">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold mb-1">Date début</label>
+            <input type="date" name="created_from" value="{{ filters.created_from ?? '' }}" class="form-control">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold mb-1">Date fin</label>
+            <input type="date" name="created_to" value="{{ filters.created_to ?? '' }}" class="form-control">
+        </div>
+        <div class="col-md-2">
+            <label class="form-label small fw-semibold mb-1">Tri</label>
+            <select name="order" class="form-select">
+                <option value="recent" {{ (filters.order ?? 'recent') == 'recent' ? 'selected' }}>Plus récentes</option>
+                <option value="oldest" {{ (filters.order ?? '') == 'oldest' ? 'selected' }}>Plus anciennes</option>
+                <option value="amount_desc" {{ (filters.order ?? '') == 'amount_desc' ? 'selected' }}>Montant décroissant</option>
+                <option value="amount_asc" {{ (filters.order ?? '') == 'amount_asc' ? 'selected' }}>Montant croissant</option>
+                <option value="investor_asc" {{ (filters.order ?? '') == 'investor_asc' ? 'selected' }}>Investisseur A-Z</option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button type="submit" class="btn btn-nj w-100"><i class="bi bi-funnel me-1"></i>Appliquer</button>
         </div>
         <div class="col-md-2">
             <a href="{{ path('admin_invest_offers') }}" class="btn btn-outline-secondary w-100">Réinitialiser</a>
         </div>
+        <div class="col-12">
+            <div class="small text-muted">Recherche et filtrage en temps réel par acteur, statut, paiement, montant et fenêtre de création.</div>
+        </div>
     </form>
 </div>
 
-<div class="card border-0 shadow-sm" style="border-radius:1rem">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-nj mb-0">
-                <thead>
-                    <tr><th>Investisseur</th><th>Projet</th><th>Montant</th><th>Statut</th><th>Date</th><th class="text-end">Actions</th></tr>
-                </thead>
-                <tbody>
-                    {% for offer in pagination %}
-                    <tr>
-                        <td>{{ offer.investor.firstname }} {{ offer.investor.lastname }}</td>
-                        <td>{{ offer.opportunity.project ? offer.opportunity.project.titre : 'N/A' }}</td>
-                        <td class="fw-semibold">{{ offer.proposedAmount|number_format(0, ',', ' ') }} DT</td>
-                        <td><span class="badge bg-{{ offer.status == 'ACCEPTED' ? 'success' : (offer.status == 'REJECTED' ? 'danger' : 'warning text-dark') }}">{{ offer.status }}</span></td>
-                        <td class="text-muted small">{{ offer.createdAt|date('d/m/Y H:i') }}</td>
-                        <td class="text-end">
-                            <div class="btn-group btn-group-sm">
-                                <a href="{{ path('admin_invest_show', {id: offer.opportunity.id}) }}" class="btn btn-outline-primary" title="Voir opportunité"><i class="bi bi-eye"></i></a>
-                                {% if offer.status == 'PENDING' %}
-                                <form method="post" action="{{ path('admin_invest_offer_accept', {id: offer.id}) }}" class="d-inline">
-                                    <input type="hidden" name="_token" value="{{ csrf_token('offer_action_' ~ offer.id) }}">
-                                    <button class="btn btn-sm btn-outline-success" title="Accepter"><i class="bi bi-check-lg"></i></button>
-                                </form>
-                                <form method="post" action="{{ path('admin_invest_offer_reject', {id: offer.id}) }}" class="d-inline">
-                                    <input type="hidden" name="_token" value="{{ csrf_token('offer_action_' ~ offer.id) }}">
-                                    <button class="btn btn-sm btn-outline-danger" title="Rejeter"><i class="bi bi-x-lg"></i></button>
-                                </form>
-                                {% endif %}
-                            </div>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr><td colspan="6" class="text-center text-muted py-4">Aucune offre trouvée.</td></tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-    </div>
+<div id="offerResultsContainer">
+    {% include 'admin/investment/_offers_results.html.twig' with {pagination: pagination} %}
 </div>
-<div class="d-flex justify-content-center mt-4">{{ knp_pagination_render(pagination) }}</div>
+
+<script>
+(function() {
+    var form = document.getElementById('offerFiltersForm');
+    var results = document.getElementById('offerResultsContainer');
+    var debounceTimer;
+    var requestController;
+
+    if (!form || !results) {
+        return;
+    }
+
+    function setLoading(isLoading) {
+        results.style.opacity = isLoading ? '0.55' : '1';
+        results.style.transition = 'opacity .18s ease';
+    }
+
+    function buildUrl(baseUrl) {
+        var url = new URL(baseUrl || form.action, window.location.origin);
+        url.search = new URLSearchParams(new FormData(form)).toString();
+        return url;
+    }
+
+    function fetchResults(url) {
+        if (requestController) {
+            requestController.abort();
+        }
+
+        requestController = new AbortController();
+        setLoading(true);
+
+        fetch(url.toString(), {
+            headers: {'X-Requested-With': 'XMLHttpRequest'},
+            signal: requestController.signal
+        })
+            .then(function(response) { return response.text(); })
+            .then(function(html) {
+                results.innerHTML = html;
+                history.replaceState({}, '', window.location.pathname + '?' + url.searchParams.toString());
+                setLoading(false);
+            })
+            .catch(function(error) {
+                if (error.name !== 'AbortError') {
+                    setLoading(false);
+                }
+            });
+    }
+
+    function queueFetch() {
+        window.clearTimeout(debounceTimer);
+        debounceTimer = window.setTimeout(function() {
+            fetchResults(buildUrl());
+        }, 250);
+    }
+
+    form.addEventListener('submit', function(event) {
+        event.preventDefault();
+        fetchResults(buildUrl());
+    });
+
+    form.addEventListener('input', function(event) {
+        if (event.target.matches('input[type="search"], input[type="text"], input[type="number"], input[type="date"]')) {
+            queueFetch();
+        }
+    });
+
+    form.addEventListener('change', function() {
+        queueFetch();
+    });
+
+    results.addEventListener('click', function(event) {
+        var link = event.target.closest('.pagination a');
+        if (!link) {
+            return;
+        }
+
+        event.preventDefault();
+        fetchResults(link.href);
+    });
+})();
+</script>
 {% endblock %}

@@ -3,9 +3,12 @@
 {% block title %}Trouver un mentor - Najahni{% endblock %}
 
 {% block main %}
-<div class="d-flex justify-content-between align-items-center mb-4">
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <h2 class="fw-bold mb-0"><i class="bi bi-search me-2"></i>Trouver un mentor</h2>
-    <a href="{{ path('app_mentorat_requests') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Mes demandes</a>
+    <div class="d-flex gap-2">
+        <a href="{{ path('app_mentorat_calendar') }}" class="btn btn-outline-nj"><i class="bi bi-calendar2-week me-1"></i>Calendrier</a>
+        <a href="{{ path('app_mentorat_requests') }}" class="btn btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Mes demandes</a>
+    </div>
 </div>
 
 {% for message in app.flashes('success') %}

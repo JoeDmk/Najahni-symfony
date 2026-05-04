@@ -272,7 +272,12 @@
                 const data = await res.json();
                 addBotMsg(data.response);
             } else {
+<<<<<<< HEAD
                 addBotMsg("Désolé, une erreur est survenue. Réessayez dans un instant.");
+=======
+                const err = await res.json().catch(() => null);
+                addBotMsg(err?.error || "Désolé, une erreur est survenue. Réessayez dans un instant.");
+>>>>>>> 8855d79e01fcb7a8846aef0b364c2d81b5a2ad22
             }
         } catch(e){
             removeTyping();

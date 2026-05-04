@@ -48,6 +48,8 @@ class GeminiService
                     ],
                 ],
                 'timeout' => 30,
+                'verify_peer' => false,
+                'verify_host' => false,
             ]);
 
             $statusCode = $response->getStatusCode();

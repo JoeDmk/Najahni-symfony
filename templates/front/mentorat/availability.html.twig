@@ -5,6 +5,7 @@
 {% block main %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h2 class="fw-bold mb-0"><i class="bi bi-mortarboard me-2"></i>Mentorat</h2>
+    <a href="{{ path('app_mentorat_my_calendar') }}" class="btn btn-outline-nj"><i class="bi bi-calendar2-week me-1"></i>Mon Calendrier</a>
 </div>
 
 {# ── 4-Tab Navigation (role-aware) ── #}
@@ -31,7 +32,7 @@
                 <input type="hidden" name="_token" value="{{ csrf_token('mentorat_availability') }}">
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Date</label>
-                    <input type="date" name="date" class="form-control" required>
+                    <input type="date" name="date" class="form-control" required min="{{ 'now'|date('Y-m-d') }}">
                 </div>
                 <div class="row g-3">
                     <div class="col-6">

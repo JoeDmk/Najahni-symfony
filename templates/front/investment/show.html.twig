@@ -3,7 +3,11 @@
 {% block title %}{{ opportunity.project ? opportunity.project.titre : 'Opportunité' }} - Investissement{% endblock %}
 
 {% block main %}
-<a href="{{ path('app_invest_opportunities') }}" class="text-decoration-none text-muted"><i class="bi bi-arrow-left me-1"></i>Toutes les opportunités</a>
+{% include 'front/investment/_wayfinder.html.twig' with {pageLabel: 'Detail opportunite', activeStep: 1} %}
+<div class="d-flex justify-content-between align-items-center">
+    <a href="{{ path('app_invest_opportunities') }}" class="text-decoration-none text-muted"><i class="bi bi-arrow-left me-1"></i>Toutes les opportunités</a>
+    <a href="{{ path('app_invest_risk_analysis', {id: opportunity.id}) }}" class="btn btn-sm btn-outline-warning"><i class="bi bi-shield-exclamation me-1"></i>Analyse de risque IA</a>
+</div>
 
 {% for message in app.flashes('success') %}
     <div class="alert alert-success alert-dismissible fade show mt-3">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>
@@ -54,6 +58,46 @@
                 {% endif %}
             </div>
             {% endif %}
+
+            {% if opportunity.project and opportunity.project.user %}
+            <div class="mt-3 p-4 rounded-4 border" style="border-color:rgba(13,110,253,.14)!important; background:linear-gradient(180deg, rgba(13,110,253,.05), rgba(13,110,253,.015))">
+                <div class="d-flex flex-column flex-md-row gap-3 align-items-md-start justify-content-between">
+                    <div class="d-flex gap-3 align-items-start">
+                        {% set entrepreneur = opportunity.project.user %}
+                        {% if entrepreneur.profilePicture %}
+                            <img src="{{ entrepreneur.profilePicture }}" alt="{{ entrepreneur.firstname }} {{ entrepreneur.lastname }}" class="rounded-circle" width="64" height="64" style="object-fit:cover">
+                        {% else %}
+                            <div class="rounded-circle d-flex align-items-center justify-content-center text-white fw-bold" style="width:64px;height:64px;background:linear-gradient(135deg, #0d6efd, #20c997)">
+                                {{ entrepreneur.firstname|first|upper }}{{ entrepreneur.lastname|first|upper }}
+                            </div>
+                        {% endif %}
+                        <div>
+                            <div class="text-uppercase small fw-semibold text-primary mb-1" style="letter-spacing:.08em">Entrepreneur</div>
+                            <h5 class="fw-bold mb-1">{{ entrepreneur.firstname }} {{ entrepreneur.lastname }}</h5>
+                            <div class="d-flex flex-wrap gap-2 small text-muted mb-2">
+                                <span><i class="bi bi-person-badge me-1"></i>{{ entrepreneur.role }}</span>
+                                {% if entrepreneur.companyName %}<span><i class="bi bi-building me-1"></i>{{ entrepreneur.companyName }}</span>{% endif %}
+                                {% if opportunity.project.secteur %}<span><i class="bi bi-diagram-3 me-1"></i>{{ opportunity.project.secteur }}</span>{% endif %}
+                            </div>
+                            {% if entrepreneur.bio %}
+                                <p class="text-muted small mb-0">{{ entrepreneur.bio|slice(0, 220) }}{% if entrepreneur.bio|length > 220 %}...{% endif %}</p>
+                            {% else %}
+                                <p class="text-muted small mb-0">Aucune bio publique renseignee pour le moment.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="d-flex flex-column gap-2 align-items-md-end">
+                        <a href="{{ path('app_user_profile', {id: entrepreneur.id}) }}" class="btn btn-primary px-4">
+                            <i class="bi bi-person-vcard me-2"></i>Voir le profil
+                        </a>
+                        <div class="small text-muted text-md-end">
+                            <div>{{ entrepreneur.email }}</div>
+                            {% if entrepreneur.phone %}<div>{{ entrepreneur.phone }}</div>{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
         </div>
 
         {# Offers list #}
@@ -62,14 +106,49 @@
             {% if offers|length > 0 %}
             <div class="table-responsive">
                 <table class="table table-nj">
-                    <thead><tr><th>Investisseur</th><th>Montant</th><th>Statut</th><th>Date</th></tr></thead>
+                    <thead><tr><th>Investisseur</th><th>Montant</th><th>Statut</th><th>Date</th>{% if canManageOffers %}<th class="text-end">Actions</th>{% endif %}</tr></thead>
                     <tbody>
                         {% for offer in offers %}
                         <tr>
                             <td><a href="{{ path('app_user_profile', {id: offer.investor.id}) }}" class="text-decoration-none">{{ offer.investor.firstname }} {{ offer.investor.lastname }}</a></td>
                             <td class="fw-semibold">{{ offer.proposedAmount|number_format(0, ',', ' ') }} DT</td>
-                            <td><span class="badge bg-{{ offer.status == 'ACCEPTED' ? 'success' : (offer.status == 'REJECTED' ? 'danger' : 'warning text-dark') }}">{{ offer.status }}</span></td>
+                            <td>
+                                <span class="badge bg-{{ offer.status == 'ACCEPTED' ? 'success' : (offer.status == 'REJECTED' ? 'danger' : 'warning text-dark') }}">{{ offer.status }}</span>
+                                {% if offer.status == 'ACCEPTED' and offer.paid %}
+                                    <div class="small text-success fw-semibold mt-1">Paiement confirme</div>
+                                {% elseif offer.status == 'ACCEPTED' %}
+                                    {% if offer.contract and offer.contract.fullySigned %}
+                                        <div class="small text-success fw-semibold mt-1">Contrat signe -- paiement disponible</div>
+                                    {% else %}
+                                        <div class="small text-warning mt-1">
+                                            <a href="{{ path('app_invest_contract_show', {id: offer.id}) }}" class="text-warning text-decoration-underline">Negociation en cours -- signature requise avant paiement</a>
+                                        </div>
+                                    {% endif %}
+                                {% endif %}
+                            </td>
                             <td class="text-muted small">{{ offer.createdAt|date('d/m/Y H:i') }}</td>
+                            {% if canManageOffers %}
+                            <td class="text-end">
+                                {% if offer.status == 'PENDING' %}
+                                <form method="post" action="{{ path('app_invest_offer_accept_front', {id: offer.id}) }}" class="d-inline">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('offer_action_' ~ offer.id) }}">
+                                    <input type="hidden" name="_redirect_route" value="app_invest_entrepreneur_inbox">
+                                    <button class="btn btn-sm btn-outline-success" title="Accepter l'offre"><i class="bi bi-check-lg"></i></button>
+                                </form>
+                                <form method="post" action="{{ path('app_invest_offer_reject_front', {id: offer.id}) }}" class="d-inline">
+                                    <input type="hidden" name="_token" value="{{ csrf_token('offer_action_' ~ offer.id) }}">
+                                    <input type="hidden" name="_redirect_route" value="app_invest_entrepreneur_inbox">
+                                    <button class="btn btn-sm btn-outline-danger" title="Refuser l'offre"><i class="bi bi-x-lg"></i></button>
+                                </form>
+                                {% elseif offer.status == 'ACCEPTED' and not offer.paid %}
+                                    <a href="{{ path('app_invest_contract_show', {id: offer.id}) }}" class="btn btn-sm btn-outline-primary">Contrat</a>
+                                {% elseif offer.status == 'ACCEPTED' and offer.paid %}
+                                    <a href="{{ path('app_invest_contract_show', {id: offer.id}) }}" class="btn btn-sm btn-outline-success">Contrat signe</a>
+                                {% else %}
+                                    <span class="small text-muted">Aucune action</span>
+                                {% endif %}
+                            </td>
+                            {% endif %}
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -90,35 +169,57 @@
                 <div class="alert alert-info mb-0">
                     <i class="bi bi-info-circle me-1"></i>Vous avez déjà soumis une offre de <strong>{{ myOffer.proposedAmount|number_format(0, ',', ' ') }} DT</strong>
                     <br><span class="badge bg-{{ myOffer.status == 'ACCEPTED' ? 'success' : (myOffer.status == 'REJECTED' ? 'danger' : 'warning text-dark') }} mt-1">{{ myOffer.status }}</span>
+                    {% if myOffer.status == 'ACCEPTED' and not myOffer.paid %}
+                        <div class="mt-3">
+                            <a href="{{ path('app_invest_contract_show', {id: myOffer.id}) }}" class="btn btn-sm btn-outline-primary">Negocier le contrat</a>
+                            {% if myOffer.contract and myOffer.contract.fullySigned %}
+                                <a href="{{ path('app_invest_my_offers') }}" class="btn btn-sm btn-nj">Finaliser le paiement</a>
+                            {% endif %}
+                        </div>
+                        <div class="mt-2 small {{ myOffer.contract and myOffer.contract.fullySigned ? 'text-success fw-semibold' : 'text-warning' }}">
+                            {% if myOffer.contract and myOffer.contract.fullySigned %}
+                                Le contrat est signe numeriquement par les deux parties.
+                            {% elseif myOffer.contract %}
+                                Negociation en cours -- <a href="{{ path('app_invest_contract_show', {id: myOffer.id}) }}" class="text-warning text-decoration-underline">signature requise avant paiement</a>.
+                            {% else %}
+                                Le paiement sera active apres signature SHA-256 du contrat par l'investisseur et l'entrepreneur.
+                            {% endif %}
+                        </div>
+                    {% elseif myOffer.paid %}
+                        <div class="mt-2 small text-success fw-semibold">Paiement confirme{% if myOffer.paymentIntentId %} · {{ myOffer.paymentIntentId }}{% endif %}</div>
+                        <div class="mt-3">
+                            <a href="{{ path('app_invest_contract_show', {id: myOffer.id}) }}" class="btn btn-sm btn-outline-primary">Voir le contrat</a>
+                            <a href="{{ path('app_invest_portfolio') }}" class="btn btn-sm btn-outline-success">Voir dans le portfolio</a>
+                        </div>
+                    {% endif %}
                 </div>
             {% else %}
                 {% set remaining = (opportunity.targetAmount|number_format(2, '.', '') - opportunity.totalFunded)|round(2) %}
                 <form method="post" action="{{ path('app_invest_offer', {id: opportunity.id}) }}" id="offerForm" novalidate>
                     <input type="hidden" name="_token" value="{{ csrf_token('invest_offer_' ~ opportunity.id) }}">
+                    <input type="hidden" name="risk_acknowledged" id="riskAcknowledgedField" value="0">
+                    <div class="rounded-4 p-3 mb-3 text-white" style="background:linear-gradient(135deg, #0d6efd 0%, #00a6fb 100%); box-shadow:0 18px 40px rgba(13, 110, 253, 0.22)">
+                        <div class="d-flex flex-column gap-3 flex-lg-row justify-content-between align-items-lg-center">
+                            <div>
+                                <div class="text-uppercase fw-semibold small mb-1" style="letter-spacing:.08em; opacity:.85">Avant d'investir</div>
+                                <div class="h5 fw-bold mb-2">Consultez l'analyse de risque si vous voulez plus de contexte.</div>
+                                <p class="mb-0" style="color:rgba(255,255,255,.88)">Cette verification est optionnelle. Vous pouvez ouvrir l'analyse complete puis revenir a l'offre, ou soumettre directement votre investissement.</p>
+                            </div>
+                            <a href="{{ path('app_invest_risk_analysis', {id: opportunity.id}) }}" class="btn btn-light btn-lg fw-semibold px-4 align-self-start align-self-lg-center" style="border-radius:999px; color:#0b5ed7; box-shadow:0 10px 24px rgba(0, 0, 0, 0.12)">
+                                <i class="bi bi-shield-check me-2"></i>Voir l'analyse de risque
+                            </a>
+                        </div>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Montant (DT)</label>
                         <input type="number" step="0.01" min="1" {% if remaining > 0 %}max="{{ remaining }}"{% endif %} name="amount" class="form-control form-control-lg" placeholder="Ex: 5000" required id="offerAmount">
                         <div class="form-text">Montant restant à financer : <strong>{{ remaining|number_format(0, ',', ' ') }} DT</strong></div>
+                        <div class="form-text text-muted">L'analyse de risque reste facultative et n'empêche plus l'envoi de votre offre.</div>
                         <div class="invalid-feedback" id="offerAmountError"></div>
                     </div>
                     <button type="submit" class="btn btn-nj w-100 btn-lg"><i class="bi bi-send me-2"></i>Soumettre l'offre</button>
                 </form>
-                <script>
-                document.getElementById('offerForm').addEventListener('submit', function(e) {
-                    var amount = document.getElementById('offerAmount');
-                    var val = parseFloat(amount.value);
-                    var max = parseFloat(amount.getAttribute('max')) || Infinity;
-                    var errEl = document.getElementById('offerAmountError');
-                    amount.classList.remove('is-invalid');
-                    if (isNaN(val) || val <= 0) {
-                        e.preventDefault(); amount.classList.add('is-invalid');
-                        errEl.textContent = 'Le montant doit être un nombre positif.';
-                    } else if (val > max) {
-                        e.preventDefault(); amount.classList.add('is-invalid');
-                        errEl.textContent = 'Le montant ne peut pas dépasser ' + max.toLocaleString('fr') + ' DT.';
-                    }
-                });
-                </script>
+
             {% endif %}
         </div>
         {% endif %}
@@ -137,4 +238,44 @@
         {% endif %}
     </div>
 </div>
+
+{% if opportunity.status == 'OPEN' and is_granted('ROLE_INVESTISSEUR') and not myOffer %}
+        <script>
+        (function() {
+                var form = document.getElementById('offerForm');
+                var amount = document.getElementById('offerAmount');
+                var errEl = document.getElementById('offerAmountError');
+                var riskAcknowledgedField = document.getElementById('riskAcknowledgedField');
+
+                if (!form || !amount || !riskAcknowledgedField) {
+                        return;
+                }
+
+                if (new URLSearchParams(window.location.search).get('risk_reviewed') === '1') {
+                        riskAcknowledgedField.value = '1';
+                }
+
+                form.addEventListener('submit', function(e) {
+                        var val = parseFloat(amount.value);
+                        var max = parseFloat(amount.getAttribute('max')) || Infinity;
+
+                        amount.classList.remove('is-invalid');
+
+                        if (isNaN(val) || val <= 0) {
+                                e.preventDefault();
+                                amount.classList.add('is-invalid');
+                                errEl.textContent = 'Le montant doit etre un nombre positif.';
+                                return;
+                        }
+
+                        if (val > max) {
+                                e.preventDefault();
+                                amount.classList.add('is-invalid');
+                                errEl.textContent = 'Le montant ne peut pas depasser ' + max.toLocaleString('fr') + ' DT.';
+                            return;
+                        }
+                });
+        })();
+        </script>
+{% endif %}
 {% endblock %}

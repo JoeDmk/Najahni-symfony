@@ -324,8 +324,8 @@ body { background: #f0f2f5; }
                 <a href="{{ path('app_projet_index') }}" class="btn btn-hero-primary">Mes Projets</a>
                 <a href="{{ path('app_invest_opportunities') }}" class="btn btn-hero-secondary">Opportunites d'investissement</a>
             {% else %}
-                <a href="{{ path('app_register') }}" class="btn btn-hero-primary">Rejoindre Najahni - c'est gratuit</a>
-                <a href="{{ path('app_login') }}" class="btn btn-hero-secondary">Se connecter</a>
+                <a href="#" data-bs-toggle="modal" data-bs-target="#registerModal" class="btn btn-hero-primary"><i class="bi bi-person-plus me-2"></i>Rejoindre Najahni - c'est gratuit</a>
+                <a href="#" data-bs-toggle="modal" data-bs-target="#loginModal" class="btn btn-hero-secondary"><i class="bi bi-box-arrow-in-right me-2"></i>Se connecter</a>
             {% endif %}
         </div>
 

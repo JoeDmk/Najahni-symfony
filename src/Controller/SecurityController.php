@@ -63,14 +63,15 @@ class SecurityController extends AbstractController
             $confirmPassword = $request->request->get('confirm_password', '');
 
             // Validation
+            $fieldErrors = [];
             if ($plainPassword !== $confirmPassword) {
-                $this->addFlash('danger', 'Les mots de passe ne correspondent pas.');
-                return $this->render('security/register.html.twig', ['user' => $user]);
+                $fieldErrors['confirm_password'] = 'Les mots de passe ne correspondent pas.';
+                return $this->render('security/register.html.twig', ['user' => $user, 'fieldErrors' => $fieldErrors]);
             }
 
             if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/', $plainPassword)) {
-                $this->addFlash('danger', 'Le mot de passe doit contenir au moins 6 caractères, une majuscule, une minuscule et un chiffre.');
-                return $this->render('security/register.html.twig', ['user' => $user]);
+                $fieldErrors['password'] = 'Le mot de passe doit contenir au moins 6 caractères, une majuscule, une minuscule et un chiffre.';
+                return $this->render('security/register.html.twig', ['user' => $user, 'fieldErrors' => $fieldErrors]);
             }
 
             // Check role - prevent self-registration as admin
@@ -83,9 +84,12 @@ class SecurityController extends AbstractController
             $errors = $validator->validate($user);
             if (count($errors) > 0) {
                 foreach ($errors as $error) {
-                    $this->addFlash('danger', $error->getMessage());
+                    $field = $error->getPropertyPath();
+                    if (!isset($fieldErrors[$field])) {
+                        $fieldErrors[$field] = $error->getMessage();
+                    }
                 }
-                return $this->render('security/register.html.twig', ['user' => $user]);
+                return $this->render('security/register.html.twig', ['user' => $user, 'fieldErrors' => $fieldErrors]);
             }
 
             // Generate verification code
@@ -280,13 +284,15 @@ class SecurityController extends AbstractController
             $confirm = $request->request->get('confirm_password', '');
 
             if ($password !== $confirm) {
-                $this->addFlash('danger', 'Les mots de passe ne correspondent pas.');
-                return $this->render('security/reset_password.html.twig');
+                return $this->render('security/reset_password.html.twig', [
+                    'fieldErrors' => ['confirm_password' => 'Les mots de passe ne correspondent pas.'],
+                ]);
             }
 
             if (!preg_match('/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,}$/', $password)) {
-                $this->addFlash('danger', 'Le mot de passe doit contenir au moins 6 caractères, une majuscule, une minuscule et un chiffre.');
-                return $this->render('security/reset_password.html.twig');
+                return $this->render('security/reset_password.html.twig', [
+                    'fieldErrors' => ['password' => 'Le mot de passe doit contenir au moins 6 caractères, une majuscule, une minuscule et un chiffre.'],
+                ]);
             }
 
             $user->setPassword($hasher->hashPassword($user, $password));

@@ -37,7 +37,7 @@ class InvestmentOpportunity
     #[Assert\NotNull(message: 'La date limite est obligatoire.')]
     private ?\DateTimeInterface $deadline = null;
 
-    #[ORM\Column(length: 20, columnDefinition: "ENUM('OPEN','CLOSED','FUNDED') DEFAULT 'OPEN'")]
+    #[ORM\Column(length: 20)]
     private string $status = self::STATUS_OPEN;
 
     #[ORM\ManyToOne(targetEntity: Projet::class, inversedBy: 'opportunities')]
@@ -93,7 +93,7 @@ class InvestmentOpportunity
     {
         $total = 0;
         foreach ($this->offers as $offer) {
-            if ($offer->getStatus() === InvestmentOffer::STATUS_ACCEPTED) {
+            if ($offer->isPaid()) {
                 $total += (float) $offer->getProposedAmount();
             }
         }

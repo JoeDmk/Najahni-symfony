@@ -4,6 +4,12 @@
 # Put parameters here that don't need to change on each machine where the app is deployed
 # https://symfony.com/doc/current/best_practices.html#use-parameters-for-application-configuration
 parameters:
+    cours_documents_directory: '%kernel.project_dir%/var/uploads/documents'
+    groq_url: '%env(string:GROQ_URL)%'
+    groq_model: '%env(string:GROQ_MODEL)%'
+    app.groq_api_key: '%env(string:GROQ_API_KEY)%'
+    profanity_api_url: '%env(string:PROFANITY_API_URL)%'
+    profanity_api_host: '%env(string:PROFANITY_API_HOST)%'
 
 services:
     # default configuration for services in *this* file
@@ -32,3 +38,33 @@ services:
             $secretKey: '%env(RECAPTCHA3_SECRET)%'
             $scoreThreshold: 0.5
             $enabled: true
+
+    App\Service\Investment\InvestmentChatbotService:
+        arguments:
+            $hfToken: '%env(HF_TOKEN)%'
+
+    App\Service\Investment\StripePaymentService:
+        arguments:
+            $stripeSecretKey: '%env(STRIPE_SECRET_KEY)%'
+
+    App\Service\Investment\ContractQrCodeService:
+        arguments:
+            $publicBaseUrl: '%env(string:APP_PUBLIC_URL)%'
+
+    App\Service\AvisRatingService:
+        arguments:
+            $groqApiKey: '%env(string:GROQ_API_KEY)%'
+            $groqUrl: '%groq_url%'
+            $groqModel: '%groq_model%'
+
+    App\Service\CoursQuizService:
+        arguments:
+            $groqApiKey: '%env(string:GROQ_API_KEY)%'
+            $groqUrl: '%groq_url%'
+            $groqModel: '%groq_model%'
+
+    App\Service\ProfanityCheckService:
+        arguments:
+            $rapidApiKey: '%env(string:RAPIDAPI_KEY)%'
+            $rapidApiHost: '%profanity_api_host%'
+            $rapidApiUrl: '%profanity_api_url%'

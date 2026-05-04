@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\Notification;
 use App\Entity\User;
 use App\Entity\UserFollow;
+use App\Service\WebSocketNotifier;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -16,7 +17,10 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 #[IsGranted('ROLE_USER')]
 class PublicProfileController extends AbstractController
 {
-    public function __construct(private EntityManagerInterface $em) {}
+    public function __construct(
+        private EntityManagerInterface $em,
+        private WebSocketNotifier $wsNotifier,
+    ) {}
 
     #[Route('/user/{id}', name: 'app_user_profile', requirements: ['id' => '\d+'])]
     public function show(int $id): Response
@@ -94,6 +98,18 @@ class PublicProfileController extends AbstractController
         $this->em->persist($notif);
 
         $this->em->flush();
+
+        // Push real-time notification via WebSocket
+        $this->wsNotifier->pushNotification($user->getId(), [
+            'id' => $notif->getId(),
+            'title' => $notif->getTitle(),
+            'message' => $notif->getMessage(),
+            'notifType' => $notif->getType(),
+            'typeIcon' => $notif->getTypeIcon(),
+            'typeColor' => $notif->getTypeColor(),
+            'isRead' => false,
+            'createdAt' => $notif->getCreatedAt()->format('d/m H:i'),
+        ]);
 
         $followersCount = $repo->count(['followed' => $user]);
         return new JsonResponse(['action' => 'followed', 'followersCount' => $followersCount]);
