@@ -52,6 +52,12 @@ class MentorshipRequest
     #[ORM\Column(nullable: true)]
     private ?float $matchScore = null;
 
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $matchExplanation = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $mentorGuidance = null;
+
     #[ORM\Column]
     private bool $autoApproved = false;
 
@@ -65,6 +71,7 @@ class MentorshipRequest
     private ?\DateTimeInterface $updatedAt = null;
 
     #[ORM\OneToMany(targetEntity: MentorshipSession::class, mappedBy: 'mentorshipRequest', cascade: ['remove'])]
+    /** @var Collection<int, MentorshipSession> */
     private Collection $sessions;
 
     public function __construct()
@@ -93,6 +100,10 @@ class MentorshipRequest
     public function setGoals(?string $v): static { $this->goals = $v; return $this; }
     public function getMatchScore(): ?float { return $this->matchScore; }
     public function setMatchScore(?float $v): static { $this->matchScore = $v; return $this; }
+    public function getMatchExplanation(): ?string { return $this->matchExplanation; }
+    public function setMatchExplanation(?string $v): static { $this->matchExplanation = $v; return $this; }
+    public function getMentorGuidance(): ?string { return $this->mentorGuidance; }
+    public function setMentorGuidance(?string $v): static { $this->mentorGuidance = $v; return $this; }
     public function isAutoApproved(): bool { return $this->autoApproved; }
     public function setAutoApproved(bool $v): static { $this->autoApproved = $v; return $this; }
     public function getStatus(): string { return $this->status; }

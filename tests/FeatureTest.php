@@ -65,6 +65,38 @@ class FeatureTest extends WebTestCase
         $this->assertStringContainsString('spreadsheetml', $client->getResponse()->headers->get('Content-Type'));
     }
 
+    public function testMentoratChatbotPageLoads(): void
+    {
+        $client = static::createClient();
+        $this->loginAsAdmin($client);
+        $crawler = $client->request('GET', '/mentorat/chatbot');
+
+        $this->assertSame(200, $client->getResponse()->getStatusCode());
+        $this->assertSelectorExists('input#chatInput');
+        $this->assertSelectorExists('button.btn-nj');
+    }
+
+    public function testMentoratChatbotApiFallbacksWithoutAi(): void
+    {
+        $client = static::createClient();
+        $this->loginAsAdmin($client);
+        $client->request(
+            'POST',
+            '/mentorat/chatbot/api',
+            [],
+            [],
+            ['CONTENT_TYPE' => 'application/json'],
+            json_encode(['question' => 'Qu est ce que Najahni ?'])
+        );
+
+        $this->assertSame(200, $client->getResponse()->getStatusCode());
+        $data = json_decode($client->getResponse()->getContent(), true);
+        $this->assertIsArray($data);
+        $this->assertArrayHasKey('answer', $data);
+        $this->assertIsString($data['answer']);
+        $this->assertNotSame('', trim($data['answer']));
+    }
+
     public function testProfileEditFormLoads(): void
     {
         $client = static::createClient();

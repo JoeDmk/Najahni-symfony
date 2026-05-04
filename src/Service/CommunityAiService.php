@@ -4,6 +4,8 @@ namespace App\Service;
 
 use App\Entity\Comment;
 use App\Entity\Event;
+use App\Entity\MentorshipRequest;
+use App\Entity\MentorshipSession;
 use App\Entity\Thread;
 use App\Entity\User;
 use Symfony\Contracts\HttpClient\HttpClientInterface;
@@ -39,6 +41,133 @@ final class CommunityAiService
     public function isConfigured(): bool
     {
         return $this->apiKey() !== null;
+    }
+
+    public function answerQuestion(string $question): ?string
+    {
+        $question = trim($question);
+        if ($question === '') {
+            return null;
+        }
+
+        $system = 'You are the Najahni assistant. Answer questions clearly and concisely about the Najahni platform in the same language as the user. Use only information about mentorat, sessions, calendar, projects, investment, community, learning, badges, and exports. If the question is unrelated, say that you only know about Najahni platform features.';
+
+        return $this->chat(
+            $system,
+            'User question: '.$question,
+            0.45,
+        );
+    }
+
+    public function evaluateMentorCompatibility(User $entrepreneur, User $mentor, ?string $projectSecteur = null): array
+    {
+        if (!$this->isConfigured()) {
+            return ['score' => null, 'explanation' => null];
+        }
+
+        $system = 'You are an expert mentorship compatibility analyst. Compare an entrepreneur profile and a mentor profile, then score their compatibility from 0 to 100. Output a short explanation of the main strengths, risks, and how well the mentor can support the entrepreneur.';
+        $user = implode("\n", [
+            'Entrepreneur profile:',
+            'Name: '.$this->safe($entrepreneur->getFullName()),
+            'Bio: '.$this->safe($entrepreneur->getBio()),
+            'Company: '.$this->safe($entrepreneur->getCompanyName()),
+            'LinkedIn: '.$this->safe($entrepreneur->getLinkedinUrl()),
+            'Mentor profile:',
+            'Name: '.$this->safe($mentor->getFullName()),
+            'Bio: '.$this->safe($mentor->getBio()),
+            'Company: '.$this->safe($mentor->getCompanyName()),
+            'LinkedIn: '.$this->safe($mentor->getLinkedinUrl()),
+            'Project sector: '.$this->safe($projectSecteur),
+            '',
+            'Provide output in one of two formats: JSON with keys score and explanation, or plain text lines containing a score and explanation.',
+        ]);
+
+        $content = $this->chat($system, $user, 0.35);
+        if ($content === null) {
+            return ['score' => null, 'explanation' => null];
+        }
+
+        $parsed = $this->parseCompatibilityResponse($content);
+        return [
+            'score' => $parsed['score'] ?? null,
+            'explanation' => $parsed['explanation'] ?? trim($content),
+        ];
+    }
+
+    public function analyzeRequestObjectives(MentorshipRequest $request): ?string
+    {
+        if (!$this->isConfigured()) {
+            return null;
+        }
+
+        $system = 'You are a mentorship briefing assistant. Read the entrepreneur request and suggest clear points the mentor should cover in the first session.';
+        $user = implode("\n", [
+            'Entrepreneur name: '.$this->safe($request->getEntrepreneur()?->getFullName()),
+            'Company: '.$this->safe($request->getEntrepreneur()?->getCompanyName()),
+            'Bio: '.$this->safe($request->getEntrepreneur()?->getBio()),
+            'Project sector: '.$this->safe($request->getProject()?->getSecteur()),
+            'Motivation: '.$this->safe($request->getMotivation()),
+            'Goals: '.$this->safe($request->getGoals()),
+            '',
+            'Suggest 3 practical points the mentor should discuss in the first session. Output short bullet points or numbered items.',
+        ]);
+
+        return $this->chat($system, $user, 0.25);
+    }
+
+    public function summarizeSessionFeedback(MentorshipSession $session): ?string
+    {
+        if (!$this->isConfigured()) {
+            return null;
+        }
+
+        $request = $session->getMentorshipRequest();
+        $system = 'You are a mentorship session summarization assistant. Read the session details and feedback, then write a short summary of what happened and what the next recommended steps are.';
+        $user = implode("\n", [
+            'Mentor: '.$this->safe($request?->getMentor()?->getFullName()),
+            'Entrepreneur: '.$this->safe($request?->getEntrepreneur()?->getFullName()),
+            'Project sector: '.$this->safe($request?->getProject()?->getSecteur()),
+            'Motivation: '.$this->safe($request?->getMotivation()),
+            'Goals: '.$this->safe($request?->getGoals()),
+            'Mentor feedback: '.$this->safe($session->getMentorFeedback()),
+            'Entrepreneur feedback: '.$this->safe($session->getEntrepreneurFeedback()),
+            '',
+            'Write a concise session summary in one or two sentences, mention the main outcome, and suggest a next step if possible.',
+        ]);
+
+        return $this->chat($system, $user, 0.2);
+    }
+
+    private function parseCompatibilityResponse(string $content): array
+    {
+        $parsed = ['score' => null, 'explanation' => null];
+        $json = json_decode(trim($content), true);
+
+        if (is_array($json)) {
+            if (isset($json['score'])) {
+                $parsed['score'] = is_numeric($json['score']) ? (float) $json['score'] : null;
+            }
+            if (isset($json['explanation'])) {
+                $parsed['explanation'] = trim((string) $json['explanation']);
+            }
+            return $parsed;
+        }
+
+        if (preg_match('/score\s*[:=]\s*(\d{1,3})/i', $content, $matches)) {
+            $parsed['score'] = min(100.0, max(0.0, (float) $matches[1]));
+        }
+
+        if (preg_match('/explanation\s*[:=]\s*(.+)$/is', $content, $matches)) {
+            $parsed['explanation'] = trim($matches[1]);
+        }
+
+        if ($parsed['score'] === null) {
+            if (preg_match('/(\d{1,3})\s*%/', $content, $matches)) {
+                $parsed['score'] = min(100.0, max(0.0, (float) $matches[1]));
+            }
+        }
+
+        return $parsed;
     }
 
     /** @param Comment[] $comments */
@@ -367,6 +496,9 @@ final class CommunityAiService
                 'json' => [
                     'model' => $this->model(),
                     'temperature' => $temperature,
+                    'max_tokens' => 250,
+                    'top_p' => 0.95,
+                    'n' => 1,
                     'messages' => [
                         ['role' => 'system', 'content' => $system],
                         ['role' => 'user', 'content' => $user],

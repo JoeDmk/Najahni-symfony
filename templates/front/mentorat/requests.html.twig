@@ -66,6 +66,12 @@
                         <span class="badge bg-{{ req.matchScore >= 70 ? 'success' : (req.matchScore >= 40 ? 'warning text-dark' : 'secondary') }}">{{ req.matchScore }}%</span>
                     </p>
                 {% endif %}
+                {% if req.matchExplanation %}
+                    <p class="small text-muted mb-1"><strong>Analyse compatibilité :</strong> {{ req.matchExplanation|length > 100 ? req.matchExplanation|slice(0,100) ~ '...' : req.matchExplanation }}</p>
+                {% endif %}
+                {% if req.mentorGuidance %}
+                    <p class="small text-muted mb-1"><strong>Points à discuter :</strong> {{ req.mentorGuidance|length > 100 ? req.mentorGuidance|slice(0,100) ~ '...' : req.mentorGuidance }}</p>
+                {% endif %}
                 {% if req.motivation %}
                     <p class="small text-muted mb-0 mt-2">{{ req.motivation|length > 100 ? req.motivation|slice(0,100) ~ '...' : req.motivation }}</p>
                 {% endif %}
@@ -118,6 +124,12 @@
                         <i class="bi bi-bullseye me-1"></i>Match :
                         <span class="badge bg-{{ req.matchScore >= 70 ? 'success' : (req.matchScore >= 40 ? 'warning text-dark' : 'secondary') }}">{{ req.matchScore }}%</span>
                     </p>
+                {% endif %}
+                {% if req.matchExplanation %}
+                    <p class="small text-muted mb-1"><strong>Analyse :</strong> {{ req.matchExplanation|length > 120 ? req.matchExplanation|slice(0,120) ~ '...' : req.matchExplanation }}</p>
+                {% endif %}
+                {% if req.mentorGuidance %}
+                    <p class="small text-muted mb-1"><strong>Points mentor :</strong> {{ req.mentorGuidance|length > 120 ? req.mentorGuidance|slice(0,120) ~ '...' : req.mentorGuidance }}</p>
                 {% endif %}
                 {% if req.motivation %}
                     <p class="small text-muted mb-2">{{ req.motivation|length > 100 ? req.motivation|slice(0,100) ~ '...' : req.motivation }}</p>

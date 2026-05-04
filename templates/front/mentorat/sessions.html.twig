@@ -104,6 +104,16 @@
                     {% endif %}
                 </td>
             </tr>
+            {# ── Session summary (AI-generated) ── #}
+            {% if session.sessionSummary %}
+            <tr class="table-light">
+                <td colspan="9">
+                    <div class="alert alert-info mb-0 py-2">
+                        <strong><i class="bi bi-lightbulb me-1"></i>Résumé IA :</strong> {{ session.sessionSummary }}
+                    </div>
+                </td>
+            </tr>
+            {% endif %}
             {# ── Feedback row for completed sessions ── #}
             {% if session.status == 'completed' %}
             <tr class="table-light">

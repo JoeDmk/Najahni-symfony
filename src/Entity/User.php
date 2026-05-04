@@ -124,12 +124,15 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     private int $totalXp = 0;
 
     #[ORM\OneToMany(targetEntity: Projet::class, mappedBy: 'user')]
+    /** @var Collection<int, Projet> */
     private Collection $projets;
 
     #[ORM\OneToMany(targetEntity: Progression::class, mappedBy: 'user')]
+    /** @var Collection<int, Progression> */
     private Collection $progressions;
 
     #[ORM\OneToMany(targetEntity: Post::class, mappedBy: 'user')]
+    /** @var Collection<int, Post> */
     private Collection $posts;
 
     public function __construct()

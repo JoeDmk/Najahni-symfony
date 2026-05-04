@@ -1,12 +1,13 @@
 <?php
 namespace App\Repository;
 use App\Entity\MentorshipSession;
+use App\Entity\User;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 class MentorshipSessionRepository extends ServiceEntityRepository {
     public function __construct(ManagerRegistry $registry) { parent::__construct($registry, MentorshipSession::class); }
 
-    public function findByUser($user): array
+    public function findByUser(User $user): array
     {
         return $this->createQueryBuilder('s')
             ->join('s.mentorshipRequest', 'r')

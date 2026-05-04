@@ -37,6 +37,7 @@ class Thread
     private ?\DateTimeInterface $createdAt = null;
 
     #[ORM\OneToMany(targetEntity: Comment::class, mappedBy: 'thread', cascade: ['remove'])]
+    /** @var Collection<int, Comment> */
     private Collection $comments;
 
     public function __construct()

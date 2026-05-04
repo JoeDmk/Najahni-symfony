@@ -70,6 +70,7 @@ class Projet
     private ?DonneesBusiness $donneesBusiness = null;
 
     #[ORM\OneToMany(targetEntity: InvestmentOpportunity::class, mappedBy: 'project')]
+    /** @var Collection<int, InvestmentOpportunity> */
     private Collection $opportunities;
 
     public function __construct()

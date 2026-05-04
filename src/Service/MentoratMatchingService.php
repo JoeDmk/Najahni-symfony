@@ -4,10 +4,15 @@ namespace App\Service;
 
 use App\Entity\MentorshipRequest;
 use App\Entity\User;
+use App\Service\CommunityAiService;
 
 class MentoratMatchingService
 {
     private const AUTO_ACCEPT_THRESHOLD = 70.0;
+
+    public function __construct(private readonly ?CommunityAiService $communityAiService = null)
+    {
+    }
 
     /**
      * Calculate a matching score (0-100) between an entrepreneur and a mentor.
@@ -103,6 +108,23 @@ class MentoratMatchingService
 
         $score = $this->calculateMatchScore($entrepreneur, $mentor, $projectSecteur);
         $request->setMatchScore($score);
+
+        if ($this->communityAiService !== null && $this->communityAiService->isConfigured()) {
+            $compatibility = $this->communityAiService->evaluateMentorCompatibility($entrepreneur, $mentor, $projectSecteur);
+            if (isset($compatibility['score']) && is_numeric($compatibility['score'])) {
+                $score = round(min(100.0, max(0.0, (float) $compatibility['score'])), 1);
+                $request->setMatchScore($score);
+            }
+
+            if (isset($compatibility['explanation']) && trim((string) $compatibility['explanation']) !== '') {
+                $request->setMatchExplanation(trim((string) $compatibility['explanation']));
+            }
+
+            $guidance = $this->communityAiService->analyzeRequestObjectives($request);
+            if (trim((string) $guidance) !== '') {
+                $request->setMentorGuidance(trim($guidance));
+            }
+        }
 
         if ($this->shouldAutoAccept($score)) {
             $request->setAutoApproved(true);

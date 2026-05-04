@@ -5,8 +5,8 @@ use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 class CoursRepository extends ServiceEntityRepository {
     public function __construct(ManagerRegistry $registry) { parent::__construct($registry, Cours::class); }
-    public function findBySearch(string $q) {
-        return $this->createQueryBuilder('c')->where('c.titre LIKE :q OR c.categorie LIKE :q')->setParameter('q', '%'.$q.'%');
+    public function findBySearch(string $q): array {
+        return $this->createQueryBuilder('c')->where('c.titre LIKE :q OR c.categorie LIKE :q')->setParameter('q', '%'.$q.'%')->getQuery()->getResult();
     }
     public function countCertifiants(): int { return $this->count(['certification' => true]); }
     public function sumXpPoints(): int {

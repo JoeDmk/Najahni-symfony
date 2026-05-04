@@ -33,6 +33,7 @@ class Post
     private ?string $imageUrl = null;
 
     #[ORM\OneToMany(targetEntity: PostReaction::class, mappedBy: 'post', cascade: ['remove'])]
+    /** @var Collection<int, PostReaction> */
     private Collection $reactions;
 
     public function __construct()

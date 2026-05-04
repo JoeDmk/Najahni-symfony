@@ -42,6 +42,9 @@ class MentorshipSession
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $entrepreneurFeedback = null;
 
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $sessionSummary = null;
+
     #[ORM\Column(nullable: true)]
     private ?int $mentorRating = null;
 
@@ -74,6 +77,8 @@ class MentorshipSession
     public function setMentorFeedback(?string $v): static { $this->mentorFeedback = $v; return $this; }
     public function getEntrepreneurFeedback(): ?string { return $this->entrepreneurFeedback; }
     public function setEntrepreneurFeedback(?string $v): static { $this->entrepreneurFeedback = $v; return $this; }
+    public function getSessionSummary(): ?string { return $this->sessionSummary; }
+    public function setSessionSummary(?string $v): static { $this->sessionSummary = $v; return $this; }
     public function getMentorRating(): ?int { return $this->mentorRating; }
     public function setMentorRating(?int $v): static { $this->mentorRating = $v; return $this; }
     public function getEntrepreneurRating(): ?int { return $this->entrepreneurRating; }
