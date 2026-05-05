@@ -185,7 +185,7 @@ class HomeController extends AbstractController
         return $events;
     }
 
-    private function toTimestamp($date): int
+    private function toTimestamp(mixed $date): int
     {
         if ($date instanceof \DateTimeInterface) {
             return $date->getTimestamp();
@@ -193,7 +193,7 @@ class HomeController extends AbstractController
         return 0;
     }
 
-    private function relativeTime($date, \DateTimeImmutable $now): string
+    private function relativeTime(mixed $date, \DateTimeImmutable $now): string
     {
         if (!$date instanceof \DateTimeInterface) {
             return '';
