@@ -49,6 +49,10 @@ COPY docker/php.ini "$PHP_INI_DIR/conf.d/app.ini"
 WORKDIR /var/www/html
 COPY --from=composer_stage /app .
 
+# Force production mode
+ENV APP_ENV=prod
+ENV APP_DEBUG=0
+
 # Ensure upload dirs exist and are writable
 RUN mkdir -p var/cache var/log public/uploads/profiles public/uploads/community/posts var/uploads/documents \
  && chown -R www-data:www-data var public/uploads var/uploads
