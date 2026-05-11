@@ -11,12 +11,10 @@ echo "=== DATABASE_URL=${DATABASE_URL:0:30}... ==="
 echo "=== APP_ENV=$APP_ENV ==="
 
 # Create database schema from entities (skip migrations — they contain MySQL-specific SQL)
-echo "=== Running doctrine:schema:update ==="
-php bin/console doctrine:schema:update --force --no-interaction 2>&1 || {
-    echo "WARN: schema update failed, attempting fresh schema..."
-    php bin/console doctrine:schema:drop --force --no-interaction 2>&1 || true
-    php bin/console doctrine:schema:update --force --no-interaction 2>&1 || echo "WARN: schema update failed again"
-}
+echo "=== Dropping existing schema (fresh deploy) ==="
+php bin/console doctrine:schema:drop --force --no-interaction 2>&1 || true
+echo "=== Creating schema ==="
+php bin/console doctrine:schema:update --force --no-interaction 2>&1 || echo "WARN: schema update failed"
 
 # Warm up Symfony cache
 echo "=== Warming up cache ==="
