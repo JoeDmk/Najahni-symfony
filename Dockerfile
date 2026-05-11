@@ -14,8 +14,7 @@ RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
 
 COPY . .
 RUN composer dump-autoload --optimize --classmap-authoritative \
- && composer dump-env prod \
- && php -r "\$e=require '.env.local.php'; unset(\$e['DATABASE_URL'],\$e['APP_SECRET'],\$e['MAILER_DSN'],\$e['GOOGLE_CLIENT_ID'],\$e['GOOGLE_CLIENT_SECRET'],\$e['RECAPTCHA3_KEY'],\$e['RECAPTCHA3_SECRET'],\$e['STRIPE_SECRET_KEY'],\$e['GROQ_API_KEY'],\$e['HF_TOKEN'],\$e['RAPIDAPI_KEY']); file_put_contents('.env.local.php','<?php return '.var_export(\$e,true).';\n');" \
+ && rm -f .env.local.php \
  && composer run-script post-install-cmd --no-interaction 2>/dev/null || true
 
 # ── Stage 2: Production image ─────────────────────────────────
