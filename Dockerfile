@@ -3,6 +3,13 @@ FROM composer:2 AS composer_stage
 
 WORKDIR /app
 COPY composer.json composer.lock ./
+
+# Install system deps needed by PHP extensions during composer install
+RUN apk add --no-cache icu-dev libzip-dev libpng-dev libjpeg-turbo-dev \
+        freetype-dev oniguruma-dev libxml2-dev postgresql-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) intl pdo pdo_mysql pdo_pgsql zip gd mbstring xml
+
 RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
 
 COPY . .
@@ -15,7 +22,7 @@ FROM php:8.2-apache
 # Install system deps + PHP extensions
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libicu-dev libzip-dev libpng-dev libjpeg-dev libfreetype6-dev \
-        libonig-dev libxml2-dev unzip git curl \
+        libonig-dev libxml2-dev libpq-dev unzip git curl \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
         intl pdo pdo_mysql pdo_pgsql zip gd opcache mbstring xml \
