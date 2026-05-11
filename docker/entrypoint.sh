@@ -7,14 +7,19 @@ if [ -n "$PORT" ]; then
     sed -i "s/:80/:$PORT/" /etc/apache2/sites-available/*.conf
 fi
 
+echo "=== DATABASE_URL=${DATABASE_URL:0:30}... ==="
+echo "=== APP_ENV=$APP_ENV ==="
+
 # Create database schema from entities (skip migrations — they contain MySQL-specific SQL)
-php bin/console doctrine:schema:update --force --no-interaction 2>/dev/null || true
+echo "=== Running doctrine:schema:update ==="
+php bin/console doctrine:schema:update --force --no-interaction 2>&1 || echo "WARN: schema update failed (may be OK on first run)"
 
 # Warm up Symfony cache
-php bin/console cache:warmup --env=prod --no-debug 2>/dev/null || true
+echo "=== Warming up cache ==="
+php bin/console cache:warmup --env=prod --no-debug 2>&1 || echo "WARN: cache warmup failed"
 
 # Fix permissions after cache warmup
 chown -R www-data:www-data var/
 
-# Start Apache
+echo "=== Starting Apache ==="
 exec apache2-foreground
