@@ -14,6 +14,7 @@ RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
 
 COPY . .
 RUN composer dump-autoload --optimize --classmap-authoritative \
+ && composer dump-env prod \
  && composer run-script post-install-cmd --no-interaction 2>/dev/null || true
 
 # ── Stage 2: Production image ─────────────────────────────────
