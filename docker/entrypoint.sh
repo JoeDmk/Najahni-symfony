@@ -7,6 +7,17 @@ if [ -n "$PORT" ]; then
     sed -i "s/:80/:$PORT/" /etc/apache2/sites-available/*.conf
 fi
 
+# Append serverVersion to DATABASE_URL for PostgreSQL on Render
+if echo "$DATABASE_URL" | grep -q "^postgres"; then
+    if ! echo "$DATABASE_URL" | grep -q "serverVersion"; then
+        if echo "$DATABASE_URL" | grep -q "?"; then
+            export DATABASE_URL="${DATABASE_URL}&serverVersion=16"
+        else
+            export DATABASE_URL="${DATABASE_URL}?serverVersion=16"
+        fi
+    fi
+fi
+
 echo "=== DATABASE_URL=${DATABASE_URL:0:30}... ==="
 echo "=== APP_ENV=$APP_ENV ==="
 
