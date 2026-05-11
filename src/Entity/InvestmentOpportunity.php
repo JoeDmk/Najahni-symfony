@@ -37,7 +37,7 @@ class InvestmentOpportunity
     #[Assert\NotNull(message: 'La date limite est obligatoire.')]
     private ?\DateTimeInterface $deadline = null;
 
-    #[ORM\Column(length: 20, columnDefinition: "ENUM('OPEN','CLOSED','FUNDED') DEFAULT 'OPEN'")]
+    #[ORM\Column(length: 20, options: ['default' => 'OPEN'])]
     private string $status = self::STATUS_OPEN;
 
     #[ORM\ManyToOne(targetEntity: Projet::class, inversedBy: 'opportunities')]

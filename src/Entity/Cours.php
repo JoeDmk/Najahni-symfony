@@ -37,7 +37,7 @@ class Cours
     #[Assert\Length(max: 100)]
     private string $categorie = 'Général';
 
-    #[ORM\Column(length: 20, columnDefinition: "ENUM('DEBUTANT','INTERMEDIAIRE','AVANCE','EXPERT') NOT NULL DEFAULT 'DEBUTANT'")]
+    #[ORM\Column(length: 20, options: ['default' => 'DEBUTANT'])]
     private string $niveauDifficulte = self::NIVEAU_DEBUTANT;
 
     #[ORM\Column]

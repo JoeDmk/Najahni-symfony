@@ -29,7 +29,7 @@ class PostReaction
     #[ORM\JoinColumn(name: 'user_id', nullable: false, onDelete: 'CASCADE')]
     private ?User $user = null;
 
-    #[ORM\Column(length: 20, columnDefinition: "ENUM('LIKE','LOVE','HAHA','WOW','SAD','ANGRY') NOT NULL DEFAULT 'LIKE'")]
+    #[ORM\Column(length: 20, options: ['default' => 'LIKE'])]
     private string $reactionType = self::TYPE_LIKE;
 
     public function getId(): ?int { return $this->id; }

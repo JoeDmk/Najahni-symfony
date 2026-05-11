@@ -51,7 +51,7 @@ class Badge
     #[ORM\Column(length: 50)]
     private string $categorie = 'Général';
 
-    #[ORM\Column(length: 20, columnDefinition: "ENUM('COMMUN','RARE','EPIQUE','LEGENDAIRE') DEFAULT 'COMMUN'")]
+    #[ORM\Column(length: 20, options: ['default' => 'COMMUN'])]
     private string $rarete = self::RARETE_COMMUN;
 
     #[ORM\Column]

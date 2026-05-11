@@ -26,7 +26,7 @@ class InvestmentOffer
     #[Assert\Positive(message: 'Le montant doit être positif.')]
     private ?string $proposedAmount = null;
 
-    #[ORM\Column(length: 20, columnDefinition: "ENUM('PENDING','ACCEPTED','REJECTED') DEFAULT 'PENDING'")]
+    #[ORM\Column(length: 20, options: ['default' => 'PENDING'])]
     private string $status = self::STATUS_PENDING;
 
     #[ORM\ManyToOne(targetEntity: User::class)]

@@ -14,7 +14,8 @@ RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist
 
 COPY . .
 RUN composer dump-autoload --optimize --classmap-authoritative \
- && rm -f .env.local.php \
+ && composer dump-env prod \
+ && php -r "\$f='.env.local.php';\$e=require \$f;file_put_contents(\$f,'<?php return '.var_export(['APP_ENV'=>'prod','APP_DEBUG'=>'0'],true).';'.chr(10));" \
  && composer run-script post-install-cmd --no-interaction 2>/dev/null || true
 
 # ── Stage 2: Production image ─────────────────────────────────

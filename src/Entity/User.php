@@ -50,7 +50,7 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[Assert\Regex(pattern: '/^\+?[0-9\s\-]{7,20}$/', message: 'Invalid phone number.')]
     private ?string $phone = null;
 
-    #[ORM\Column(length: 20, columnDefinition: "ENUM('ADMIN','ENTREPRENEUR','MENTOR','INVESTISSEUR') NOT NULL DEFAULT 'ENTREPRENEUR'")]
+    #[ORM\Column(length: 20, options: ['default' => 'ENTREPRENEUR'])]
     private string $role = self::ROLE_ENTREPRENEUR;
 
     #[ORM\Column(type: Types::TEXT, nullable: true)]

@@ -39,7 +39,7 @@ class Progression
     #[ORM\Column]
     private int $niveau = 1;
 
-    #[ORM\Column(length: 20, columnDefinition: "ENUM('NON_COMMENCE','EN_COURS','COMPLETE','CERTIFIE') DEFAULT 'NON_COMMENCE'")]
+    #[ORM\Column(length: 20, options: ['default' => 'NON_COMMENCE'])]
     private string $etat = self::ETAT_NON_COMMENCE;
 
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
