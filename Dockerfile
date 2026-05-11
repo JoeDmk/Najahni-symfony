@@ -18,6 +18,9 @@ RUN composer dump-autoload --optimize --classmap-authoritative \
  && php -r "\$f='.env.local.php';\$e=require \$f;file_put_contents(\$f,'<?php return '.var_export(['APP_ENV'=>'prod','APP_DEBUG'=>'0'],true).';'.chr(10));" \
  && composer run-script post-install-cmd --no-interaction 2>/dev/null || true
 
+# Compile AssetMapper assets for production
+RUN php bin/console asset-map:compile --env=prod 2>/dev/null || true
+
 # ── Stage 2: Production image ─────────────────────────────────
 FROM php:8.2-apache
 
