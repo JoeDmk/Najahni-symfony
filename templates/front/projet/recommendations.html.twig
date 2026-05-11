@@ -27,7 +27,7 @@
                 <div class="col-md-4">
                     <p class="text-muted small mb-1">{{ label }}</p>
                     <div class="progress mb-1" style="height:10px">
-                        <div class="progress-bar" style="width:{{ val }}%;background:{{ val >= 70 ? '#10b981' : (val >= 40 ? '#f59e0b' : '#ef4444') }}"></div>
+                        <div class="progress-bar" style="width:{{ val }}%;background:{{ val >= 70 ? '#06d6a0' : (val >= 40 ? '#ffd166' : '#ef476f') }}"></div>
                     </div>
                     <small class="fw-bold">{{ val }}%</small>
                 </div>
@@ -46,7 +46,7 @@
         <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
             <h5 class="fw-bold mb-3"><i class="bi bi-list-check me-2"></i>Actions Prioritaires</h5>
             {% for action in recommendations.actions_prioritaires %}
-            <div class="d-flex align-items-start mb-3 p-3 rounded-3" style="background:rgba({{ action.priorite == 'haute' ? '239,68,68' : (action.priorite == 'moyenne' ? '245,158,11' : '16,185,129') }},.05)">
+            <div class="d-flex align-items-start mb-3 p-3 rounded-3" style="background:#fff;border:1px solid #e0e0e0">
                 <span class="badge me-3 {{ action.priorite == 'haute' ? 'bg-danger' : (action.priorite == 'moyenne' ? 'bg-warning text-dark' : 'bg-success') }}">
                     {{ action.priorite|upper }}
                 </span>

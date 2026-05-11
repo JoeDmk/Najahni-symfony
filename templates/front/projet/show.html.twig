@@ -17,7 +17,7 @@
 </div>
 
 {# AI Action Buttons #}
-<div class="card border-0 shadow-sm p-3 mb-4" style="border-radius:1rem;background:linear-gradient(135deg,rgba(67,97,238,.04),rgba(114,9,183,.04))">
+<div class="card border-0 shadow-sm p-3 mb-4" style="border-radius:1rem;background:#fff;border:1px solid #e0e0e0 !important">
     <div class="d-flex flex-wrap gap-2 align-items-center">
         <span class="fw-bold small me-2"><i class="bi bi-robot me-1"></i>Actions IA :</span>
         <form method="post" action="{{ path('app_projet_evaluate_ai', {id: projet.id}) }}" class="d-inline">
@@ -56,9 +56,9 @@
 
         {# Diagnostic IA même style que Description #}
         {% if projet.diagnosticIa %}
-        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem">
-            <h5 class="fw-bold">Diagnostic IA du projet</h5>
-            <p>{{ projet.diagnosticIa|replace({'**':''})|nl2br }}</p>
+        <div class="card border-0 shadow-sm p-4 mb-4" style="border-radius:1rem;background:#fff;border-left:4px solid #4361ee !important">
+            <h5 class="fw-bold" style="color:#1a1a2e">Diagnostic IA du projet</h5>
+            <p style="color:#1a1a2e">{{ projet.diagnosticIa|replace({'**':''})|nl2br }}</p>
         </div>
         {% endif %}
 
@@ -69,39 +69,39 @@
             <h5 class="fw-bold mb-4"><i class="bi bi-graph-up me-2"></i>Données Business</h5>
             <div class="row g-3">
                 <div class="col-md-4">
-                    <div class="p-3 rounded-3" style="background:rgba(67,97,238,.05)">
+                    <div class="p-3 rounded-3" style="background:#fff;border:1px solid #e0e0e0">
                         <p class="text-muted small mb-1">Taille du marché</p>
-                        <h5 class="fw-bold mb-0">{{ db.tailleMarche|number_format(0, ',', ' ') }} DT</h5>
+                        <h5 class="fw-bold mb-0" style="color:#1a1a2e">{{ db.tailleMarche|number_format(0, ',', ' ') }} DT</h5>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="p-3 rounded-3" style="background:rgba(114,9,183,.05)">
+                    <div class="p-3 rounded-3" style="background:#fff;border:1px solid #e0e0e0">
                         <p class="text-muted small mb-1">Coûts estimés</p>
-                        <h5 class="fw-bold mb-0">{{ db.coutsEstimes|number_format(0, ',', ' ') }} DT</h5>
+                        <h5 class="fw-bold mb-0" style="color:#1a1a2e">{{ db.coutsEstimes|number_format(0, ',', ' ') }} DT</h5>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="p-3 rounded-3" style="background:rgba(247,37,133,.05)">
+                    <div class="p-3 rounded-3" style="background:#fff;border:1px solid #e0e0e0">
                         <p class="text-muted small mb-1">Revenus attendus</p>
-                        <h5 class="fw-bold mb-0">{{ db.revenusAttendus|number_format(0, ',', ' ') }} DT</h5>
+                        <h5 class="fw-bold mb-0" style="color:#1a1a2e">{{ db.revenusAttendus|number_format(0, ',', ' ') }} DT</h5>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="p-3 rounded-3" style="background:rgba(67,97,238,.05)">
+                    <div class="p-3 rounded-3" style="background:#fff;border:1px solid #e0e0e0">
                         <p class="text-muted small mb-1">Modèle de revenu</p>
-                        <h6 class="fw-semibold mb-0">{{ db.modeleRevenu }}</h6>
+                        <h6 class="fw-semibold mb-0" style="color:#1a1a2e">{{ db.modeleRevenu }}</h6>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="p-3 rounded-3" style="background:rgba(114,9,183,.05)">
+                    <div class="p-3 rounded-3" style="background:#fff;border:1px solid #e0e0e0">
                         <p class="text-muted small mb-1">Niveau de risque</p>
-                        <h6 class="fw-semibold mb-0">{{ db.niveauRisque }}</h6>
+                        <h6 class="fw-semibold mb-0" style="color:#1a1a2e">{{ db.niveauRisque }}</h6>
                     </div>
                 </div>
                 <div class="col-md-4">
-                    <div class="p-3 rounded-3" style="background:rgba(247,37,133,.05)">
+                    <div class="p-3 rounded-3" style="background:#fff;border:1px solid #e0e0e0">
                         <p class="text-muted small mb-1">Force d'équipe</p>
-                        <h6 class="fw-semibold mb-0">{{ db.forceEquipe }}/10</h6>
+                        <h6 class="fw-semibold mb-0" style="color:#1a1a2e">{{ db.forceEquipe }}/10</h6>
                     </div>
                 </div>
             </div>
