@@ -6,7 +6,7 @@ use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity]
 #[ORM\Table(name: 'user_follow')]
-#[ORM\UniqueConstraint(name: 'unique_follow', columns: ['follower_id', 'followed_id'])]
+#[ORM\UniqueConstraint(name: 'unique_user_follow', columns: ['follower_id', 'followed_id'])]
 class UserFollow
 {
     #[ORM\Id]
